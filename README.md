@@ -1,10 +1,5 @@
 # Sistem Informasi Koperasi Simpan Pinjam Sido Manunggal
 
-![Version](https://img.shields.io/badge/version-1.0.0-blue)
-![PHP](https://img.shields.io/badge/PHP-8.1+-green)
-![CodeIgniter](https://img.shields.io/badge/CodeIgniter-4.3.1-red)
-![License](https://img.shields.io/badge/license-MIT-yellow)
-
 Sistem Informasi Koperasi Simpan Pinjam berbasis web yang dibangun menggunakan framework CodeIgniter 4 untuk membantu pengelolaan administrasi dan keuangan Koperasi Kredit Sido Manunggal.
 
 ## 📑 Deskripsi Proyek
