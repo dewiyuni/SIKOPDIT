@@ -51,10 +51,11 @@
 
 <body>
     <div class="login-container">
-        <img src="/assets/img/logo.png" alt="Logo" class="logo">
 
         <!-- Kolom Form Login -->
-        <h3 class="text-center mb-3">Login</h3>
+        <h2 class="text-center mb-3">Login</h2>
+        <img src="<?= base_url("assets/logo.png") ?>" alt="Logo" class="logo">
+
         <form action="/auth/authenticate" method="POST">
             <?= csrf_field(); ?>
             <?php if (session()->getFlashdata('error')): ?>

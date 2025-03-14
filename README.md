@@ -1,68 +1,124 @@
-# CodeIgniter 4 Application Starter
+# Sistem Informasi Koperasi Simpan Pinjam Sido Manunggal
 
-## What is CodeIgniter?
+![Version](https://img.shields.io/badge/version-1.0.0-blue)
+![PHP](https://img.shields.io/badge/PHP-8.1+-green)
+![CodeIgniter](https://img.shields.io/badge/CodeIgniter-4.3.1-red)
+![License](https://img.shields.io/badge/license-MIT-yellow)
 
-CodeIgniter is a PHP full-stack web framework that is light, fast, flexible and secure.
-More information can be found at the [official site](https://codeigniter.com).
+Sistem Informasi Koperasi Simpan Pinjam berbasis web yang dibangun menggunakan framework CodeIgniter 4 untuk membantu pengelolaan administrasi dan keuangan Koperasi Kredit Sido Manunggal.
 
-This repository holds a composer-installable app starter.
-It has been built from the
-[development repository](https://github.com/codeigniter4/CodeIgniter4).
+## 📑 Deskripsi Proyek
 
-More information about the plans for version 4 can be found in [CodeIgniter 4](https://forum.codeigniter.com/forumdisplay.php?fid=28) on the forums.
+Proyek ini merupakan implementasi sistem informasi untuk mengatasi permasalahan pencatatan manual pada Koperasi Kredit Sido Manunggal. Sistem ini dikembangkan sebagai bagian dari penelitian skripsi dengan tujuan meningkatkan efisiensi, akurasi, dan kemudahan akses dalam pengelolaan data simpanan dan pinjaman anggota koperasi.
 
-You can read the [user guide](https://codeigniter.com/user_guide/)
-corresponding to the latest version of the framework.
+### Latar Belakang
 
-## Installation & updates
+Koperasi Kredit Sido Manunggal menghadapi kendala dalam pengelolaan administrasi simpan pinjam yang masih dilakukan secara manual menggunakan buku catatan dan spreadsheet sederhana. Hal ini menyebabkan:
 
-`composer create-project codeigniter4/appstarter` then `composer update` whenever
-there is a new release of the framework.
+- Keterlambatan dalam pelaporan keuangan
+- Kesulitan dalam pencarian dan penelusuran data anggota
+- Potensi kesalahan input data yang tinggi
+- Inefisiensi dalam proses administrasi
 
-When updating, check the release notes to see if there are any changes you might need to apply
-to your `app` folder. The affected files can be copied or merged from
-`vendor/codeigniter4/framework/app`.
+Sistem informasi ini dikembangkan untuk mengatasi permasalahan tersebut dengan menghadirkan solusi digital yang terintegrasi.
 
-## Setup
+## 🚀 Fitur Utama
 
-Copy `env` to `.env` and tailor for your app, specifically the baseURL
-and any database settings.
+- **Coming Soon**
 
-## Important Change with index.php
+## 💻 Teknologi yang Digunakan
 
-`index.php` is no longer in the root of the project! It has been moved inside the *public* folder,
-for better security and separation of components.
+- **Backend Framework**: CodeIgniter 4
+- **Database**: MySQL
+- **Frontend**: Bootstrap 5, jQuery, Chart.js
+- **Authentication**: CodeIgniter Shield
+- **Reporting**: DOMPDF
+- **Version Control**: Git
 
-This means that you should configure your web server to "point" to your project's *public* folder, and
-not to the project root. A better practice would be to configure a virtual host to point there. A poor practice would be to point your web server to the project root and expect to enter *public/...*, as the rest of your logic and the
-framework are exposed.
+## 🛠️ Instalasi
 
-**Please** read the user guide for a better explanation of how CI4 works!
+### Persyaratan Sistem
 
-## Repository Management
+- PHP 8.2 atau lebih tinggi
+- MySQL 5.7 atau lebih tinggi
+- Composer
+- Web server (Apache/Nginx)
 
-We use GitHub issues, in our main repository, to track **BUGS** and to track approved **DEVELOPMENT** work packages.
-We use our [forum](http://forum.codeigniter.com) to provide SUPPORT and to discuss
-FEATURE REQUESTS.
+### Langkah Instalasi
 
-This repository is a "distribution" one, built by our release preparation script.
-Problems with it can be raised on our forum, or as issues in the main repository.
+1. Clone repositori ini
 
-## Server Requirements
+   ```bash
+   git clone https://github.com/username/koperasi-sido-manunggal.git
+   cd koperasi-sido-manunggal
+   ```
 
-PHP version 8.1 or higher is required, with the following extensions installed:
+2. Instal dependensi menggunakan Composer
 
-- [intl](http://php.net/manual/en/intl.requirements.php)
-- [mbstring](http://php.net/manual/en/mbstring.installation.php)
+   ```bash
+   composer install
+   ```
 
-> [!WARNING]
-> - The end of life date for PHP 7.4 was November 28, 2022.
-> - The end of life date for PHP 8.0 was November 26, 2023.
-> - If you are still using PHP 7.4 or 8.0, you should upgrade immediately.
-> - The end of life date for PHP 8.1 will be December 31, 2025.
+3. Salin file `.env.example` menjadi `.env` dan sesuaikan konfigurasi database
 
-Additionally, make sure that the following extensions are enabled in your PHP:
+   ```bash
+   cp .env.example .env
+   ```
 
-- json (enabled by default - don't turn it off)
-- [mysqlnd](http://php.net/manual/en/mysqlnd.install.php) if you plan to use MySQL
-- [libcurl](http://php.net/manual/en/curl.requirements.php) if you plan to use the HTTP\CURLRequest library
+4. Sesuaikan konfigurasi database pada file `.env`
+
+   ```
+   database.default.hostname = localhost
+   database.default.database = koperasi_sidomanunggal
+   database.default.username = root
+   database.default.password = password
+   database.default.DBDriver = MySQLi
+   ```
+
+5. Jalankan migrasi database
+
+   ```bash
+   php spark migrate
+   ```
+
+6. Jalankan seeder untuk data awal
+
+   ```bash
+   php spark db:seed UserSeeder
+   ```
+
+7. Jalankan server pengembangan
+
+   ```bash
+   php spark serve
+   ```
+
+8. Akses aplikasi melalui browser
+   ```
+   http://localhost:8080
+   ```
+
+## 👥 Kontribusi
+
+Proyek ini merupakan bagian dari penelitian skripsi, namun kontribusi untuk perbaikan dan pengembangan sangat diterima. Silakan ikuti langkah-langkah berikut untuk berkontribusi:
+
+1. Fork repositori
+2. Buat branch fitur baru (`git checkout -b feature/fitur-baru`)
+3. Commit perubahan (`git commit -m 'Menambahkan fitur baru'`)
+4. Push ke branch (`git push origin feature/fitur-baru`)
+5. Buat Pull Request
+
+## 📝 Lisensi
+
+Proyek ini dilisensikan di bawah [MIT License](LICENSE).
+
+## 🙏 Acknowledgments
+
+- Koperasi Kredit Sido Manunggal yang telah bersedia menjadi objek penelitian
+- Dosen pembimbing yang telah memberikan arahan selama penelitian
+- CodeIgniter Community untuk framework yang luar biasa
+- Semua pihak yang telah membantu dalam penyelesaian proyek
+
+---
+
+⭐ Dikembangkan sebagai bagian dari penelitian skripsi di Universitas Bina Sarana Informatika © 2025
