@@ -212,6 +212,25 @@ class JurnalKasController extends ResourceController
         }
     }
 
+    public function delete($id = null)
+    {
+        if ($id === null) {
+            return $this->failValidationErrors('ID tidak boleh kosong');
+        }
+
+        $dataLama = $this->jurnalkasModel->find($id);
+        if (!$dataLama) {
+            return $this->failNotFound('Data tidak ditemukan');
+        }
+
+        $this->jurnalkasModel->delete($id);
+
+        return $this->respondDeleted([
+            'status' => 'success',
+            'message' => 'Data berhasil dihapus'
+        ]);
+    }
+
     public function exportExcel()
     {
         $model = new JurnalKasModel();
@@ -281,6 +300,7 @@ class JurnalKasController extends ResourceController
             $rows = $sheet->toArray();
 
             $dataToInsert = [];
+            $errorRows = []; // Untuk mencatat baris dengan format tanggal yang bermasalah
 
             foreach ($rows as $key => $row) {
                 if ($key == 0)
@@ -288,35 +308,55 @@ class JurnalKasController extends ResourceController
 
                 // ========================== [ PENGOLAHAN TANGGAL ] ==========================
                 $tanggal = null;
+                $originalDate = '';
 
                 if (!empty($row[0])) {
-                    $excelDate = trim($row[0]);
+                    $originalDate = trim($row[0]);
+                    $excelDate = $originalDate;
 
                     // Cek apakah formatnya serial date (angka dari Excel)
                     if (is_numeric($excelDate)) {
                         $tanggal = date('Y-m-d', \PhpOffice\PhpSpreadsheet\Shared\Date::excelToTimestamp($excelDate));
-                    } else {
-                        // Coba parsing dengan berbagai format tanggal umum
-                        $formats = ['d/m/Y', 'm/d/Y', 'Y-m-d'];
-                        $tanggalObj = null;
+                        log_message('info', "Tanggal Excel (numeric): $excelDate -> $tanggal");
+                    }
+                    // Prioritaskan format MM/DD/YYYY yang ada di data Anda
+                    else if (preg_match('/^(\d{2})\/(\d{2})\/(\d{4})$/', $excelDate, $matches)) {
+                        $month = $matches[1];
+                        $day = $matches[2];
+                        $year = $matches[3];
+
+                        // Validasi tanggal (cek apakah bulan dan hari valid)
+                        if (checkdate(intval($month), intval($day), intval($year))) {
+                            $tanggal = "$year-$month-$day";
+                            log_message('info', "Tanggal MM/DD/YYYY: $excelDate -> $tanggal");
+                        } else {
+                            // Coba dengan asumsi format DD/MM/YYYY
+                            if (checkdate(intval($day), intval($month), intval($year))) {
+                                $tanggal = "$year-$day-$month";
+                                log_message('info', "Tanggal DD/MM/YYYY: $excelDate -> $tanggal");
+                            }
+                        }
+                    }
+                    // Coba format lainnya jika format utama tidak cocok
+                    else {
+                        // Coba dengan format yang umum
+                        $formats = ['m/d/Y', 'd/m/Y', 'Y-m-d'];
 
                         foreach ($formats as $format) {
                             $tanggalObj = \DateTime::createFromFormat($format, $excelDate);
-                            if ($tanggalObj) {
+                            if ($tanggalObj && $tanggalObj->format($format) === $excelDate) {
                                 $tanggal = $tanggalObj->format('Y-m-d');
+                                log_message('info', "Tanggal format $format: $excelDate -> $tanggal");
                                 break;
                             }
-                        }
-
-                        // Jika semua gagal, coba pakai strtotime()
-                        if (!$tanggal && strtotime($excelDate)) {
-                            $tanggal = date('Y-m-d', strtotime($excelDate));
                         }
                     }
                 }
 
-                // Jika tanggal tetap null, skip baris ini
+                // Jika tanggal tetap null, catat sebagai error dan lanjutkan ke baris berikutnya
                 if (!$tanggal) {
+                    $errorRows[] = $key + 1; // +1 karena index array dimulai dari 0
+                    log_message('warning', "Baris " . ($key + 1) . ": Format tanggal tidak valid - '$originalDate'");
                     continue;
                 }
                 // ==============================================================================
@@ -327,8 +367,9 @@ class JurnalKasController extends ResourceController
                     continue;
                 }
 
-                $dum = isset($row[2]) && is_numeric($row[2]) ? floatval($row[2]) : 0;
-                $duk = isset($row[3]) && is_numeric($row[3]) ? floatval($row[3]) : 0;
+                // Pastikan nilai numerik diproses dengan benar
+                $dum = isset($row[2]) ? $this->parseNumericValue($row[2]) : 0;
+                $duk = isset($row[3]) ? $this->parseNumericValue($row[3]) : 0;
 
                 if ($dum > 0) {
                     $dataToInsert[] = [
@@ -350,6 +391,9 @@ class JurnalKasController extends ResourceController
             }
 
             if (!empty($dataToInsert)) {
+                $insertCount = 0;
+                $updateCount = 0;
+
                 foreach ($dataToInsert as $data) {
                     $existing = $this->jurnalkasModel->where([
                         'tanggal' => $data['tanggal'],
@@ -359,23 +403,52 @@ class JurnalKasController extends ResourceController
 
                     if ($existing) {
                         $this->jurnalkasModel->update($existing['id'], ['jumlah' => $existing['jumlah'] + $data['jumlah']]);
+                        $updateCount++;
                     } else {
                         $this->jurnalkasModel->insert($data);
+                        $insertCount++;
                     }
                 }
 
                 // ✅ Panggil fungsi update total harian setelah import sukses
                 $this->jurnalkasModel->updateTotalHarian();
 
-                session()->setFlashdata('success', 'Data berhasil diimport dan total harian diperbarui!');
+                $message = "Import berhasil: $insertCount data baru, $updateCount data diperbarui.";
+                if (!empty($errorRows)) {
+                    $message .= " Baris dengan format tanggal tidak valid: " . implode(', ', $errorRows);
+                }
+
+                session()->setFlashdata('success', $message);
             } else {
                 session()->setFlashdata('error', 'Tidak ada data yang valid untuk diimport.');
             }
         } catch (\Exception $e) {
             log_message('error', 'Kesalahan saat mengimport Excel: ' . $e->getMessage());
-            session()->setFlashdata('error', 'Terjadi kesalahan saat mengimport data.');
+            session()->setFlashdata('error', 'Terjadi kesalahan saat mengimport data: ' . $e->getMessage());
         }
 
         return redirect()->to(base_url('admin/jurnal_neraca')); // Sesuaikan dengan route tujuan
     }
+
+    /**
+     * Helper function untuk memproses nilai numerik dari Excel
+     * Menangani nilai yang mungkin berformat string dengan pemisah ribuan
+     */
+    private function parseNumericValue($value)
+    {
+        if (is_numeric($value)) {
+            return floatval($value);
+        }
+
+        // Jika string, bersihkan pemisah ribuan dan ganti koma desimal dengan titik
+        if (is_string($value)) {
+            $value = str_replace(['.', ','], ['', '.'], $value);
+            if (is_numeric($value)) {
+                return floatval($value);
+            }
+        }
+
+        return 0;
+    }
+
 }

@@ -91,6 +91,8 @@ $routes->post('/jurnal/saveDUK', 'JurnalKasController::saveDUK');
 $routes->post('/jurnal/simpan', 'JurnalKasController::simpan');
 $routes->post('/jurnal/createKas', 'JurnalKasController::createKas');
 $routes->put('jurnal/update/(:num)', 'JurnalKasController::update/$1');
+$routes->delete('admin/jurnal_kas_harian/delete/(:num)', 'JurnalKasController::delete/$1'); //hapus
+
 
 $routes->get('export-excel', 'JurnalKasController::exportExcel');
 $routes->post('admin/jurnal_neraca/import_excel', 'JurnalKasController::importExcel');

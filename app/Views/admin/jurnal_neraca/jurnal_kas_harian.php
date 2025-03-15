@@ -25,9 +25,19 @@
             </div>
         </div>
 
-
         <div class="card-body">
             <div class="row mb-3">
+                <div class="col-md-3 ">
+                    <label for="tahunSelect">Pilih Tahun</label>
+                    <select id="tahunSelect" class="form-select" onchange="filterData()">
+                        <option value="">Semua Tahun</option>
+                        <?php
+                        // Ganti dengan tahun yang relevan sesuai data Anda
+                        for ($year = date("Y"); $year >= 2000; $year--): ?>
+                            <option value="<?= $year; ?>"><?= $year; ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
                 <div class="col-md-3 ">
                     <label for="bulanSelect">Pilih Bulan</label>
                     <select id="bulanSelect" class="form-select" onchange="filterData()">
@@ -72,16 +82,13 @@
                                             value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" required
                                             oninput="hitungTotalPerHari()">
                                     </td>
-                                    </td>
                                     <td><input type="text" class="form-control" value="<?= $k['uraian'] ?>"
-                                            data-id="<?= $k['id'] ?>">
-                                    </td>
+                                            data-id="<?= $k['id'] ?>"></td>
                                     <td>
                                         <input type="text" class="form-control dum"
                                             value="<?= number_format($k['jumlah'], 0, ',', '.') ?>" data-id="<?= $k['id'] ?>"
                                             oninput="formatRibuan(this)">
                                     </td>
-
                                     <td><button class="btn btn-danger" onclick="hapusBaris(this, 'dum')">Hapus</button></td>
                                 </tr>
                             <?php endif; ?>
@@ -97,8 +104,7 @@
                     </tfoot>
                 </table>
             </div>
-            <button class="btn btn-info" style="width: 100%; display: block;" onclick="tambahDUM()">Tambah
-                DUM</button>
+            <button class="btn btn-info" style="width: 100%; display: block;" onclick="tambahDUM()">Tambah DUM</button>
 
             <div class="d-flex justify-content-between align-items-center">
                 <h4 class="mt-4">Data DUK</h4>
@@ -126,16 +132,13 @@
                                             value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" required
                                             oninput="hitungTotalPerHari()">
                                     </td>
-                                    </td>
                                     <td><input type="text" class="form-control" value="<?= $k['uraian'] ?>"
-                                            data-id="<?= $k['id'] ?>">
-                                    </td>
+                                            data-id="<?= $k['id'] ?>"></td>
                                     <td>
                                         <input type="text" class="form-control duk"
                                             value="<?= number_format($k['jumlah'], 0, ',', '.') ?>" data-id="<?= $k['id'] ?>"
                                             oninput="formatRibuan(this)">
                                     </td>
-
                                     <td><button class="btn btn-danger" onclick="hapusBaris(this, 'duk')">Hapus</button></td>
                                 </tr>
                             <?php endif; ?>
@@ -151,12 +154,10 @@
                     </tfoot>
                 </table>
             </div>
-            <button class="btn btn-info" style="width: 100%; display: block;" onclick="tambahDUK()">Tambah
-                DUK</button>
+            <button class="btn btn-info" style="width: 100%; display: block;" onclick="tambahDUK()">Tambah DUK</button>
 
             <h4 class="mt-4">Total Per Hari</h4>
             <table class="table table-bordered table-striped mt-3">
-
                 <thead>
                     <tr>
                         <th>Tanggal</th>
@@ -167,7 +168,6 @@
                 </thead>
                 <tbody id="totalPerHariBody">
                 </tbody>
-
             </table>
             <button class="btn btn-success" style="width: 100%; display: block;" onclick="simpanKeDatabase()">Simpan ke
                 Database</button>
@@ -209,7 +209,6 @@
     `;
     }
 
-
     // Fungsi untuk membersihkan angka dari format ribuan sebelum dihitung
     function cleanNumber(value) {
         return parseFloat(value.replace(/\./g, "").replace(",", ".")) || 0;
@@ -221,7 +220,6 @@
         if (number === "") number = "0"; // Jika kosong, jadikan 0
         input.value = new Intl.NumberFormat("id-ID").format(number);
     }
-
 
     // Fungsi menghitung total DUM & DUK
     function hitungTotal() {
@@ -279,26 +277,38 @@
         });
     }
 
-    // Fungsi membersihkan angka dari pemisah ribuan (jika ada)
-    function cleanNumber(value) {
-        return parseFloat(value.replace(/\./g, "").replace(",", ".")) || 0;
-    }
-
     // Fungsi untuk menghapus baris & update total
     function hapusBaris(button, tipe) {
         let row = button.closest("tr");
-        row.remove();
+        let id = row.getAttribute('data-id');
 
-        hitungTotal();
-        hitungTotalPerHari();
+        if (confirm("Apakah Anda yakin ingin menghapus data ini?")) {
+            fetch(`<?= base_url('admin/jurnal_kas_harian/delete/') ?>${id}`, {
+                method: "DELETE",
+            })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.status === 'success') {
+                        alert(result.message);
+                        row.remove(); // Menghapus baris dari tampilan
+                        hitungTotal(); // Memperbarui total
+                        hitungTotalPerHari(); // Memperbarui total per hari
+                    } else {
+                        alert(result.message);
+                    }
+                })
+                .catch(error => console.error("Error:", error));
+        }
     }
+
 
     // Fungsi menyimpan ke database
     function simpanKeDatabase() {
         let data = [];
 
         document.querySelectorAll("#dumBody tr, #dukBody tr").forEach(row => {
-            let tanggal = row.querySelector(".date-dum, .date-duk")?.value;
+            let tanggalInput = row.querySelector(".date-dum, .date-duk")?.value;
+            let tanggal = tanggalInput; // Pastikan format tanggal YYYY-MM-DD untuk database
             let uraian = row.querySelector("input[type='text']")?.value;
             let jumlah = cleanNumber(row.querySelector(".dum, .duk")?.value || "0");
 
@@ -333,34 +343,26 @@
     document.addEventListener("DOMContentLoaded", function () {
         hitungTotal();
     });
+
     function filterData() {
+        let selectedYear = document.getElementById("tahunSelect").value;
         let selectedMonth = document.getElementById("bulanSelect").value;
 
         document.querySelectorAll("#dumBody tr, #dukBody tr").forEach(row => {
-            let dateInput = row.querySelector("input[type='date");
+            let dateInput = row.querySelector("input[type='date']");
             if (dateInput) {
-                let rowMonth = dateInput.value.split("-")[1];
-                row.style.display = (selectedMonth === "" || rowMonth === selectedMonth) ? "" : "none";
+                let rowDate = new Date(dateInput.value);
+                let rowYear = rowDate.getFullYear();
+                let rowMonth = rowDate.getMonth() + 1; // Bulan dimulai dari 0
+
+                row.style.display = (selectedYear === "" || rowYear == selectedYear) &&
+                    (selectedMonth === "" || rowMonth == selectedMonth) ? "" : "none";
             }
         });
     }
 
     // Panggil filter ulang setelah update data
+    document.getElementById("tahunSelect").addEventListener("change", filterData);
     document.getElementById("bulanSelect").addEventListener("change", filterData);
-
-    // Ubah format dari YYYY-MM-DD ke DD-MM-YYYY (untuk tampilan)
-    function formatTanggal(tanggal) {
-        if (!tanggal) return '';
-        let [year, month, day] = tanggal.split('-');
-        return `${day}-${month}-${year}`;
-    }
-
-    // Ubah format dari DD-MM-YYYY ke YYYY-MM-DD (untuk database)
-    function formatTanggalInput(tanggal) {
-        if (!tanggal) return '';
-        let [day, month, year] = tanggal.split('-');
-        return `${year}-${month}-${day}`;
-    }
-
 </script>
 <?= $this->endSection(); ?>
