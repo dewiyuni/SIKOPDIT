@@ -5,8 +5,8 @@ use CodeIgniter\Router\RouteCollection;
 /**
  * @var RouteCollection $routes
  */
-$routes->get('/', 'Home::index');
-
+$routes->get('/', 'AuthController::login');
+$routes->get('/login', 'AuthController::login');
 $routes->get('auth/login', 'AuthController::login');
 $routes->post('/auth/authenticate', 'AuthController::authenticate');
 $routes->get('auth/logout', 'AuthController::logout');
@@ -14,7 +14,6 @@ $routes->get('auth/logout', 'AuthController::logout');
 $routes->group('admin', ['filter' => 'roleCheck:admin'], function ($routes) {
     $routes->get('dashboard', 'AuthController::adminDashboard');
     $routes->get('/dashboard/chart-data', 'DashboardController::getChartData');
-
 });
 
 $routes->group('karyawan', ['filter' => 'roleCheck:karyawan'], function ($routes) {

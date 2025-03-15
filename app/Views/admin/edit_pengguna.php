@@ -18,7 +18,7 @@
             <input type="email" name="email" value="<?= $pengguna->email; ?>" class="form-control" required>
 
             <label for="role">Role:</label>
-            <select name="role" class="form-control" required>
+            <select name="role" class="form-control" required disabled>
                 <option value="admin" <?= $pengguna->role == 'admin' ? 'selected' : '' ?>>Admin</option>
                 <option value="karyawan" <?= $pengguna->role == 'karyawan' ? 'selected' : '' ?>>Karyawan</option>
             </select>

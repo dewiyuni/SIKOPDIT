@@ -5,9 +5,10 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center">
 
-        <h3>Jenis Simpanan</h3>
+        <h3>Daftar Akun</h3>
         <a href="<?= site_url('admin/tambah_jenis_simpanan') ?>" class="btn btn-success">Tambah</a>
     </div>
+    <br>
     <?php if (session()->getFlashdata('message')): ?>
         <div class="alert alert-success">
             <?= esc(session()->getFlashdata('message')) ?>

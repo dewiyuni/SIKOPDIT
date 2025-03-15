@@ -5,7 +5,7 @@
     <ul class="navbar-nav bg-gradient-success sidebar sidebar-dark accordion" id="accordionSidebar">
 
         <!-- Sidebar - Brand -->
-        <a class="sidebar-brand d-flex align-items-center justify-content-center" href="/dashboard">
+        <a class="sidebar-brand d-flex align-items-center justify-content-center" href="/admin/dashboard">
             <div class="sidebar-brand-icon rotate-n-15">
                 <i class="bi bi-emoji-wink"></i>
             </div>
@@ -30,7 +30,7 @@
                 <a class="nav-link" href="/admin/anggota">👬 <span>Kelola Anggota</span></a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/admin/kelola_pengguna">📋 <span>Kelola Pengguna</span></a>
+                <a class="nav-link" href="/admin/kelola_pengguna">📋 <span>Kelola Karyawan</span></a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href="/admin/jenis_simpanan">📋 <span>Jenis Simpanan</span></a>
@@ -81,65 +81,25 @@
 
                 <!-- Sidebar Toggle (Topbar) -->
                 <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
-                    <i class="fa fa-bars"></i>
+                    <i class="fas fa-arrow-down"></i>
                 </button>
-
-                <!-- Topbar Search -->
-                <form class="d-none d-sm-inline-block form-inline mr-auto ml-md-3 my-2 my-md-0 mw-100 navbar-search">
-                    <div class="input-group">
-                        <input type="text" class="form-control bg-light border-0 small" placeholder="Search for..."
-                            aria-label="Search" aria-describedby="basic-addon2">
-                        <div class="input-group-append">
-                            <button class="btn btn-success" type="button">
-                                <i class="bi bi-search"></i>
-                            </button>
-                        </div>
-                    </div>
-                </form>
-
                 <!-- Topbar Navbar -->
                 <ul class="navbar-nav ml-auto">
 
-                    <!-- Nav Item - Search Dropdown (Visible Only XS) -->
-                    <li class="nav-item dropdown no-arrow d-sm-none">
-                        <a class="nav-link dropdown-toggle" href="#" id="searchDropdown" role="button"
-                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            <i class="bi bi-search"></i>
-                        </a>
-                        <!-- Dropdown - Messages -->
-                        <div class="dropdown-menu dropdown-menu-right p-3 shadow animated--grow-in"
-                            aria-labelledby="searchDropdown">
-                            <form class="form-inline mr-auto w-100 navbar-search">
-                                <div class="input-group">
-                                    <input type="text" class="form-control bg-light border-0 small"
-                                        placeholder="Search for..." aria-label="Search" aria-describedby="basic-addon2">
-                                    <div class="input-group-append">
-                                        <button class="btn btn-primary" type="button">
-                                            <i class="bi bi-search"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                            </form>
-                        </div>
-                    </li>
-
-                    <div class="topbar-divider d-none d-sm-block"></div>
-
                     <!-- Nav Item - User Information -->
-                    <li class="nav-item dropdown no-arrow">
+                    <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
-                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            <span
-                                class="mr-2 d-none d-lg-inline text-gray-600 small"><?= session()->get('role') == 'admin' ? 'Admin' : 'Karyawan'; ?></span>
+                            data-bs-toggle="dropdown" aria-expanded="false">
+                            <span class="mr-2 d-none d-lg-inline text-gray-600 small">
+                                <?= session()->get('role') == 'admin' ? 'Admin' : 'Karyawan'; ?>
+                            </span>
                             <img class="img-profile rounded-circle"
                                 src="<?= base_url('assets/img/undraw_profile_3.svg'); ?>" alt="Profile Image">
                         </a>
-                        <!-- Dropdown - User Information -->
-                        <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
+                        <ul class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
                             aria-labelledby="userDropdown">
-                            <a href="<?= base_url('auth/logout') ?>" class="nav-link">🔒 Keluar</a>
-
-                        </div>
+                            <li><a class="dropdown-item" href="<?= base_url('auth/logout') ?>">🔒 Keluar</a></li>
+                        </ul>
                     </li>
 
                 </ul>

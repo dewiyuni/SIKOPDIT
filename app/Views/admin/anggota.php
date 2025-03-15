@@ -6,7 +6,7 @@
         <h3>Daftar Anggota</h3>
         <a href="<?= site_url('admin/tambah_anggota') ?>" class="btn btn-success">Tambah Anggota</a>
     </div>
-
+    <br>
     <?php if (session()->getFlashdata('message')): ?>
         <div class="alert alert-success">
             <?= esc(session()->getFlashdata('message')) ?>

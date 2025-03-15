@@ -19,11 +19,20 @@ class AuthController extends BaseController
     }
     public function login()
     {
+        if (session()->get('is_logged_in')) {
+            return redirect()->to(session()->get('role') === 'admin' ? '/admin/dashboard' : '/karyawan/dashboard');
+        }
+
         return view('auth/login');
     }
 
+
     public function authenticate()
     {
+        if (session()->get('is_logged_in')) {
+            return redirect()->to(session()->get('role') === 'admin' ? '/admin/dashboard' : '/karyawan/dashboard');
+        }
+
         $email = $this->request->getPost('email');
         $password = $this->request->getPost('password');
 
@@ -33,7 +42,7 @@ class AuthController extends BaseController
         if ($user && password_verify($password, $user->password)) {
             if ($user->status !== 'aktif') {
                 session()->setFlashdata('error', 'Akun belum aktif.');
-                return redirect()->to('/login');
+                return redirect()->to('/');
             }
 
             // Set session
@@ -47,7 +56,7 @@ class AuthController extends BaseController
             return redirect()->to($user->role === 'admin' ? '/admin/dashboard' : '/karyawan/dashboard');
         } else {
             session()->setFlashdata('error', 'Email atau password salah');
-            return redirect()->to('/login');
+            return redirect()->to('/');
         }
     }
 

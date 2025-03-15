@@ -4,10 +4,10 @@
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center">
-        <h3>Daftar Pengguna</h3>
+        <h3>Daftar Karyawan</h3>
         <a href="<?= site_url('admin/tambah_pengguna') ?>" class="btn btn-success">Tambah Pengguna</a>
     </div>
-
+    <br>
     <!-- Notifikasi Flash Data -->
     <?php if (session()->getFlashdata('success')): ?>
         <div class="alert alert-success"><?= session()->getFlashdata('success') ?></div>
@@ -37,15 +37,18 @@
                             <td>
                                 <a href="<?= site_url('admin/edit_pengguna/' . $u->id_user) ?>"
                                     class="btn btn-warning btn-sm">Edit</a>
-                                <a href="<?= site_url('admin/hapus_pengguna/' . $u->id_user) ?>"
-                                    class="btn btn-danger btn-sm"
-                                    onclick="return confirm('Yakin ingin menghapus pengguna ini?');">Hapus</a>
+                                <?php if (strtolower($u->role) !== 'admin'): ?>
+                                    <a href="<?= site_url('admin/hapus_pengguna/' . $u->id_user) ?>"
+                                        class="btn btn-danger btn-sm"
+                                        onclick="return confirm('Yakin ingin menghapus pengguna ini?');">Hapus</a>
+                                <?php else: ?>
+                                    <button class="btn btn-secondary btn-sm" disabled>Hapus</button>
+                                <?php endif; ?>
                             </td>
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
-
         </div>
     </div>
 </div>

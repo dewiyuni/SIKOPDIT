@@ -3,7 +3,7 @@
 
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center">
-        <h3>Tambah Pengguna</h3>
+        <h3>Tambah Karyawan</h3>
         <a href="<?= site_url('admin/kelola_pengguna') ?>" class="btn btn-warning">Kembali</a>
     </div>
 
@@ -21,9 +21,8 @@
             <input type="password" name="password" class="form-control" required>
 
             <label for="role">Role:</label>
-            <select name="role" class="form-control" required>
+            <select name="role" class="form-control" disabled required>
                 <option value="karyawan">Karyawan</option>
-                <option value="admin">Admin</option>
             </select><br>
 
             <button type="submit" class="btn btn-success">Simpan</button>
