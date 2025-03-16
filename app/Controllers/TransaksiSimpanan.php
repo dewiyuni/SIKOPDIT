@@ -335,8 +335,6 @@ class TransaksiSimpanan extends Controller
 
     }
 
-
-
     public function simpan()
     {
         $transaksiModel = new TransaksiSimpananModel();
