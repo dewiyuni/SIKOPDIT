@@ -274,37 +274,65 @@ class TransaksiSimpanan extends Controller
         $anggotaModel = new \App\Models\AnggotaModel();
         $transaksiDetailModel = new \App\Models\TransaksiSimpananDetailModel();
 
+        // Saldo awal sebagai objek
+        $saldo_awal = (object) [
+            'sw' => 75000,
+            'swp' => 0,
+            'ss' => 5000,
+            'sp' => 10000
+        ];
+
         // Ambil data anggota
         $anggota = $anggotaModel->find($id_anggota);
         if (!$anggota) {
             return redirect()->to('karyawan/transaksi_simpanan')->with('error', 'Anggota tidak ditemukan.');
         }
 
-        // Ambil riwayat transaksi simpanan tanpa pengelompokan per tanggal
+        // Ambil riwayat transaksi simpanan
         $riwayat = $transaksiDetailModel
-            ->select("
-            transaksi_simpanan_detail.id_detail,
-            transaksi_simpanan_detail.id_transaksi_simpanan,
-            transaksi_simpanan_detail.setor as total_setor,
-            transaksi_simpanan_detail.tarik as total_tarik,
-            transaksi_simpanan_detail.saldo_akhir as total_saldo,
-            transaksi_simpanan_detail.created_at as tanggal, 
-            jenis_simpanan.nama_simpanan
-        ")
+            ->select("DATE(transaksi_simpanan_detail.created_at) as tanggal,
+            SUM(CASE WHEN jenis_simpanan.nama_simpanan = 'Simpanan Wajib' THEN transaksi_simpanan_detail.setor ELSE 0 END) as setor_sw,
+            SUM(CASE WHEN jenis_simpanan.nama_simpanan = 'Simpanan Wajib' THEN transaksi_simpanan_detail.tarik ELSE 0 END) as tarik_sw,
+            SUM(CASE WHEN jenis_simpanan.nama_simpanan = 'Simpanan Wajib Pokok' THEN transaksi_simpanan_detail.setor ELSE 0 END) as setor_swp,
+            SUM(CASE WHEN jenis_simpanan.nama_simpanan = 'Simpanan Wajib Pokok' THEN transaksi_simpanan_detail.tarik ELSE 0 END) as tarik_swp,
+            SUM(CASE WHEN jenis_simpanan.nama_simpanan = 'Simpanan Sukarela' THEN transaksi_simpanan_detail.setor ELSE 0 END) as setor_ss,
+            SUM(CASE WHEN jenis_simpanan.nama_simpanan = 'Simpanan Sukarela' THEN transaksi_simpanan_detail.tarik ELSE 0 END) as tarik_ss,
+            SUM(CASE WHEN jenis_simpanan.nama_simpanan = 'Simpanan Pokok' THEN transaksi_simpanan_detail.setor ELSE 0 END) as setor_sp,
+            SUM(CASE WHEN jenis_simpanan.nama_simpanan = 'Simpanan Pokok' THEN transaksi_simpanan_detail.tarik ELSE 0 END) as tarik_sp")
             ->join('jenis_simpanan', 'jenis_simpanan.id_jenis_simpanan = transaksi_simpanan_detail.id_jenis_simpanan')
             ->whereIn('transaksi_simpanan_detail.id_transaksi_simpanan', function ($builder) use ($id_anggota) {
                 return $builder->select('id_transaksi_simpanan')
                     ->from('transaksi_simpanan')
                     ->where('id_anggota', $id_anggota);
             })
-            ->orderBy('transaksi_simpanan_detail.created_at', 'DESC')
+            ->groupBy('tanggal')
+            ->orderBy('tanggal', 'DESC')
             ->findAll();
+
+        // Hitung saldo berjalan
+        $saldo = clone $saldo_awal; // Buat salinan saldo awal
+        foreach ($riwayat as &$row) {
+            $row->saldo_sw = $saldo->sw + $row->setor_sw - $row->tarik_sw;
+            $row->saldo_swp = $saldo->swp + $row->setor_swp - $row->tarik_swp;
+            $row->saldo_ss = $saldo->ss + $row->setor_ss - $row->tarik_ss;
+            $row->saldo_sp = $saldo->sp + $row->setor_sp - $row->tarik_sp;
+
+            // Perbarui saldo berjalan
+            $saldo->sw = $row->saldo_sw;
+            $saldo->swp = $row->saldo_swp;
+            $saldo->ss = $row->saldo_ss;
+            $saldo->sp = $row->saldo_sp;
+        }
 
         return view('karyawan/transaksi_simpanan/detail', [
             'anggota' => $anggota,
-            'riwayat' => $riwayat
+            'riwayat' => $riwayat,
+            'saldo_awal' => $saldo_awal,
+            'saldo_akhir' => $saldo
         ]);
     }
+
+
 
     public function simpan()
     {
