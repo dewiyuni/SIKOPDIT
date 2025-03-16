@@ -15,6 +15,7 @@ class TransaksiSimpanan extends Controller
     protected $detailModel;
     protected $anggotaModel;
     protected $jenisSimpananModel;
+    protected $db;
 
     public function __construct()
     {
@@ -22,6 +23,7 @@ class TransaksiSimpanan extends Controller
         $this->detailModel = new TransaksiSimpananDetailModel();
         $this->anggotaModel = new AnggotaModel();
         $this->jenisSimpananModel = new JenisSimpananModel();
+        $this->db = \Config\Database::connect();
     }
 
     public function index()
@@ -375,8 +377,6 @@ class TransaksiSimpanan extends Controller
         ]);
     }
 
-
-
     public function simpan()
     {
         $transaksiModel = new TransaksiSimpananModel();
@@ -394,7 +394,71 @@ class TransaksiSimpanan extends Controller
             return redirect()->to('/transaksi-simpanan')->with('error', 'Gagal menyimpan transaksi.');
         }
     }
+    public function edit($id_transaksi_simpanan)
+    {
+        $transaksi = $this->transaksiModel->where('id_transaksi_simpanan', $id_transaksi_simpanan)->first();
+        if (!$transaksi) {
+            return redirect()->to('karyawan/transaksi_simpanan')->with('error', 'Data tidak ditemukan');
+        }
 
+        // Ambil semua detail transaksi simpanan
+        $details = $this->detailModel
+            ->where('id_transaksi_simpanan', $id_transaksi_simpanan)
+            ->findAll();
+
+        // Ubah menjadi array asosiatif berdasarkan id_jenis_simpanan
+        $detailData = [];
+        foreach ($details as $detail) {
+            $detailData[$detail->id_jenis_simpanan] = $detail;
+        }
+
+        $data = [
+            'title' => 'Edit Transaksi Simpanan',
+            'transaksi' => $transaksi,
+            'details' => $detailData, // Kirim array detail
+        ];
+
+        return view('karyawan/transaksi_simpanan/edit', $data);
+    }
+    // Method untuk update transaksi simpanan
+    public function update($id)
+    {
+        $transaksi = $this->transaksiModel->find($id);
+
+        if (!$transaksi) {
+            return redirect()->back()->with('error', 'Transaksi tidak ditemukan.');
+        }
+
+        foreach (['SW', 'SWP', 'SS', 'SP'] as $jenis) {
+            if ($this->request->getPost('edit_' . strtolower($jenis))) {
+                $id_detail = $this->request->getPost('id_detail_' . strtolower($jenis));
+                $setor = $this->request->getPost('setor_' . strtolower($jenis));
+                $tarik = $this->request->getPost('tarik_' . strtolower($jenis));
+
+                $this->detailModel->update($id_detail, [
+                    'setor' => $setor,
+                    'tarik' => $tarik,
+                ]);
+            }
+        }
+
+        return redirect()->to('karyawan/transaksi_simpanan')->with('success', 'Transaksi diperbarui.');
+    }
+    public function delete($id_detail)
+    {
+        $id_detail = (int) $id_detail; // Pastikan integer
+
+        // Cek apakah id_detail ada
+        $detail = $this->detailModel->find($id_detail);
+        if (!$detail) {
+            return redirect()->to('karyawan/transaksi_simpanan')->with('error', 'Detail transaksi tidak ditemukan.');
+        }
+
+        // Hapus hanya satu detail transaksi
+        $this->detailModel->delete($id_detail);
+
+        return redirect()->to('karyawan/transaksi_simpanan')->with('success', 'Detail transaksi berhasil dihapus.');
+    }
 
     // ==================== Jenis simpanan ==================================== 
     public function jenisSimpanan()
