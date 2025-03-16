@@ -83,6 +83,9 @@ $routes->post('api/updateKas', 'JurnalKasController::updateKas');
 $routes->post('admin/jurnal_harian', 'JurnalKasController::create');
 $routes->post('admin/jurnal_kas_harian/simpan', 'JurnalKasController::simpan');
 // $routes->match(['put', 'post'], 'jurnal_/updateKas', 'JurnalKasController::updateKas');
+
+$routes->put('admin/jurnal_kas_harian/update', 'JurnalKasController::update');
+
 $routes->get('admin/jurnal_neraca/jurnal_kas_harian', 'JurnalKasController::index');
 $routes->get('jurnal_neraca', 'JurnalKasController::getData'); // Menampilkan semua data
 $routes->post('jurnal_neraca/create', 'JurnalKasController::createKas'); // Menambah data

@@ -103,61 +103,44 @@ class JurnalKasController extends ResourceController
 
     public function simpan()
     {
-        $data = $this->request->getJSON();
+        $json = $this->request->getJSON(true);
+        $model = new JurnalKasModel();
 
-        log_message('debug', print_r($data, true));
+        $success = 0;
+        $failed = 0;
 
-        if (!is_array($data) || empty($data)) {
-            return $this->respond([
-                'status' => 'error',
-                'message' => 'Format data tidak valid atau kosong'
-            ], 400);
-        }
-
-        log_message('debug', 'Data diterima: ' . json_encode($data));
-
-        foreach ($data as $row) {
-            $tanggal = isset($row->tanggal) ? trim($row->tanggal) : null;
-            $uraian = isset($row->uraian) ? trim($row->uraian) : null;
-            $jumlah = isset($row->jumlah) ? floatval($row->jumlah) : null;
-            $kategori = isset($row->kategori) ? trim($row->kategori) : null;
-
-            // Validasi input
-            if (empty($tanggal) || empty($uraian) || empty($kategori) || !isset($jumlah)) {
-                continue; // Lewati jika ada data kosong
-            }
-
-            // Format tanggal ke `Y-m-d`
-            $tanggal = date('Y-m-d', strtotime($tanggal));
-
-            log_message('debug', "Menyimpan: $tanggal - $uraian - $jumlah - $kategori");
-
-            // Cek apakah data sudah ada
-            $existingData = $this->jurnalkasModel->where([
-                'tanggal' => $tanggal,
-                'uraian' => $uraian,
-                'kategori' => $kategori
-            ])->first();
-
-            if ($existingData) {
-                log_message('debug', 'Update Data: ' . json_encode($row));
-                $this->jurnalkasModel->update($existingData['id'], ['jumlah' => $jumlah]);
+        foreach ($json as $item) {
+            // If ID exists, update existing record
+            if (!empty($item['id'])) {
+                $result = $model->update($item['id'], [
+                    'tanggal' => $item['tanggal'],
+                    'uraian' => $item['uraian'],
+                    'jumlah' => $item['jumlah'],
+                    'kategori' => $item['kategori']
+                ]);
             } else {
-                log_message('debug', 'Insert Data: ' . json_encode($row));
-                $this->jurnalkasModel->insert([
-                    'tanggal' => $tanggal,
-                    'uraian' => $uraian,
-                    'kategori' => $kategori,
-                    'jumlah' => $jumlah
+                // Otherwise insert new record
+                $result = $model->insert([
+                    'tanggal' => $item['tanggal'],
+                    'uraian' => $item['uraian'],
+                    'jumlah' => $item['jumlah'],
+                    'kategori' => $item['kategori']
                 ]);
             }
+
+            if ($result) {
+                $success++;
+            } else {
+                $failed++;
+            }
         }
 
-        return $this->respond([
-            'status' => 'success',
-            'message' => 'Data berhasil disimpan'
+        return $this->response->setJSON([
+            'status' => ($failed == 0) ? 'success' : 'partial',
+            'message' => "Berhasil menyimpan $success data" . ($failed > 0 ? ", gagal menyimpan $failed data" : "")
         ]);
     }
+
 
 
     private function saveOrUpdateKas($row, $kategori, $jumlah)
@@ -173,42 +156,37 @@ class JurnalKasController extends ResourceController
 
     public function update($id = null)
     {
+        // Check if the ID is provided
         if ($id === null) {
-            return $this->failValidationErrors('ID tidak boleh kosong');
+            return $this->response->setJSON(['status' => 'error', 'message' => 'ID tidak boleh kosong.']);
         }
 
-        $dataLama = $this->jurnalkasModel->find($id);
-        if (!$dataLama) {
-            return $this->failNotFound('Data tidak ditemukan');
+        $json = $this->request->getJSON(true); // Get JSON data as an array
+
+        // Validate input data
+        if (empty($json['tanggal']) || empty($json['uraian']) || empty($json['jumlah']) || empty($json['kategori'])) {
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Data tidak lengkap.']);
         }
 
-        $dataBaru = $this->request->getJSON(true);
+        // Prepare data for update
+        $data = [
+            'tanggal' => $json['tanggal'],
+            'uraian' => $json['uraian'],
+            'jumlah' => $json['jumlah'],
+            'kategori' => $json['kategori']
+        ];
 
-        $tanggal = isset($dataBaru->tanggal) ? trim($dataBaru->tanggal) : null;
-        $uraian = isset($dataBaru->uraian) ? trim($dataBaru->uraian) : null;
-        $kategori = isset($dataBaru->kategori) ? trim($dataBaru->kategori) : null;
-        $jumlah = isset($dataBaru->jumlah) ? (float) $dataBaru->jumlah : null;
+        // Update the record in the database
+        $updated = $this->jurnalkasModel->update($id, $data);
 
-        if (empty($tanggal) || empty($uraian) || empty($kategori) || $jumlah === null) {
-            return $this->failValidationErrors('Semua field harus diisi');
-        }
-
-        // Pastikan format tanggal benar
-        $tanggal = date('Y-m-d', strtotime($tanggal));
-
-        try {
-            $this->jurnalkasModel->update($id, [
-                'tanggal' => $tanggal,
-                'uraian' => $uraian,
-                'kategori' => $kategori,
-                'jumlah' => $jumlah
-            ]);
-            return $this->respondUpdated([
-                'status' => 'success',
-                'message' => 'Data berhasil diperbarui'
-            ]);
-        } catch (\Exception $e) {
-            return $this->failServerError('Terjadi kesalahan saat memperbarui data: ' . $e->getMessage());
+        // Check if the update was successful
+        if ($updated) {
+            return $this->response->setJSON(['status' => 'success', 'message' => 'Data berhasil diperbarui.']);
+        } else {
+            // Log the error
+            log_message('error', 'Failed to update record with ID: ' . $id);
+            log_message('error', 'Data: ' . json_encode($data));
+            return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal memperbarui data.']);
         }
     }
 
