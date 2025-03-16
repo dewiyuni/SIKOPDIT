@@ -14,9 +14,6 @@
 
         <!-- Divider -->
         <hr class="sidebar-divider my-0">
-
-
-
         <!-- Divider -->
         <hr class="sidebar-divider">
 
@@ -27,17 +24,31 @@
                 <a class="nav-link" href="/admin/dashboard">🏠 <span>Dashboard</span></a>
             </li>
             <li class="nav-item">
-                <a class="nav-link" href="/admin/anggota">👬 <span>Kelola Anggota</span></a>
+                <a class="nav-link" href="/admin/jenis_simpanan">💰 <span>Jenis Simpanan</span></a>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" href="/admin/kelola_pengguna">📋 <span>Kelola Karyawan</span></a>
+
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="kelolaUserDropdown" role="button" data-bs-toggle="dropdown"
+                    aria-expanded="false">
+                    👥 <span>Kelola User</span>
+                </a>
+                <ul class="dropdown-menu" aria-labelledby="kelolaUserDropdown">
+                    <li><a class="dropdown-item" href="/admin/anggota">👬 Kelola Anggota</a></li>
+                    <li><a class="dropdown-item" href="/admin/kelola_pengguna">📋 Kelola Karyawan</a></li>
+                </ul>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" href="/admin/jenis_simpanan">📋 <span>Jenis Simpanan</span></a>
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="jurnalKasDropdown" role="button" data-bs-toggle="dropdown"
+                    aria-expanded="false">
+                    📒 <span>Jurnal Kas Harian</span>
+                </a>
+                <ul class="dropdown-menu" aria-labelledby="jurnalKasDropdown">
+                    <li><a class="dropdown-item" href="/admin/jurnal_neraca/jurnal_kas_harian">📋 Semua Jurnal Kas</a></li>
+                    <li><a class="dropdown-item" href="/admin/jurnal_neraca/jurnal_kas_harian?sort=month">📅 Sort by
+                            Bulan</a></li>
+                </ul>
             </li>
-            <li class="nav-item">
-                <a class="nav-link" href="/admin/jurnal_neraca/jurnal_kas_harian">📋 <span>Jurnal Kas Harian</span></a>
-            </li>
+
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="neracaDropdown" role="button" data-bs-toggle="dropdown"
                     aria-expanded="false">
