@@ -11,7 +11,6 @@
         <div class="alert alert-danger"><?= session()->getFlashdata('error') ?></div>
     <?php endif; ?>
 
-    <!-- Informasi Anggota -->
     <div class="card mb-4">
         <div class="card-header bg-success text-white">
             <h5 class="mb-0">Informasi Anggota</h5>
@@ -33,9 +32,8 @@
             </div>
         </div>
     </div>
-
     <div class="card p-3 mb-4">
-        <div class="table-responsive">
+        <div style="overflow-x: auto;">
             <table class="table table-bordered table-hover">
                 <thead>
                     <tr class="bg-light">
@@ -148,13 +146,20 @@
                         <td class="text-end">
                             <?= $total_sp_tarik > 0 ? 'Rp ' . number_format($total_sp_tarik, 0, ',', '.') : '-' ?>
                         </td>
-                        <td class="text-end">Rp
-                            <?= number_format($total_sw_setor + $total_swp_setor + $total_ss_setor + $total_sp_setor, 0, ',', '.') ?>
-                        </td>
+                        <td class="text-end">Rp <?= number_format(
+                            ($total_sw_setor - $total_sw_tarik) +
+                            ($total_swp_setor - $total_swp_tarik) +
+                            ($total_ss_setor - $total_ss_tarik) +
+                            ($total_sp_setor - $total_sp_tarik),
+                            0,
+                            ',',
+                            '.'
+                        ) ?></td> <!-- Total saldo -->
                     </tr>
                 </tbody>
             </table>
         </div>
     </div>
+
 </div>
 <?= $this->endSection() ?>
