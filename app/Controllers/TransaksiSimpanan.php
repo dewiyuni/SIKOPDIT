@@ -324,12 +324,15 @@ class TransaksiSimpanan extends Controller
             $saldo->sp = $row->saldo_sp;
         }
 
+
         return view('karyawan/transaksi_simpanan/detail', [
             'anggota' => $anggota,
             'riwayat' => $riwayat,
             'saldo_awal' => $saldo_awal,
             'saldo_akhir' => $saldo
         ]);
+
+
     }
 
 
