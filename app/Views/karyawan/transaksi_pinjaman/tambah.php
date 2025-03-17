@@ -22,8 +22,8 @@
                 <select name="id_anggota" class="form-control" required>
                     <option value="" disabled selected>-- Pilih Anggota --</option>
                     <?php foreach ($anggota as $a): ?>
-                        <option value="<?= $a->id_anggota ?>" <?= old('id_anggota') == $a->id_anggota ? 'selected' : '' ?>>
-                            <?= $a->nama ?>
+                        <option value="<?= esc($a->id_anggota) ?>" <?= old('id_anggota') == $a->id_anggota ? 'selected' : '' ?>>
+                            <?= esc($a->nama) ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
@@ -52,7 +52,9 @@
 
             <div class="form-group">
                 <label for="jumlah_pinjaman">Besar Pinjaman</label>
-                <input type="number" name="jumlah_pinjaman" class="form-control" required min="1000"
+                <input type="text" id="jumlah_pinjaman" class="form-control" required oninput="formatRibuan(this)"
+                    autocomplete="off">
+                <input type="hidden" name="jumlah_pinjaman" id="jumlah_pinjaman_hidden"
                     value="<?= old('jumlah_pinjaman') ?>">
                 <?php if (session('errors.jumlah_pinjaman')): ?>
                     <small class="text-danger"><?= session('errors.jumlah_pinjaman') ?></small>
@@ -68,4 +70,15 @@
         </form>
     </div>
 </div>
+
+<script>
+    function formatRibuan(input) {
+        let angka = input.value.replace(/\D/g, ""); // Hapus semua non-angka
+        input.value = angka.replace(/\B(?=(\d{3})+(?!\d))/g, "."); // Tambah titik pemisah ribuan
+
+        // Simpan nilai asli tanpa titik ke input hidden untuk dikirim ke server
+        document.getElementById("jumlah_pinjaman_hidden").value = angka;
+    }
+</script>
+
 <?= $this->endSection() ?>

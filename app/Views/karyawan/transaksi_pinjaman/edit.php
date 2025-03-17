@@ -3,9 +3,11 @@
 <?= $this->section('content') ?>
 <div class="container">
     <div class="d-flex justify-content-between align-items-center">
-        <h3>Edit Pinjaman</h3>
-        <a href="<?= site_url('karyawan/transaksi_pinjaman/index') ?>" class="btn btn-warning">Kembali</a>
-
+        <h3>Edit Angsuran</h3>
+        <a href="<?= base_url('karyawan/transaksi_pinjaman/detail/' . $pinjaman->id_pinjaman) ?>"
+            class="btn btn-warning">
+            Kembali
+        </a>
     </div>
 
     <?php if (session()->getFlashdata('message')): ?>
@@ -15,29 +17,27 @@
     <?php endif; ?>
 
     <div class="card p-3">
-        <form action="<?= base_url('karyawan/transaksi_pinjaman/update/' . $pinjaman->id_pinjaman) ?>" method="post">
-            <label for="id_anggota">Nama Anggota</label>
-            <select name="id_anggota">
-                <?php foreach ($anggota as $a): ?>
-                    <option value="<?= $a->id_anggota ?>" <?= ($a->id_anggota == $pinjaman->id_anggota) ? 'selected' : '' ?>>
-                        <?= $a->nama ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-
-            <label for="tanggal_pinjaman">Tanggal Cair</label>
-            <input type="date" name="tanggal_pinjaman" value="<?= $pinjaman->tanggal_pinjaman ?>">
-
-            <label for="jangka_waktu">Jangka Waktu</label>
-            <input type="number" name="jangka_waktu" value="<?= $pinjaman->jangka_waktu ?>">
-
-            <label for="jumlah_pinjaman">Besar Pinjaman</label>
-            <input type="number" name="jumlah_pinjaman" value="<?= $pinjaman->jumlah_pinjaman ?>">
-
-            <label for="jaminan">Jaminan</label>
-            <input type="text" name="jaminan" value="<?= $pinjaman->jaminan ?>">
-
-            <button type="submit">Update</button>
+        <form action="<?= base_url('karyawan/transaksi_pinjaman/update/' . $angsuran->id_angsuran) ?>" method="post">
+            <div class="card p-3">
+                <table class="table table-bordered">
+                    <tr>
+                        <th>Tanggal Angsuran</th>
+                        <td>
+                            <input type="date" name="tanggal_angsuran" value="<?= $angsuran->tanggal_angsuran ?>"
+                                required>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Jumlah Angsuran</th>
+                        <td>
+                            <input type="number" name="jumlah_angsuran" value="<?= $angsuran->jumlah_angsuran ?>"
+                                required>
+                        </td>
+                    </tr>
+                </table>
+                <button type="submit" class="btn btn-success mt-3">Update</button>
+            </div>
         </form>
     </div>
-    <?= $this->endSection() ?>
+</div>
+<?= $this->endSection() ?>

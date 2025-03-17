@@ -83,7 +83,7 @@ class TransaksiSimpananModel extends Model
 
         // Pastikan saldo total tidak kurang dari Rp10.000 setelah transaksi
         if ($saldoBaru['saldo_total'] < 10000) {
-            return ['error' => 'Saldo total tidak boleh kurang dari Rp10.000.'];
+            return ['error' => 'Saldo total tidak boleh kurang dari Rp10.000'];
         }
 
         // Data transaksi utama
@@ -168,22 +168,19 @@ class TransaksiSimpananModel extends Model
             ->orderBy('tanggal', 'DESC')
             ->findAll();
     }
-
     public function getLatestTransaksiPerAnggota()
     {
-        $subQuery = $this->db->table('transaksi_simpanan ts1')
-            ->select('MAX(ts1.id_transaksi_simpanan) AS id_transaksi_simpanan')
-            ->groupBy('ts1.id_anggota');
-
-        return $this->db->table('transaksi_simpanan ts')
-            ->select('ts.*, a.nama AS nama_anggota, a.no_ba, 
-                      COALESCE(SUM(td.setor), 0) AS total_setor, 
-                      COALESCE(SUM(td.tarik), 0) AS total_tarik')
-            ->join('anggota a', 'a.id_anggota = ts.id_anggota', 'left')
-            ->join('transaksi_simpanan_detail td', 'td.id_transaksi_simpanan = ts.id_transaksi_simpanan', 'left')
-            ->join("({$subQuery->getCompiledSelect()}) latest_ts", 'latest_ts.id_transaksi_simpanan = ts.id_transaksi_simpanan', 'inner')
-            ->groupBy('ts.id_transaksi_simpanan, a.nama, a.no_ba, ts.tanggal')
-            ->orderBy('ts.tanggal', 'DESC')
+        return $this->db->table('transaksi_simpanan t1')
+            ->select('a.nama, a.no_ba, 
+                      t1.saldo_sw, t1.saldo_swp, t1.saldo_ss, t1.saldo_sp,
+                      (t1.saldo_sw + t1.saldo_swp + t1.saldo_ss + t1.saldo_sp) AS saldo_total,
+                      a.id_anggota')
+            ->join('anggota a', 'a.id_anggota = t1.id_anggota', 'left')
+            ->join(
+                '(SELECT id_anggota, MAX(updated_at) AS max_date FROM transaksi_simpanan GROUP BY id_anggota) t2',
+                't1.id_anggota = t2.id_anggota AND t1.updated_at = t2.max_date',
+                'inner'
+            )
             ->get()
             ->getResult();
     }

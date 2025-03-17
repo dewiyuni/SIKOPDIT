@@ -23,6 +23,7 @@
                         <th>No BA</th>
                         <th>Tanggal Cair</th>
                         <th>Jangka Waktu</th>
+                        <th>Jasa</th>
                         <th>Besar Pinjaman</th>
                         <th>Saldo Terakhir</th>
                         <th>Jaminan</th>
@@ -40,14 +41,18 @@
                                 <td><?= isset($row->tanggal_pinjaman) ? date('d M Y', strtotime($row->tanggal_pinjaman)) : '-' ?>
                                 </td>
                                 <td><?= esc($row->jangka_waktu ?? '-') ?> bulan</td>
+                                <td>2,5%</td>
                                 <td>Rp <?= number_format($row->jumlah_pinjaman ?? 0, 0, ',', '.') ?></td>
                                 <td>Rp <?= number_format($row->saldo_terakhir ?? 0, 0, ',', '.') ?></td>
                                 <td><?= esc($row->jaminan ?? '-') ?></td>
+
                                 <td>
                                     <a href="<?= base_url('karyawan/transaksi_pinjaman/detail/' . $row->id_pinjaman) ?>"
                                         class="btn btn-info btn-sm">Detail</a>
                                     <a href="<?= base_url('karyawan/transaksi_pinjaman/tambahAngsuran/' . $row->id_pinjaman) ?>"
                                         class="btn btn-warning btn-sm">Tambah Angsuran</a>
+                                </td>
+
                                 </td>
                             </tr>
                         <?php endforeach; ?>

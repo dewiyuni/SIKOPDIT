@@ -31,40 +31,57 @@
         </div>
     </div>
 
-
     <div class="card p-3 mt-3">
-        <h4>Riwayat Angsuran</h4>
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>No</th>
-                    <th>Tanggal</th>
-                    <th>Saldo Awal</th>
-                    <th>Angsuran</th>
-                    <th>Saldo Akhir</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (!empty($angsuran)): ?>
-                    <?php $no = 1;
-                    foreach ($angsuran as $row): ?>
-                        <tr>
-                            <td><?= $no++ ?></td>
-                            <td><?php echo date('d M Y', strtotime($row->tanggal_angsuran)); ?></td>
-                            <td>Rp <?= number_format($row->sisa_pinjaman + $row->jumlah_angsuran, 0, ',', '.') ?></td>
-                            <td>Rp <?= number_format($row->jumlah_angsuran, 0, ',', '.') ?></td>
-                            <td>Rp <?= number_format($row->sisa_pinjaman, 0, ',', '.') ?></td>
-                        </tr>
-                    <?php endforeach; ?>
-                <?php else: ?>
+        <div style="overflow-x: auto;">
+            <h4>Riwayat Angsuran</h4>
+            <table class="table table-bordered table-hover">
+                <thead>
                     <tr>
-                        <td colspan="5" class="text-center">Belum ada angsuran</td>
+                        <th>No</th>
+                        <th>Tanggal</th>
+                        <th>Saldo Awal</th>
+                        <th>Angsuran</th>
+                        <th>Saldo Akhir</th>
+                        <th>Aksi</th>
                     </tr>
-                <?php endif; ?>
-            </tbody>
+                </thead>
+                <tbody>
+                    <?php if (!empty($angsuran)): ?>
+                        <?php $no = 1;
+                        $saldo_awal = $pinjaman->jumlah_pinjaman; ?>
+                        <?php foreach ($angsuran as $row): ?>
+                            <tr>
+                                <td><?= $no++ ?></td>
+                                <td><?= date('d M Y', strtotime($row->tanggal_angsuran)) ?></td>
 
-        </table>
+                                <!-- Menampilkan Saldo Awal -->
+                                <td>Rp <?= number_format($saldo_awal, 0, ',', '.') ?></td>
+
+                                <!-- Menampilkan Angsuran -->
+                                <td>Rp <?= number_format($row->jumlah_angsuran, 0, ',', '.') ?></td>
+
+                                <!-- Menampilkan Saldo Akhir: Saldo awal dikurangi dengan angsuran -->
+                                <td>Rp <?= number_format($saldo_awal - $row->jumlah_angsuran, 0, ',', '.') ?></td>
+
+                                <td>
+                                    <a href="<?= base_url('karyawan/transaksi_pinjaman/edit/' . $row->id_angsuran) ?>"
+                                        class="btn btn-warning btn-sm">Edit</a>
+
+                                    <a href="<?= base_url('karyawan/transaksi_pinjaman/delete/' . $row->id_angsuran) ?>"
+                                        onclick="return confirm('Apakah Anda yakin ingin menghapus angsuran ini?')"
+                                        class="btn btn-danger btn-sm">Hapus</a>
+                                </td>
+                            </tr>
+                            <?php $saldo_awal -= $row->jumlah_angsuran; ?> <!-- Update saldo awal setelah angsuran -->
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="6" class="text-center">Belum ada angsuran</td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
     </div>
-</div>
 </div>
 <?= $this->endSection() ?>

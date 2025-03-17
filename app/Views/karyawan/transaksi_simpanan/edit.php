@@ -36,8 +36,8 @@
                 <?php foreach ($jenis_simpanan as $nama => $id): ?>
                     <?php
                     $detail = isset($details[$id]) ? $details[$id] : null;
-                    $setor = $detail ? $detail->setor : 0;
-                    $tarik = $detail ? $detail->tarik : 0;
+                    $setor = $detail ? intval($detail->setor) : 0;
+                    $tarik = $detail ? intval($detail->tarik) : 0;
                     $id_detail = $detail ? $detail->id_detail : '';
                     ?>
                     <div class="row mt-3">
@@ -48,13 +48,13 @@
                         </div>
                         <div class="col-md-6">
                             <label class="form-label"><?= $nama ?> Setor</label>
-                            <input type="number" name="setor_<?= strtolower($nama) ?>" class="form-control"
-                                value="<?= esc($setor) ?>" min="0" disabled>
+                            <input type="text" name="setor_<?= strtolower($nama) ?>" class="form-control format-number"
+                                value="<?= number_format($setor, 0, ',', '.') ?>" min="0" disabled>
                         </div>
                         <div class="col-md-6">
                             <label class="form-label"><?= $nama ?> Tarik</label>
-                            <input type="number" name="tarik_<?= strtolower($nama) ?>" class="form-control"
-                                value="<?= esc($tarik) ?>" min="0" disabled>
+                            <input type="text" name="tarik_<?= strtolower($nama) ?>" class="form-control format-number"
+                                value="<?= number_format($tarik, 0, ',', '.') ?>" min="0" disabled>
                         </div>
                     </div>
                     <input type="hidden" name="id_detail_<?= strtolower($nama) ?>" value="<?= esc($id_detail) ?>">
@@ -78,6 +78,17 @@
                 tarikInput.disabled = !this.checked;
             });
         <?php endforeach; ?>
+
+        // Format input secara otomatis saat diketik
+        document.querySelectorAll('.format-number').forEach(function (input) {
+            input.addEventListener('input', function () {
+                this.value = formatRupiah(this.value);
+            });
+        });
+
+        function formatRupiah(angka) {
+            return angka.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+        }
     });
 </script>
 <?= $this->endSection() ?>

@@ -25,16 +25,14 @@ class TransaksiSimpanan extends Controller
         $this->jenisSimpananModel = new JenisSimpananModel();
         $this->db = \Config\Database::connect();
     }
-
     public function index()
     {
-        $transaksiModel = new TransaksiSimpananModel();
-
-        // Pastikan metode mengembalikan data yang benar
-        $data['transaksi'] = $transaksiModel->getLatestTransaksiPerAnggota();
+        $data['transaksi'] = $this->transaksiModel->getLatestTransaksiPerAnggota();
 
         return view('karyawan/transaksi_simpanan/index', $data);
+        // Saldo awal
     }
+
     public function create()
     {
         $data['anggota'] = $this->anggotaModel->findAll();
@@ -141,6 +139,16 @@ class TransaksiSimpanan extends Controller
         $id_anggota = $this->request->getPost('id_anggota');
         $tarik_ss = $this->request->getPost('tarik_ss');
 
+        // Validasi input tidak boleh kosong
+        if (!$id_anggota || !$tarik_ss) {
+            return redirect()->back()->with('error', 'Data tidak lengkap. Pastikan semua field diisi.')->withInput();
+        }
+
+        // Pastikan input adalah angka positif
+        if (!is_numeric($tarik_ss) || $tarik_ss <= 0) {
+            return redirect()->back()->with('error', 'Jumlah penarikan harus lebih dari 0.')->withInput();
+        }
+
         // Ambil ID Jenis Simpanan dari database
         $jenis_simpanan = $this->jenisSimpananModel->where('nama_simpanan', 'Simpanan Sukarela')->first();
         if (!$jenis_simpanan) {
@@ -154,6 +162,7 @@ class TransaksiSimpanan extends Controller
         if ($transaksi) {
             $id_transaksi_simpanan = $transaksi->id_transaksi_simpanan;
             $saldo_ss = $transaksi->saldo_ss;
+            $saldo_total = $transaksi->saldo_total;
         } else {
             // Jika tidak ada transaksi, buat transaksi baru dengan saldo awal 0
             $this->transaksiModel->insert([
@@ -167,11 +176,17 @@ class TransaksiSimpanan extends Controller
 
             $id_transaksi_simpanan = $this->transaksiModel->insertID();
             $saldo_ss = 0;
+            $saldo_total = 0;
         }
 
         // Cek apakah saldo mencukupi sebelum melanjutkan transaksi
         if ($tarik_ss > $saldo_ss) {
             return redirect()->back()->with('error', 'Saldo Simpanan Sukarela tidak mencukupi.');
+        }
+
+        // Cek apakah saldo total tidak menjadi negatif
+        if (($saldo_total - $tarik_ss) < 0) {
+            return redirect()->back()->with('error', 'Saldo total tidak mencukupi.');
         }
 
         // Insert transaksi detail untuk penarikan
@@ -189,11 +204,12 @@ class TransaksiSimpanan extends Controller
         // Update saldo di transaksi_simpanan
         $this->transaksiModel->update($id_transaksi_simpanan, [
             'saldo_ss' => $saldo_ss - $tarik_ss,
-            'saldo_total' => ($saldo_ss - $tarik_ss)
+            'saldo_total' => $saldo_total - $tarik_ss
         ]);
 
         return redirect()->to('karyawan/transaksi_simpanan')->with('success', 'Penarikan berhasil dilakukan.');
     }
+
 
     public function proses()
     {
@@ -446,7 +462,7 @@ class TransaksiSimpanan extends Controller
     }
     public function delete($id_detail)
     {
-        $id_detail = (int) $id_detail; // Pastikan integer
+        $id_detail = (int) $id_detail;
 
         // Cek apakah id_detail ada
         $detail = $this->detailModel->find($id_detail);
@@ -454,11 +470,24 @@ class TransaksiSimpanan extends Controller
             return redirect()->to('karyawan/transaksi_simpanan')->with('error', 'Detail transaksi tidak ditemukan.');
         }
 
-        // Hapus hanya satu detail transaksi
-        $this->detailModel->delete($id_detail);
+        $this->db->transStart();
 
-        return redirect()->to('karyawan/transaksi_simpanan')->with('success', 'Detail transaksi berhasil dihapus.');
+        try {
+            $this->detailModel->delete($id_detail);
+
+            $this->db->transComplete();
+
+            if ($this->db->transStatus() === false) {
+                throw new \Exception("Gagal menghapus detail transaksi.");
+            }
+
+            return redirect()->to('karyawan/transaksi_simpanan')->with('success', 'Detail transaksi berhasil dihapus.');
+        } catch (\Exception $e) {
+            $this->db->transRollback();
+            return redirect()->to('karyawan/transaksi_simpanan')->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
     }
+
 
     // ==================== Jenis simpanan ==================================== 
     public function jenisSimpanan()

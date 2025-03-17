@@ -2,11 +2,12 @@
 
 namespace App\Controllers;
 
-use App\Models\TransaksiPinjamanModel;
-use App\Models\TransaksiSimpananModel;
+use CodeIgniter\Controller;
 use App\Models\AnggotaModel;
 use App\Models\AngsuranModel;
-use CodeIgniter\Controller;
+use CodeIgniter\Database\RawSql;
+use App\Models\TransaksiPinjamanModel;
+use App\Models\TransaksiSimpananModel;
 
 
 class TransaksiPinjaman extends BaseController
@@ -105,14 +106,12 @@ class TransaksiPinjaman extends BaseController
             $swp = $jumlah_pinjaman * 0.025;
 
             // Pastikan model transaksi simpanan sudah dideklarasikan sebelumnya
-            if (!isset($this->transaksiSimpananModel)) {
-                throw new \Exception("Model TransaksiSimpananModel belum di-load.");
+            if (method_exists($this->transaksiSimpananModel, 'updateSaldoSWP')) {
+                $this->transaksiSimpananModel->updateSaldoSWP($id_anggota, $swp);
+            } else {
+                throw new \Exception("Method updateSaldoSWP tidak ditemukan.");
             }
 
-            // Update saldo SWP
-            $this->transaksiSimpananModel->updateSaldoSWP($id_anggota, $swp);
-
-            // Selesaikan transaksi
             $this->db->transComplete();
 
             if ($this->db->transStatus() === false) {
@@ -121,60 +120,133 @@ class TransaksiPinjaman extends BaseController
 
             return redirect()->to('/karyawan/transaksi_pinjaman/')->with('success', 'Pinjaman berhasil ditambahkan.');
         } catch (\Exception $e) {
-            // Rollback jika terjadi kesalahan
             $this->db->transRollback();
             log_message('error', 'Error saat menyimpan pinjaman: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
-
-    public function edit($id)
+    public function edit($id_angsuran)
     {
-        $pinjaman = $this->transaksiPinjamanModel
-            ->select('transaksi_pinjaman.*, anggota.nama')
-            ->join('anggota', 'anggota.id_anggota = transaksi_pinjaman.id_anggota')
-            ->where('transaksi_pinjaman.id_pinjaman', $id)
-            ->first();
+        $pinjamanModel = new transaksiPinjamanModel();
+        $angsuranModel = new AngsuranModel();
 
-        if (!$pinjaman) {
-            return redirect()->to('/pinjaman')->with('error', 'Data pinjaman tidak ditemukan.');
+        // Cari data angsuran berdasarkan id_angsuran
+        $angsuran = $angsuranModel->find($id_angsuran);
+        if (!$angsuran) {
+            return redirect()->to('/karyawan/transaksi_pinjaman')->with('error', 'Angsuran tidak ditemukan.');
         }
 
-        return view('pinjaman/edit', ['pinjaman' => $pinjaman]);
+        // Cari pinjaman berdasarkan id_pinjaman dari angsuran yang dipilih
+        $data['pinjaman'] = $pinjamanModel->find($angsuran->id_pinjaman);
+        $data['angsuran'] = $angsuran; // Hanya kirim satu angsuran, bukan findAll()
+
+        if (!$data['pinjaman']) {
+            return redirect()->to('/karyawan/transaksi_pinjaman/detail')->with('error', 'Pinjaman tidak ditemukan.');
+        }
+
+        return view('karyawan/transaksi_pinjaman/edit', $data);
     }
 
-    public function update($id)
+    public function update($id_angsuran)
     {
+        $angsuranModel = new AngsuranModel();
+
+        // Pastikan id_angsuran valid
+        $angsuran = $angsuranModel->find($id_angsuran);
+        if (!$angsuran) {
+            return redirect()->back()->with('error', 'Angsuran tidak ditemukan.');
+        }
+
         $data = [
-            'jumlah_pinjaman' => $this->request->getPost('jumlah_pinjaman'),
-            'jangka_waktu' => $this->request->getPost('jangka_waktu'),
-            'bunga' => $this->request->getPost('bunga'),
-            'jaminan' => $this->request->getPost('jaminan'),
-            'status' => $this->request->getPost('status'),
+            'tanggal_angsuran' => $this->request->getPost('tanggal_angsuran'),
+            'jumlah_angsuran' => $this->request->getPost('jumlah_angsuran'),
         ];
 
-        $this->transaksiPinjamanModel->update($id, $data);
-        return redirect()->to('/pinjaman')->with('success', 'Data pinjaman berhasil diperbarui.');
+        // Update hanya jika data tidak kosong
+        if (!empty($data['tanggal_angsuran']) && !empty($data['jumlah_angsuran'])) {
+            $angsuranModel->update($id_angsuran, $data);
+            return redirect()->to('/karyawan/transaksi_pinjaman/detail/' . $angsuran->id_pinjaman)
+                ->with('success', 'Data angsuran berhasil diperbarui.');
+        } else {
+            return redirect()->back()->with('error', 'Data tidak valid atau kosong.');
+        }
     }
 
-    public function delete($id)
+
+    public function delete($id_angsuran)
     {
-        if (!$this->transaksiPinjamanModel->find($id)) {
-            return redirect()->to('/pinjaman')->with('error', 'Data pinjaman tidak ditemukan.');
+        $id_angsuran = (int) $id_angsuran; // Konversi ke integer
+
+        // Cek apakah angsuran ada dalam database
+        $angsuran = $this->angsuranModel->find($id_angsuran);
+        if (!$angsuran) {
+            return redirect()->to('karyawan/transaksi_pinjaman')->with('error', 'Data angsuran tidak ditemukan.');
         }
 
-        $this->transaksiPinjamanModel->delete($id);
-        return redirect()->to('/pinjaman')->with('success', 'Data pinjaman berhasil dihapus.');
-    }
+        // Mulai transaksi database
+        $this->db->transStart();
 
+        try {
+            // Ambil data pinjaman terkait
+            $pinjaman = $this->transaksiPinjamanModel->find($angsuran->id_pinjaman);
+            if (!$pinjaman) {
+                throw new \Exception("Pinjaman terkait tidak ditemukan.");
+            }
+
+            // Update saldo pinjaman setelah angsuran dihapus
+            $this->transaksiPinjamanModel->update($pinjaman->id_pinjaman, [
+                'saldo_terakhir' => $pinjaman->saldo_terakhir + $angsuran->jumlah_angsuran
+            ]);
+
+            // Hapus data angsuran
+            $this->angsuranModel->delete($id_angsuran);
+
+            // Selesaikan transaksi
+            $this->db->transComplete();
+
+            if ($this->db->transStatus() === false) {
+                throw new \Exception("Gagal menghapus angsuran.");
+            }
+
+            return redirect()->to('karyawan/transaksi_pinjaman')->with('success', 'Angsuran berhasil dihapus.');
+        } catch (\Exception $e) {
+            $this->db->transRollback();
+            return redirect()->to('karyawan/transaksi_pinjaman')->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
+    }
     public function detail($id)
     {
         $model = new TransaksiPinjamanModel();
-        $data['pinjaman'] = $model->getDataById($id);
-        $data['angsuran'] = $model->getAngsuranByPinjaman($id);
 
-        return view('karyawan/transaksi_pinjaman/detail', $data);
+        try {
+            // Ambil data pinjaman berdasarkan ID
+            $pinjaman = $model->getDataById($id);
+
+            // Jika data pinjaman tidak ditemukan, tampilkan error 404
+            if (!$pinjaman) {
+                return redirect()->to('karyawan/transaksi_pinjaman')->with('error', 'Data pinjaman tidak ditemukan.');
+            }
+
+            // Ambil data angsuran berdasarkan ID pinjaman
+            $angsuran = $model->getAngsuranByPinjaman($id);
+
+            // Jika tidak ada data angsuran
+            if (!$angsuran) {
+                return redirect()->to('karyawan/transaksi_pinjaman')->with('error', 'Tidak ada riwayat angsuran untuk pinjaman ini.');
+            }
+
+            // Kirim data ke tampilan
+            return view('karyawan/transaksi_pinjaman/detail', [
+                'pinjaman' => $pinjaman,
+                'angsuran' => $angsuran
+            ]);
+
+        } catch (\Exception $e) {
+            // Tangani kesalahan dan tampilkan pesan error
+            return redirect()->to('karyawan/transaksi_pinjaman')->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
     }
+
     public function tambahAngsuran($id_pinjaman)
     {
         // Memuat model
