@@ -49,15 +49,28 @@ class TransaksiPinjamanModel extends Model
     }
     public function getDataById($id)
     {
-        return $this->db->table('transaksi_pinjaman p')
+        $query = $this->db->table('transaksi_pinjaman p')
             ->select('p.*, a.nama, a.no_ba, 
-            COALESCE((SELECT sisa_pinjaman FROM angsuran WHERE id_pinjaman = p.id_pinjaman ORDER BY tanggal_angsuran DESC LIMIT 1), p.jumlah_pinjaman) AS saldo_terakhir,
-            (SELECT jumlah_angsuran FROM angsuran WHERE id_pinjaman = p.id_pinjaman ORDER BY tanggal_angsuran DESC LIMIT 1) AS angsuran_terakhir')
+        COALESCE((SELECT sisa_pinjaman FROM angsuran WHERE id_pinjaman = p.id_pinjaman ORDER BY tanggal_angsuran DESC LIMIT 1), p.jumlah_pinjaman) AS saldo_terakhir,
+        (SELECT jumlah_angsuran FROM angsuran WHERE id_pinjaman = p.id_pinjaman ORDER BY tanggal_angsuran DESC LIMIT 1) AS angsuran_terakhir')
             ->join('anggota a', 'p.id_anggota = a.id_anggota')
             ->where('p.id_pinjaman', $id)
-            ->get()
-            ->getRow();
+            ->get();
+
+        // Cek apakah query berhasil
+        if ($query === false) {
+            log_message('error', 'Query getDataById gagal dijalankan.');
+            return null;
+        }
+
+        $result = $query->getRow();
+        if (!$result) {
+            log_message('error', 'Data pinjaman dengan ID ' . $id . ' tidak ditemukan.');
+        }
+
+        return $result;
     }
+
 
     public function getAngsuranByPinjaman($id)
     {

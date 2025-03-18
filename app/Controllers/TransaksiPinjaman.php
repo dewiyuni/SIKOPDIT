@@ -103,7 +103,7 @@ class TransaksiPinjaman extends BaseController
             ]);
 
             // Perhitungan SWP (Simpanan Wajib Pinjaman)
-            $swp = $jumlah_pinjaman * 0.025;
+            $swp = $jumlah_pinjaman * 0.02;
 
             // Pastikan model transaksi simpanan sudah dideklarasikan sebelumnya
             if (method_exists($this->transaksiSimpananModel, 'updateSaldoSWP')) {
