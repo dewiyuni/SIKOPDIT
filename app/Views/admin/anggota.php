@@ -13,7 +13,10 @@
         </div>
     <?php endif; ?>
 
-    <div class="card p-3">
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">Anggota</h5>
+        </div>
         <div style="overflow-x: auto;">
             <table class="table table-bordered table-striped">
                 <thead>
@@ -51,10 +54,14 @@
                             </td>
                             <td>
                                 <a href="<?= site_url('admin/edit_anggota/' . $row->id_anggota) ?>"
-                                    class="btn btn-warning btn-sm">Edit</a>
+                                    class="btn btn-warning btn-sm">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
                                 <form action="<?= site_url('admin/hapus_anggota/' . $row->id_anggota) ?>" method="post"
                                     class="d-inline" onsubmit="return confirm('Yakin ingin menghapus anggota ini?');">
-                                    <button type="submit" class="btn btn-danger btn-sm">Hapus</button>
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        <i class="fas fa-trash"></i> Hapus
+                                    </button>
                                 </form>
                             </td>
                         </tr>

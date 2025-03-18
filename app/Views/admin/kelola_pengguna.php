@@ -15,7 +15,10 @@
         <div class="alert alert-danger"><?= session()->getFlashdata('error') ?></div>
     <?php endif; ?>
 
-    <div class="card p-3">
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">Karyawan</h5>
+        </div>
         <div style="overflow-x: auto;">
             <table class="table table-bordered table-striped">
                 <thead>
