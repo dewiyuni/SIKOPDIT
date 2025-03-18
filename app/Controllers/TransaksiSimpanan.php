@@ -290,15 +290,8 @@ class TransaksiSimpanan extends Controller
     public function detail($id_anggota)
     {
         $anggotaModel = new \App\Models\AnggotaModel();
+        $transaksiSimpananModel = new \App\Models\TransaksiSimpananModel();
         $transaksiDetailModel = new \App\Models\TransaksiSimpananDetailModel();
-
-        // Saldo awal sebagai objek
-        $saldo_awal = (object) [
-            'sw' => 75000,
-            'swp' => 0,
-            'ss' => 5000,
-            'sp' => 10000
-        ];
 
         // Ambil data anggota
         $anggota = $anggotaModel->find($id_anggota);
@@ -306,32 +299,56 @@ class TransaksiSimpanan extends Controller
             return redirect()->to('karyawan/transaksi_simpanan')->with('error', 'Anggota tidak ditemukan.');
         }
 
-        // Ambil riwayat transaksi simpanan - diubah untuk menampilkan per transaksi, bukan per hari
-        $riwayat_transaksi = $transaksiDetailModel
-            ->select("
-                transaksi_simpanan_detail.id_detail,
-                transaksi_simpanan_detail.id_transaksi_simpanan,
-                transaksi_simpanan_detail.created_at as waktu_transaksi,
-                jenis_simpanan.nama_simpanan,
-                transaksi_simpanan_detail.setor,
-                transaksi_simpanan_detail.tarik
-            ")
-            ->join('jenis_simpanan', 'jenis_simpanan.id_jenis_simpanan = transaksi_simpanan_detail.id_jenis_simpanan')
-            ->join('transaksi_simpanan', 'transaksi_simpanan.id_transaksi_simpanan = transaksi_simpanan_detail.id_transaksi_simpanan')
-            ->where('transaksi_simpanan.id_anggota', $id_anggota)
-            ->orderBy('transaksi_simpanan_detail.created_at', 'DESC')
-            ->findAll();
+        // Ambil data transaksi simpanan utama (yang berisi saldo_swp)
+        $transaksi_simpanan = $transaksiSimpananModel->getTransaksiByAnggota($id_anggota);
 
-        // Kelompokkan transaksi berdasarkan waktu untuk tampilan yang lebih terorganisir
+        // Debug transaksi simpanan
+        // echo '<pre>';
+        // print_r($transaksi_simpanan);
+        // echo '</pre>';
+        // exit;
+
+        // Ambil detail transaksi simpanan
+        $detail_transaksi = $transaksiDetailModel->getDetailTransaksiByAnggota($id_anggota);
+
+        // Kelompokkan transaksi berdasarkan tanggal transaksi
         $transaksi_dikelompokkan = [];
 
-        foreach ($riwayat_transaksi as $transaksi) {
-            $waktu_key = $transaksi->waktu_transaksi;
+        // Pertama, kelompokkan berdasarkan tanggal dari transaksi utama
+        foreach ($transaksi_simpanan as $transaksi) {
+            $tanggal_key = date('Y-m-d H:i:s', strtotime($transaksi->created_at));
 
-            if (!isset($transaksi_dikelompokkan[$waktu_key])) {
-                $transaksi_dikelompokkan[$waktu_key] = [
-                    'waktu' => $transaksi->waktu_transaksi,
+            if (!isset($transaksi_dikelompokkan[$tanggal_key])) {
+                $transaksi_dikelompokkan[$tanggal_key] = [
+                    'waktu' => $tanggal_key,
                     'id_transaksi' => $transaksi->id_transaksi_simpanan,
+                    'setor_sw' => 0,
+                    'tarik_sw' => 0,
+                    'setor_swp' => 0, // Ini akan diisi dari data transaksi utama
+                    'tarik_swp' => 0,
+                    'setor_ss' => 0,
+                    'tarik_ss' => 0,
+                    'setor_sp' => 0,
+                    'tarik_sp' => 0,
+                ];
+            }
+
+            // Isi data SWP dari transaksi utama (jika ada perubahan)
+            if (isset($transaksi->saldo_swp) && $transaksi->saldo_swp > 0) {
+                // Jika ini adalah transaksi pertama, anggap sebagai setoran
+                // Jika ada transaksi sebelumnya, hitung selisih untuk menentukan setor/tarik
+                $transaksi_dikelompokkan[$tanggal_key]['setor_swp'] = $transaksi->saldo_swp;
+            }
+        }
+
+        // Kemudian, tambahkan detail dari transaksi_simpanan_detail
+        foreach ($detail_transaksi as $detail) {
+            $tanggal_key = date('Y-m-d H:i:s', strtotime($detail->created_at));
+
+            if (!isset($transaksi_dikelompokkan[$tanggal_key])) {
+                $transaksi_dikelompokkan[$tanggal_key] = [
+                    'waktu' => $tanggal_key,
+                    'id_transaksi' => $detail->id_transaksi_simpanan,
                     'setor_sw' => 0,
                     'tarik_sw' => 0,
                     'setor_swp' => 0,
@@ -344,25 +361,27 @@ class TransaksiSimpanan extends Controller
             }
 
             // Tentukan jenis simpanan dan tambahkan nilai setor/tarik
-            switch ($transaksi->nama_simpanan) {
+            switch ($detail->nama_simpanan) {
                 case 'Simpanan Wajib':
-                    $transaksi_dikelompokkan[$waktu_key]['setor_sw'] += $transaksi->setor;
-                    $transaksi_dikelompokkan[$waktu_key]['tarik_sw'] += $transaksi->tarik;
-                    break;
-                case 'Simpanan Wajib Pokok':
-                    $transaksi_dikelompokkan[$waktu_key]['setor_swp'] += $transaksi->setor;
-                    $transaksi_dikelompokkan[$waktu_key]['tarik_swp'] += $transaksi->tarik;
+                    $transaksi_dikelompokkan[$tanggal_key]['setor_sw'] += $detail->setor;
+                    $transaksi_dikelompokkan[$tanggal_key]['tarik_sw'] += $detail->tarik;
                     break;
                 case 'Simpanan Sukarela':
-                    $transaksi_dikelompokkan[$waktu_key]['setor_ss'] += $transaksi->setor;
-                    $transaksi_dikelompokkan[$waktu_key]['tarik_ss'] += $transaksi->tarik;
+                    $transaksi_dikelompokkan[$tanggal_key]['setor_ss'] += $detail->setor;
+                    $transaksi_dikelompokkan[$tanggal_key]['tarik_ss'] += $detail->tarik;
                     break;
                 case 'Simpanan Pokok':
-                    $transaksi_dikelompokkan[$waktu_key]['setor_sp'] += $transaksi->setor;
-                    $transaksi_dikelompokkan[$waktu_key]['tarik_sp'] += $transaksi->tarik;
+                    $transaksi_dikelompokkan[$tanggal_key]['setor_sp'] += $detail->setor;
+                    $transaksi_dikelompokkan[$tanggal_key]['tarik_sp'] += $detail->tarik;
                     break;
             }
         }
+
+        // Debug data yang dikelompokkan
+        // echo '<pre>';
+        // print_r($transaksi_dikelompokkan);
+        // echo '</pre>';
+        // exit;
 
         // Konversi array asosiatif menjadi array numerik untuk view
         $riwayat_transaksi_final = [];
@@ -370,28 +389,58 @@ class TransaksiSimpanan extends Controller
             $riwayat_transaksi_final[] = (object) $transaksi;
         }
 
-        // Hitung saldo berjalan
-        $saldo = clone $saldo_awal; // Buat salinan saldo awal
-        foreach ($riwayat_transaksi_final as &$row) {
-            $row->saldo_sw = $saldo->sw + $row->setor_sw - $row->tarik_sw;
-            $row->saldo_swp = $saldo->swp + $row->setor_swp - $row->tarik_swp;
-            $row->saldo_ss = $saldo->ss + $row->setor_ss - $row->tarik_ss;
-            $row->saldo_sp = $saldo->sp + $row->setor_sp - $row->tarik_sp;
+        // Urutkan berdasarkan waktu (terbaru dulu)
+        usort($riwayat_transaksi_final, function ($a, $b) {
+            return strtotime($b->waktu) - strtotime($a->waktu);
+        });
 
-            // Perbarui saldo berjalan
-            $saldo->sw = $row->saldo_sw;
-            $saldo->swp = $row->saldo_swp;
-            $saldo->ss = $row->saldo_ss;
-            $saldo->sp = $row->saldo_sp;
+        // Hitung total untuk setiap jenis simpanan
+        $total_sw_setor = 0;
+        $total_sw_tarik = 0;
+        $total_swp_setor = 0;
+        $total_swp_tarik = 0;
+        $total_ss_setor = 0;
+        $total_ss_tarik = 0;
+        $total_sp_setor = 0;
+        $total_sp_tarik = 0;
+
+        foreach ($riwayat_transaksi_final as $transaksi) {
+            $total_sw_setor += $transaksi->setor_sw;
+            $total_sw_tarik += $transaksi->tarik_sw;
+            $total_swp_setor += $transaksi->setor_swp;
+            $total_swp_tarik += $transaksi->tarik_swp;
+            $total_ss_setor += $transaksi->setor_ss;
+            $total_ss_tarik += $transaksi->tarik_ss;
+            $total_sp_setor += $transaksi->setor_sp;
+            $total_sp_tarik += $transaksi->tarik_sp;
         }
+
+        // Ambil saldo akhir dari transaksi terakhir
+        $saldo_akhir = $transaksiSimpananModel->getLastSaldo($id_anggota);
+
+        // Konversi ke objek untuk konsistensi
+        $saldo_akhir = (object) [
+            'sw' => $saldo_akhir['saldo_sw'],
+            'swp' => $saldo_akhir['saldo_swp'],
+            'ss' => $saldo_akhir['saldo_ss'],
+            'sp' => $saldo_akhir['saldo_sp']
+        ];
 
         return view('karyawan/transaksi_simpanan/detail', [
             'anggota' => $anggota,
             'riwayat_transaksi' => $riwayat_transaksi_final,
-            'saldo_awal' => $saldo_awal,
-            'saldo_akhir' => $saldo
+            'saldo_akhir' => $saldo_akhir,
+            'total_sw_setor' => $total_sw_setor,
+            'total_sw_tarik' => $total_sw_tarik,
+            'total_swp_setor' => $total_swp_setor,
+            'total_swp_tarik' => $total_swp_tarik,
+            'total_ss_setor' => $total_ss_setor,
+            'total_ss_tarik' => $total_ss_tarik,
+            'total_sp_setor' => $total_sp_setor,
+            'total_sp_tarik' => $total_sp_tarik
         ]);
     }
+
 
     public function simpan()
     {

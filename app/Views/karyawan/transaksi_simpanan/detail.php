@@ -32,6 +32,7 @@
             </div>
         </div>
     </div>
+
     <div class="card p-3 mb-4">
         <div style="overflow-x: auto;">
             <table class="table table-bordered table-hover">
@@ -51,64 +52,41 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <?php
-                    $no = 1;
-
-                    // Inisialisasi variabel untuk menyimpan total
-                    $total_sw_setor = 0;
-                    $total_sw_tarik = 0;
-                    $total_swp_setor = 0;
-                    $total_swp_tarik = 0;
-                    $total_ss_setor = 0;
-                    $total_ss_tarik = 0;
-                    $total_sp_setor = 0;
-                    $total_sp_tarik = 0;
-                    ?>
+                    <?php $no = 1; ?>
 
                     <!-- Riwayat Transaksi -->
                     <?php if (!empty($riwayat_transaksi)): ?>
                         <?php foreach ($riwayat_transaksi as $transaksi): ?>
-                            <?php
-                            // Menambahkan nilai ke total
-                            $total_sw_setor += $transaksi->setor_sw;
-                            $total_sw_tarik += $transaksi->tarik_sw;
-                            $total_swp_setor += $transaksi->setor_swp;
-                            $total_swp_tarik += $transaksi->tarik_swp;
-                            $total_ss_setor += $transaksi->setor_ss;
-                            $total_ss_tarik += $transaksi->tarik_ss;
-                            $total_sp_setor += $transaksi->setor_sp;
-                            $total_sp_tarik += $transaksi->tarik_sp;
-                            ?>
                             <tr>
                                 <td class="text-center"><?= $no++ ?></td>
                                 <td><?= date('d M Y H:i:s', strtotime($transaksi->waktu)) ?></td>
 
                                 <td class="text-end">
-                                    <?= $transaksi->setor_sw ? 'Rp ' . number_format($transaksi->setor_sw, 0, ',', '.') : '-' ?>
+                                    <?= $transaksi->setor_sw > 0 ? 'Rp ' . number_format($transaksi->setor_sw, 0, ',', '.') : '-' ?>
                                 </td>
                                 <td class="text-end">
-                                    <?= $transaksi->tarik_sw ? 'Rp ' . number_format($transaksi->tarik_sw, 0, ',', '.') : '-' ?>
-                                </td>
-
-                                <td class="text-end">
-                                    <?= $transaksi->setor_swp ? 'Rp ' . number_format($transaksi->setor_swp, 0, ',', '.') : '-' ?>
-                                </td>
-                                <td class="text-end">
-                                    <?= $transaksi->tarik_swp ? 'Rp ' . number_format($transaksi->tarik_swp, 0, ',', '.') : '-' ?>
+                                    <?= $transaksi->tarik_sw > 0 ? 'Rp ' . number_format($transaksi->tarik_sw, 0, ',', '.') : '-' ?>
                                 </td>
 
                                 <td class="text-end">
-                                    <?= $transaksi->setor_ss ? 'Rp ' . number_format($transaksi->setor_ss, 0, ',', '.') : '-' ?>
+                                    <?= $transaksi->setor_swp > 0 ? 'Rp ' . number_format($transaksi->setor_swp, 0, ',', '.') : '-' ?>
                                 </td>
                                 <td class="text-end">
-                                    <?= $transaksi->tarik_ss ? 'Rp ' . number_format($transaksi->tarik_ss, 0, ',', '.') : '-' ?>
+                                    <?= $transaksi->tarik_swp > 0 ? 'Rp ' . number_format($transaksi->tarik_swp, 0, ',', '.') : '-' ?>
                                 </td>
 
                                 <td class="text-end">
-                                    <?= $transaksi->setor_sp ? 'Rp ' . number_format($transaksi->setor_sp, 0, ',', '.') : '-' ?>
+                                    <?= $transaksi->setor_ss > 0 ? 'Rp ' . number_format($transaksi->setor_ss, 0, ',', '.') : '-' ?>
                                 </td>
                                 <td class="text-end">
-                                    <?= $transaksi->tarik_sp ? 'Rp ' . number_format($transaksi->tarik_sp, 0, ',', '.') : '-' ?>
+                                    <?= $transaksi->tarik_ss > 0 ? 'Rp ' . number_format($transaksi->tarik_ss, 0, ',', '.') : '-' ?>
+                                </td>
+
+                                <td class="text-end">
+                                    <?= $transaksi->setor_sp > 0 ? 'Rp ' . number_format($transaksi->setor_sp, 0, ',', '.') : '-' ?>
+                                </td>
+                                <td class="text-end">
+                                    <?= $transaksi->tarik_sp > 0 ? 'Rp ' . number_format($transaksi->tarik_sp, 0, ',', '.') : '-' ?>
                                 </td>
 
                                 <td class="text-center">
@@ -154,7 +132,7 @@
                             0,
                             ',',
                             '.'
-                        ) ?></td> <!-- Total saldo -->
+                        ) ?></td>
                     </tr>
                 </tbody>
             </table>
