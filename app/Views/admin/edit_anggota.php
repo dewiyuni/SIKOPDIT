@@ -47,6 +47,10 @@
                     <option value="Jurug" <?= $anggota->dusun == 'Jurug' ? 'selected' : '' ?>>Jurug</option>
                     <option value="Ledok" <?= $anggota->dusun == 'Ledok' ? 'selected' : '' ?>>Ledok</option>
                     <option value="Gentan" <?= $anggota->dusun == 'Gentan' ? 'selected' : '' ?>>Gentan</option>
+                    <option value="Pleret" <?= $anggota->dusun == 'Pleret' ? 'selected' : '' ?>>Pleret</option>
+                    <option value="Tuksono" <?= $anggota->dusun == 'Tuksono' ? 'selected' : '' ?>>Tuksono</option>
+                    <option value="Kelompok" <?= $anggota->dusun == 'Kelompok' ? 'selected' : '' ?>>Kelompok</option>
+                    <option value="Luar" <?= $anggota->dusun == 'Luar' ? 'selected' : '' ?>>Luar</option>
                 </select>
             </div>
 

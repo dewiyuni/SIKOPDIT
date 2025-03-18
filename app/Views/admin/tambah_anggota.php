@@ -58,6 +58,10 @@
                 <option value="Jurug">Jurug</option>
                 <option value="Ledok">Ledok</option>
                 <option value="Gentan">Gentan</option>
+                <option value="Pleret">Pleret</option>
+                <option value="Tuksono">Tuksono</option>
+                <option value="Kelompok">Kelompok</option>
+                <option value="Luar">Luar</option>
             </select>
 
             <label for="alamat" class="form-label">Alamat:</label>
