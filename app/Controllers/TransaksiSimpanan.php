@@ -510,8 +510,6 @@ class TransaksiSimpanan extends Controller
             // Track changes to calculate new totals
             $total_setor_sw = 0;
             $total_tarik_sw = 0;
-            $total_setor_swp = 0;
-            $total_tarik_swp = 0;
             $total_setor_ss = 0;
             $total_tarik_ss = 0;
             $total_setor_sp = 0;
@@ -520,13 +518,12 @@ class TransaksiSimpanan extends Controller
             // Map jenis simpanan codes to IDs
             $jenis_ids = [
                 'sw' => 1,  // Simpanan Wajib
-                'swp' => 2, // Simpanan Wajib Pokok
                 'ss' => 3,  // Simpanan Sukarela
                 'sp' => 4   // Simpanan Pokok
             ];
 
             // Process each type of transaction
-            foreach (['sw', 'swp', 'ss', 'sp'] as $jenis) {
+            foreach (['sw', 'ss', 'sp'] as $jenis) {
                 if ($this->request->getPost('edit_' . $jenis)) {
                     $id_detail = $this->request->getPost('id_detail_' . $jenis);
 
@@ -566,10 +563,6 @@ class TransaksiSimpanan extends Controller
                             $total_setor_sw += $setor;
                             $total_tarik_sw += $tarik;
                             break;
-                        case 'swp':
-                            $total_setor_swp += $setor;
-                            $total_tarik_swp += $tarik;
-                            break;
                         case 'ss':
                             $total_setor_ss += $setor;
                             $total_tarik_ss += $tarik;
@@ -586,7 +579,6 @@ class TransaksiSimpanan extends Controller
             $details = $this->detailModel->where('id_transaksi_simpanan', $id)->findAll();
 
             $saldo_sw = 0;
-            $saldo_swp = 0;
             $saldo_ss = 0;
             $saldo_sp = 0;
 
@@ -594,9 +586,6 @@ class TransaksiSimpanan extends Controller
                 switch ($detail->id_jenis_simpanan) {
                     case 1: // SW
                         $saldo_sw += ($detail->setor - $detail->tarik);
-                        break;
-                    case 2: // SWP
-                        $saldo_swp += ($detail->setor - $detail->tarik);
                         break;
                     case 3: // SS
                         $saldo_ss += ($detail->setor - $detail->tarik);
@@ -610,10 +599,9 @@ class TransaksiSimpanan extends Controller
             // Update the main transaction record with new totals
             $this->transaksiModel->update($id, [
                 'saldo_sw' => $saldo_sw,
-                'saldo_swp' => $saldo_swp,
                 'saldo_ss' => $saldo_ss,
                 'saldo_sp' => $saldo_sp,
-                'saldo_total' => $saldo_sw + $saldo_swp + $saldo_ss + $saldo_sp
+                'saldo_total' => $saldo_sw + $saldo_ss + $saldo_sp
             ]);
 
             $this->db->transComplete();
@@ -628,6 +616,8 @@ class TransaksiSimpanan extends Controller
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
+
+
 
     public function delete($id_transaksi)
     {

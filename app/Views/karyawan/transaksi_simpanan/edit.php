@@ -24,11 +24,11 @@
                     required>
 
                 <?php
-                // Jenis simpanan: SW = 1, SWP = 2, SS = 3, SP = 4
+                // Jenis simpanan: SW = 1, SS = 3, SP = 4
                 $jenis_simpanan = [
                     'SW' => 1,
-                    'SWP' => 2,
                     'SS' => 3,
+                    'SP' => 4
                 ];
                 ?>
 
