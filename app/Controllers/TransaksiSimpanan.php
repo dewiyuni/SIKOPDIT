@@ -461,14 +461,21 @@ class TransaksiSimpanan extends Controller
     }
     public function edit($id_transaksi_simpanan)
     {
+        $created_at = $this->request->getGet('created_at');
+
+        if (!$created_at) {
+            return redirect()->back()->with('error', 'Parameter waktu transaksi tidak ditemukan.');
+        }
+
         $transaksi = $this->transaksiModel->where('id_transaksi_simpanan', $id_transaksi_simpanan)->first();
         if (!$transaksi) {
             return redirect()->to('karyawan/transaksi_simpanan')->with('error', 'Data tidak ditemukan');
         }
 
-        // Ambil semua detail transaksi simpanan
+        // Ambil detail transaksi berdasarkan id_transaksi dan created_at
         $details = $this->detailModel
             ->where('id_transaksi_simpanan', $id_transaksi_simpanan)
+            ->where('created_at', $created_at)
             ->findAll();
 
         // Ubah menjadi array asosiatif berdasarkan id_jenis_simpanan
@@ -480,11 +487,13 @@ class TransaksiSimpanan extends Controller
         $data = [
             'title' => 'Edit Transaksi Simpanan',
             'transaksi' => $transaksi,
-            'details' => $detailData, // Kirim array detail
+            'details' => $detailData,
+            'created_at' => $created_at
         ];
 
         return view('karyawan/transaksi_simpanan/edit', $data);
     }
+
     // Method untuk update transaksi simpanan
     public function update($id)
     {
@@ -623,8 +632,13 @@ class TransaksiSimpanan extends Controller
     public function delete($id_transaksi)
     {
         $id_transaksi = (int) $id_transaksi;
+        $created_at = $this->request->getGet('created_at');
 
-        // First, find the transaction to get the anggota_id for redirection
+        if (!$created_at) {
+            return redirect()->back()->with('error', 'Parameter waktu transaksi tidak ditemukan.');
+        }
+
+        // Ambil informasi anggota dari transaksi untuk redirect
         $transaksi = $this->db->table('transaksi_simpanan')
             ->select('id_anggota')
             ->where('id_transaksi_simpanan', $id_transaksi)
@@ -640,27 +654,30 @@ class TransaksiSimpanan extends Controller
         $this->db->transStart();
 
         try {
-            // Get the timestamp of this transaction
-            $transaction_details = $this->db->table('transaksi_simpanan_detail')
-                ->select('created_at')
+            // Hapus detail transaksi berdasarkan id_transaksi dan created_at
+            $this->db->table('transaksi_simpanan_detail')
                 ->where('id_transaksi_simpanan', $id_transaksi)
-                ->get()
-                ->getRow();
+                ->where('created_at', $created_at)
+                ->delete();
 
-            if ($transaction_details) {
-                $timestamp = $transaction_details->created_at;
+            // Jika tidak ada lagi detail untuk transaksi ini, hapus transaksi utama
+            $remaining = $this->db->table('transaksi_simpanan_detail')
+                ->where('id_transaksi_simpanan', $id_transaksi)
+                ->countAllResults();
 
-                // Delete all detail records with this timestamp for this transaction
-                $this->db->table('transaksi_simpanan_detail')
+            if ($remaining == 0) {
+                $this->db->table('transaksi_simpanan')
                     ->where('id_transaksi_simpanan', $id_transaksi)
-                    ->where('created_at', $timestamp)
                     ->delete();
+            } else {
+                // Jika masih ada detail, recalculate saldo
+                $this->recalculateSaldo($id_transaksi);
             }
 
             $this->db->transComplete();
 
             if ($this->db->transStatus() === false) {
-                throw new \Exception("Gagal menghapus detail transaksi.");
+                throw new \Exception("Gagal menghapus transaksi.");
             }
 
             return redirect()->to('karyawan/transaksi_simpanan/detail/' . $id_anggota)
@@ -732,4 +749,121 @@ class TransaksiSimpanan extends Controller
     }
 
     // =============== Import ecxel ==================
+
+    public function update_field()
+    {
+        if (!$this->request->isAJAX()) {
+            return $this->response->setStatusCode(403);
+        }
+
+        $id = $this->request->getPost('id');
+        $field = $this->request->getPost('field');
+        $value = $this->request->getPost('value');
+        $created_at = $this->request->getPost('created_at'); // Tambahkan parameter created_at
+
+        // Validasi nama field untuk mencegah SQL injection
+        $allowed_fields = [
+            'setor_sw',
+            'tarik_sw',
+            'setor_swp',
+            'tarik_swp',
+            'setor_ss',
+            'tarik_ss',
+            'setor_sp',
+            'tarik_sp'
+        ];
+
+        if (!in_array($field, $allowed_fields)) {
+            return $this->response->setJSON(['success' => false, 'message' => 'Invalid field']);
+        }
+
+        // Konversi nilai ke integer
+        $value = empty($value) ? 0 : (int) str_replace('.', '', $value);
+
+        // Ambil transaksi berdasarkan ID dan created_at
+        $this->db->transStart();
+
+        try {
+            // Update field tertentu pada detail transaksi berdasarkan id_transaksi dan created_at
+            $builder = $this->db->table('transaksi_simpanan_detail');
+
+            // Tentukan jenis_simpanan berdasarkan field
+            $id_jenis_simpanan = null;
+            if (strpos($field, 'sw') === 0 && strpos($field, 'swp') === false) {
+                $id_jenis_simpanan = 1; // Simpanan Wajib
+            } else if (strpos($field, 'swp') === 0) {
+                $id_jenis_simpanan = 2; // Simpanan Wajib Pokok
+            } else if (strpos($field, 'ss') === 0) {
+                $id_jenis_simpanan = 3; // Simpanan Sukarela
+            } else if (strpos($field, 'sp') === 0) {
+                $id_jenis_simpanan = 4; // Simpanan Pokok
+            }
+
+            if (!$id_jenis_simpanan) {
+                throw new \Exception("Jenis simpanan tidak valid");
+            }
+
+            // Tentukan field di database (setor atau tarik)
+            $db_field = strpos($field, 'setor') === 0 ? 'setor' : 'tarik';
+
+            // Update record
+            $builder->where('id_transaksi_simpanan', $id)
+                ->where('created_at', $created_at)
+                ->where('id_jenis_simpanan', $id_jenis_simpanan)
+                ->update([$db_field => $value]);
+
+            // Recalculate saldo for this transaction
+            $this->recalculateSaldo($id);
+
+            $this->db->transComplete();
+
+            if ($this->db->transStatus() === false) {
+                throw new \Exception("Failed to update transaction");
+            }
+
+            return $this->response->setJSON(['success' => true]);
+        } catch (\Exception $e) {
+            $this->db->transRollback();
+            return $this->response->setJSON(['success' => false, 'message' => $e->getMessage()]);
+        }
+    }
+
+    private function recalculateSaldo($id_transaksi)
+    {
+        // Ambil semua detail transaksi
+        $details = $this->detailModel->where('id_transaksi_simpanan', $id_transaksi)->findAll();
+
+        $saldo_sw = 0;
+        $saldo_swp = 0;
+        $saldo_ss = 0;
+        $saldo_sp = 0;
+
+        foreach ($details as $detail) {
+            switch ($detail->id_jenis_simpanan) {
+                case 1: // SW
+                    $saldo_sw += ($detail->setor - $detail->tarik);
+                    break;
+                case 2: // SWP
+                    $saldo_swp += ($detail->setor - $detail->tarik);
+                    break;
+                case 3: // SS
+                    $saldo_ss += ($detail->setor - $detail->tarik);
+                    break;
+                case 4: // SP
+                    $saldo_sp += ($detail->setor - $detail->tarik);
+                    break;
+            }
+        }
+
+        // Update catatan transaksi utama dengan saldo baru
+        $this->transaksiModel->update($id_transaksi, [
+            'saldo_sw' => $saldo_sw,
+            'saldo_swp' => $saldo_swp,
+            'saldo_ss' => $saldo_ss,
+            'saldo_sp' => $saldo_sp,
+            'saldo_total' => $saldo_sw + $saldo_swp + $saldo_ss + $saldo_sp
+        ]);
+    }
+
+
 }
