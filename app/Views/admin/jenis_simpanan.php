@@ -15,7 +15,10 @@
         </div>
     <?php endif; ?>
 
-    <div class="card p-3">
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">Data Simpanan</h5>
+        </div>
         <div style="overflow-x: auto;">
             <table class="table">
                 <thead>
@@ -32,9 +35,13 @@
                             <td><?= $jenis->nama_simpanan ?></td>
                             <td>
                                 <a href="<?= site_url('admin/edit_jenis_simpanan/' . $jenis->id_jenis_simpanan) ?>"
-                                    class="btn btn-warning">Edit</a>
+                                    class="btn btn-warning">
+                                    <i class="bi bi-pencil"></i> Edit
+                                </a>
                                 <a href="<?= site_url('admin/hapus_jenis_simpanan/' . $jenis->id_jenis_simpanan) ?>"
-                                    class="btn btn-danger" onclick="return confirm('Yakin hapus?')">Hapus</a>
+                                    class="btn btn-danger" onclick="return confirm('Yakin hapus?')">
+                                    <i class="bi bi-trash"></i> Hapus
+                                </a>
                             </td>
                         </tr>
                     <?php endforeach; ?>
