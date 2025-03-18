@@ -4,7 +4,7 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3>Daftar Transaksi Pinjaman</h3>
-        <a href="<?= site_url('karyawan/transaksi_pinjaman/tambah') ?>" class="btn btn-success">Tambah Pinjaman</a>
+        <a href="<?= site_url('karyawan/transaksi_pinjaman/tambah') ?>" class="btn btn-success">Tambah Data</a>
     </div>
 
     <?php if (session()->getFlashdata('message')): ?>
@@ -13,7 +13,10 @@
         </div>
     <?php endif; ?>
 
-    <div class="card p-3">
+    <div class="card mb-4">
+        <div class="card-header bg-success text-white">
+            <h5 class="mb-0">Transaksi Pinjaman</h5>
+        </div>
         <div style="overflow-x: auto;">
             <table class="table table-bordered">
                 <thead>

@@ -4,7 +4,7 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3>Edit Transaksi Simpanan</h3>
-        <a href="<?= site_url('karyawan/transaksi_simpanan') ?>" class="btn btn-warning">Kembali</a>
+        <a href="javascript:history.back()" class="btn btn-warning">Kembali</a>
     </div>
 
     <?php if (session()->getFlashdata('error')): ?>
@@ -49,12 +49,14 @@
                         <div class="col-md-6">
                             <label class="form-label"><?= $nama ?> Setor</label>
                             <input type="text" name="setor_<?= strtolower($nama) ?>" class="form-control format-number"
-                                value="<?= number_format($setor, 0, ',', '.') ?>" min="0" disabled>
+                                value="<?= number_format($setor, 0, ',', '.') ?>" min="0" disabled
+                                data-original-value="<?= $setor ?>">
                         </div>
                         <div class="col-md-6">
                             <label class="form-label"><?= $nama ?> Tarik</label>
                             <input type="text" name="tarik_<?= strtolower($nama) ?>" class="form-control format-number"
-                                value="<?= number_format($tarik, 0, ',', '.') ?>" min="0" disabled>
+                                value="<?= number_format($tarik, 0, ',', '.') ?>" min="0" disabled
+                                data-original-value="<?= $tarik ?>">
                         </div>
                     </div>
                     <input type="hidden" name="id_detail_<?= strtolower($nama) ?>" value="<?= esc($id_detail) ?>">
@@ -70,24 +72,47 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function () {
+        // Handle checkboxes for enabling/disabling inputs
         <?php foreach ($jenis_simpanan as $nama => $id): ?>
             document.getElementById('edit_<?= strtolower($nama) ?>').addEventListener('change', function () {
                 let setorInput = document.querySelector('input[name="setor_<?= strtolower($nama) ?>"]');
                 let tarikInput = document.querySelector('input[name="tarik_<?= strtolower($nama) ?>"]');
                 setorInput.disabled = !this.checked;
                 tarikInput.disabled = !this.checked;
+
+                // Reset to original value when enabling to avoid formatting issues
+                if (this.checked) {
+                    setorInput.value = formatRupiah(setorInput.dataset.originalValue);
+                    tarikInput.value = formatRupiah(tarikInput.dataset.originalValue);
+                }
             });
         <?php endforeach; ?>
 
-        // Format input secara otomatis saat diketik
+        // Format inputs and prepare for submission
+        const form = document.querySelector('form');
+        form.addEventListener('submit', function (e) {
+            // Remove formatting before submitting
+            document.querySelectorAll('.format-number').forEach(function (input) {
+                if (!input.disabled) {
+                    // Only process enabled fields (those being edited)
+                    input.value = input.value.replace(/\./g, '');
+                }
+            });
+        });
+
+        // Format input as user types
         document.querySelectorAll('.format-number').forEach(function (input) {
             input.addEventListener('input', function () {
-                this.value = formatRupiah(this.value);
+                // Remove non-numeric characters first
+                let value = this.value.replace(/[^0-9]/g, '');
+                // Then format with thousand separators
+                this.value = formatRupiah(value);
             });
         });
 
         function formatRupiah(angka) {
-            return angka.replace(/[^0-9]/g, '').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            if (!angka) return "0";
+            return angka.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         }
     });
 </script>

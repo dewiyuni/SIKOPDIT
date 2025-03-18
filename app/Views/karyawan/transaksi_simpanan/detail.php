@@ -4,7 +4,7 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3>Detail Transaksi Simpanan</h3>
-        <a href="<?= site_url('karyawan/transaksi_simpanan') ?>" class="btn btn-warning">Kembali</a>
+        <a href="javascript:history.back()" class="btn btn-warning">Kembali</a>
     </div>
 
     <?php if (session()->getFlashdata('error')): ?>
@@ -92,9 +92,6 @@
                                 <td class="text-center">
                                     <a href="<?= site_url('karyawan/transaksi_simpanan/edit/' . ($transaksi->id_transaksi ?? '')) ?>"
                                         class="btn btn-warning btn-sm">Edit</a>
-                                    <a href="<?= site_url('karyawan/transaksi_simpanan/delete/' . ($transaksi->id_transaksi ?? '')) ?>"
-                                        class="btn btn-danger btn-sm"
-                                        onclick="return confirm('Apakah Anda yakin ingin menghapus transaksi ini?')">Hapus</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

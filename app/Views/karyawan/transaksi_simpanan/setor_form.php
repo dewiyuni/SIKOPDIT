@@ -19,8 +19,8 @@
             <!-- Simpanan Wajib -->
             <label for="setor_sw">Simpanan Wajib:</label>
             <input type="text" id="setor_sw" class="form-control" placeholder="Masukkan jumlah setoran Wajib" required
-                oninput="formatRibuan(this)">
-            <input type="hidden" name="setor_sw" id="setor_sw_hidden">
+                oninput="formatRibuan(this)" value="5.000">
+            <input type="hidden" name="setor_sw" id="setor_sw_hidden" value="5000">
 
             <!-- Simpanan Sukarela -->
             <label for="setor_ss">Simpanan Sukarela:</label>
@@ -51,6 +51,15 @@
             hiddenInput.value = angka;
         }
     }
+
+    // Pastikan nilai default sudah diformat dengan benar saat halaman dimuat
+    window.onload = function () {
+        let setorSwInput = document.getElementById('setor_sw');
+        if (setorSwInput.value === '') {
+            setorSwInput.value = '5.000';
+            document.getElementById('setor_sw_hidden').value = '5000';
+        }
+    };
 </script>
 
 <?= $this->endSection() ?>

@@ -494,35 +494,168 @@ class TransaksiSimpanan extends Controller
             return redirect()->back()->with('error', 'Transaksi tidak ditemukan.');
         }
 
-        foreach (['SW', 'SWP', 'SS', 'SP'] as $jenis) {
-            if ($this->request->getPost('edit_' . strtolower($jenis))) {
-                $id_detail = $this->request->getPost('id_detail_' . strtolower($jenis));
-                $setor = $this->request->getPost('setor_' . strtolower($jenis));
-                $tarik = $this->request->getPost('tarik_' . strtolower($jenis));
+        // Start a database transaction
+        $this->db->transStart();
 
-                $this->detailModel->update($id_detail, [
-                    'setor' => $setor,
-                    'tarik' => $tarik,
-                ]);
+        try {
+            // Track changes to calculate new totals
+            $total_setor_sw = 0;
+            $total_tarik_sw = 0;
+            $total_setor_swp = 0;
+            $total_tarik_swp = 0;
+            $total_setor_ss = 0;
+            $total_tarik_ss = 0;
+            $total_setor_sp = 0;
+            $total_tarik_sp = 0;
+
+            // Map jenis simpanan codes to IDs
+            $jenis_ids = [
+                'sw' => 1,  // Simpanan Wajib
+                'swp' => 2, // Simpanan Wajib Pokok
+                'ss' => 3,  // Simpanan Sukarela
+                'sp' => 4   // Simpanan Pokok
+            ];
+
+            // Process each type of transaction
+            foreach (['sw', 'swp', 'ss', 'sp'] as $jenis) {
+                if ($this->request->getPost('edit_' . $jenis)) {
+                    $id_detail = $this->request->getPost('id_detail_' . $jenis);
+
+                    // Get values and remove formatting (dots as thousand separators)
+                    $setor_str = $this->request->getPost('setor_' . $jenis);
+                    $tarik_str = $this->request->getPost('tarik_' . $jenis);
+
+                    // Convert to integers, handling empty values
+                    $setor = empty($setor_str) ? 0 : (int) str_replace('.', '', $setor_str);
+                    $tarik = empty($tarik_str) ? 0 : (int) str_replace('.', '', $tarik_str);
+
+                    // If the detail record exists, update it
+                    if (!empty($id_detail)) {
+                        $detail = $this->detailModel->find($id_detail);
+                        if ($detail) {
+                            $this->detailModel->update($id_detail, [
+                                'setor' => $setor,
+                                'tarik' => $tarik,
+                            ]);
+                        }
+                    } else {
+                        // If no detail record exists but values are provided, create a new one
+                        if ($setor > 0 || $tarik > 0) {
+                            $this->detailModel->insert([
+                                'id_transaksi_simpanan' => $id,
+                                'id_jenis_simpanan' => $jenis_ids[$jenis],
+                                'setor' => $setor,
+                                'tarik' => $tarik,
+                                'created_at' => date('Y-m-d H:i:s')
+                            ]);
+                        }
+                    }
+
+                    // Track totals for the main transaction record
+                    switch ($jenis) {
+                        case 'sw':
+                            $total_setor_sw += $setor;
+                            $total_tarik_sw += $tarik;
+                            break;
+                        case 'swp':
+                            $total_setor_swp += $setor;
+                            $total_tarik_swp += $tarik;
+                            break;
+                        case 'ss':
+                            $total_setor_ss += $setor;
+                            $total_tarik_ss += $tarik;
+                            break;
+                        case 'sp':
+                            $total_setor_sp += $setor;
+                            $total_tarik_sp += $tarik;
+                            break;
+                    }
+                }
             }
-        }
 
-        return redirect()->to('karyawan/transaksi_simpanan')->with('success', 'Transaksi diperbarui.');
+            // Recalculate all saldos based on all detail records for this transaction
+            $details = $this->detailModel->where('id_transaksi_simpanan', $id)->findAll();
+
+            $saldo_sw = 0;
+            $saldo_swp = 0;
+            $saldo_ss = 0;
+            $saldo_sp = 0;
+
+            foreach ($details as $detail) {
+                switch ($detail->id_jenis_simpanan) {
+                    case 1: // SW
+                        $saldo_sw += ($detail->setor - $detail->tarik);
+                        break;
+                    case 2: // SWP
+                        $saldo_swp += ($detail->setor - $detail->tarik);
+                        break;
+                    case 3: // SS
+                        $saldo_ss += ($detail->setor - $detail->tarik);
+                        break;
+                    case 4: // SP
+                        $saldo_sp += ($detail->setor - $detail->tarik);
+                        break;
+                }
+            }
+
+            // Update the main transaction record with new totals
+            $this->transaksiModel->update($id, [
+                'saldo_sw' => $saldo_sw,
+                'saldo_swp' => $saldo_swp,
+                'saldo_ss' => $saldo_ss,
+                'saldo_sp' => $saldo_sp,
+                'saldo_total' => $saldo_sw + $saldo_swp + $saldo_ss + $saldo_sp
+            ]);
+
+            $this->db->transComplete();
+
+            if ($this->db->transStatus() === false) {
+                throw new \Exception("Gagal memperbarui transaksi.");
+            }
+
+            return redirect()->to('karyawan/transaksi_simpanan')->with('success', 'Transaksi berhasil diperbarui.');
+        } catch (\Exception $e) {
+            $this->db->transRollback();
+            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        }
     }
-    public function delete($id_detail)
-    {
-        $id_detail = (int) $id_detail;
 
-        // Cek apakah id_detail ada
-        $detail = $this->detailModel->find($id_detail);
-        if (!$detail) {
-            return redirect()->to('karyawan/transaksi_simpanan')->with('error', 'Detail transaksi tidak ditemukan.');
+    public function delete($id_transaksi)
+    {
+        $id_transaksi = (int) $id_transaksi;
+
+        // First, find the transaction to get the anggota_id for redirection
+        $transaksi = $this->db->table('transaksi_simpanan')
+            ->select('id_anggota')
+            ->where('id_transaksi_simpanan', $id_transaksi)
+            ->get()
+            ->getRow();
+
+        if (!$transaksi) {
+            return redirect()->to('karyawan/transaksi_simpanan')->with('error', 'Transaksi tidak ditemukan.');
         }
+
+        $id_anggota = $transaksi->id_anggota;
 
         $this->db->transStart();
 
         try {
-            $this->detailModel->delete($id_detail);
+            // Get the timestamp of this transaction
+            $transaction_details = $this->db->table('transaksi_simpanan_detail')
+                ->select('created_at')
+                ->where('id_transaksi_simpanan', $id_transaksi)
+                ->get()
+                ->getRow();
+
+            if ($transaction_details) {
+                $timestamp = $transaction_details->created_at;
+
+                // Delete all detail records with this timestamp for this transaction
+                $this->db->table('transaksi_simpanan_detail')
+                    ->where('id_transaksi_simpanan', $id_transaksi)
+                    ->where('created_at', $timestamp)
+                    ->delete();
+            }
 
             $this->db->transComplete();
 
@@ -530,13 +663,14 @@ class TransaksiSimpanan extends Controller
                 throw new \Exception("Gagal menghapus detail transaksi.");
             }
 
-            return redirect()->to('karyawan/transaksi_simpanan')->with('success', 'Detail transaksi berhasil dihapus.');
+            return redirect()->to('karyawan/transaksi_simpanan/detail/' . $id_anggota)
+                ->with('success', 'Transaksi berhasil dihapus.');
         } catch (\Exception $e) {
             $this->db->transRollback();
-            return redirect()->to('karyawan/transaksi_simpanan')->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+            return redirect()->to('karyawan/transaksi_simpanan/detail/' . $id_anggota)
+                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
-
 
     // ==================== Jenis simpanan ==================================== 
     public function jenisSimpanan()
