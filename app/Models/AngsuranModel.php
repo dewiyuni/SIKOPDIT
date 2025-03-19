@@ -15,6 +15,7 @@ class AngsuranModel extends Model
     protected $allowedFields = [
         'id_pinjaman',
         'tanggal_angsuran',
+        'bunga',
         'jumlah_angsuran',
         'sisa_pinjaman',
         'status',
@@ -24,23 +25,30 @@ class AngsuranModel extends Model
 
     public function simpanAngsuran($data)
     {
-        // Menghitung sisa pinjaman yang tersisa
-        $pinjaman = model('TransaksiPinjamanModel')->find($data['id_pinjaman']);
+        $pinjamanModel = model('TransaksiPinjamanModel');
+        $pinjaman = $pinjamanModel->find($data['id_pinjaman']);
+
+        if (!$pinjaman) {
+            throw new \Exception("Pinjaman tidak ditemukan.");
+        }
+
+        // Hitung total angsuran sebelumnya
         $totalAngsuran = $this->selectSum('jumlah_angsuran')
             ->where('id_pinjaman', $data['id_pinjaman'])
             ->get()
-            ->getRow();
+            ->getRow()->jumlah_angsuran ?? 0;
 
-        // Jika tidak ada angsuran sebelumnya, anggap seluruh pinjaman adalah saldo awal
-        $sisaPinjaman = $pinjaman->jumlah_pinjaman - ($totalAngsuran->jumlah_angsuran ?? 0);
+        // Hitung sisa pinjaman
+        $sisaPinjaman = $pinjaman->jumlah_pinjaman - $totalAngsuran;
+        $data['sisa_pinjaman'] = max(0, $sisaPinjaman - $data['jumlah_angsuran']);
 
-        // Update sisa pinjaman
-        $data['sisa_pinjaman'] = $sisaPinjaman - $data['jumlah_angsuran'];
+        // Update status angsuran
+        $data['status'] = ($data['sisa_pinjaman'] <= 0) ? 'lunas' : 'belum lunas';
 
-        // Insert data angsuran ke dalam database
+        // Simpan angsuran ke database
         $this->save($data);
 
-        // Perbarui transaksi pinjaman dengan sisa pinjaman yang baru
-        model('TransaksiPinjamanModel')->update($data['id_pinjaman'], ['sisa_pinjaman' => $data['sisa_pinjaman']]);
+        // Perbarui transaksi pinjaman
+        $pinjamanModel->update($data['id_pinjaman'], ['sisa_pinjaman' => $data['sisa_pinjaman']]);
     }
 }

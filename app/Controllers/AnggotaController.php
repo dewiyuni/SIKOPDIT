@@ -6,7 +6,6 @@ use CodeIgniter\Controller;
 use App\Models\AnggotaModel;
 use App\Models\KeuanganModel;
 use App\Models\TransaksiSimpananModel;
-use App\Models\TransaksiSimpananDetailModel;
 
 class AnggotaController extends Controller
 {
@@ -14,14 +13,12 @@ class AnggotaController extends Controller
     protected $authModel;
     protected $transaksiModel;
     protected $keuanganModel;
-    protected $detailModel;
 
     public function __construct()
     {
         $this->anggotaModel = new AnggotaModel();
         $this->authModel = new AuthModel();
         $this->transaksiModel = new TransaksiSimpananModel();
-        $this->detailModel = new TransaksiSimpananDetailModel();
         $this->keuanganModel = new KeuanganModel();
     }
 
@@ -92,46 +89,34 @@ class AnggotaController extends Controller
         // **2️⃣ Saldo Awal Simpanan**
         $uang_pangkal = 10000;  // Uang Pangkal (sekali saat pendaftaran)
         $simpanan_pokok = 50000; // Simpanan Pokok (sekali saat pendaftaran)
-        $saldo_sw = 75000;      // Simpanan Wajib (bertambah setiap setor)
-        $saldo_swp = 0;    // Simpanan Wajib Penyertaan (hanya di awal)
-        $saldo_ss = 5000;         // Simpanan Sukarela (tidak ada awal)
-        $saldo_sp = 10000; // Simpanan Pokok masuk saldo SP
-        $saldo_total = $saldo_sw + $saldo_swp + $saldo_ss + $saldo_sp;
+
+        $setor_sw = 75000;    // Simpanan Wajib
+        $setor_swp = 0;       // Simpanan Wajib Penyertaan (hanya di awal)
+        $setor_ss = 5000;     // Simpanan Sukarela
+        $setor_sp = 10000;    // Simpanan Pokok masuk saldo SP
+
+        $tarik_sw = 0;
+        $tarik_swp = 0;
+        $tarik_ss = 0;
+        $tarik_sp = 0;
+
+        $saldo_total = ($setor_sw + $setor_swp + $setor_ss + $setor_sp) - ($tarik_sw + $tarik_swp + $tarik_ss + $tarik_sp);
 
         // **3️⃣ Simpan ke `transaksi_simpanan`**
         $this->transaksiModel->insert([
             'id_anggota' => $id_anggota,
             'tanggal' => date('Y-m-d'),
-            'saldo_sw' => $saldo_sw,
-            'saldo_swp' => $saldo_swp,
-            'saldo_ss' => $saldo_ss,
-            'saldo_sp' => $saldo_sp, // Simpanan Pokok ditambahkan
+            'setor_sw' => $setor_sw,
+            'setor_swp' => $setor_swp,
+            'setor_ss' => $setor_ss,
+            'setor_sp' => $setor_sp,
+            'tarik_sw' => $tarik_sw,
+            'tarik_swp' => $tarik_swp,
+            'tarik_ss' => $tarik_ss,
+            'tarik_sp' => $tarik_sp,
             'saldo_total' => $saldo_total,
             'keterangan' => 'Saldo awal pendaftaran'
         ]);
-
-        // **5️⃣ Simpan ke `transaksi_simpanan_detail` untuk masing-masing simpanan**
-        $id_transaksi = $this->transaksiModel->insertID(); // Ambil ID transaksi terakhir
-
-        $jenis_simpanan = [
-            ['id' => 1, 'nama' => 'SW', 'setor' => $saldo_sw],
-            ['id' => 2, 'nama' => 'SWP', 'setor' => $saldo_swp],
-            ['id' => 3, 'nama' => 'SS', 'setor' => $saldo_ss],
-            ['id' => 4, 'nama' => 'SP', 'setor' => $saldo_sp],
-        ];
-
-        foreach ($jenis_simpanan as $simpanan) {
-            if ($simpanan['setor'] > 0) { // Hanya insert jika ada saldo
-                $this->detailModel->insert([
-                    'id_transaksi_simpanan' => $id_transaksi,
-                    'id_jenis_simpanan' => $simpanan['id'],
-                    'setor' => $simpanan['setor'],
-                    'tarik' => 0,
-                    'saldo_akhir' => $simpanan['setor'], // Saldo awal = jumlah setor pertama
-                    'created_at' => date('Y-m-d H:i:s')
-                ]);
-            }
-        }
 
         // **4️⃣ Catat Uang Pangkal & Simpanan Pokok di `keuangan_koperasi`**
         $this->keuanganModel->insert([

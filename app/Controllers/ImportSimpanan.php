@@ -96,7 +96,7 @@ class ImportSimpanan extends BaseController
             foreach ($jenis_simpanan as $simpanan) {
                 if ($simpanan['setor'] > 0) {
                     $transaksiDetailModel->insert([
-                        'id_transaksi_simpanan' => $id_transaksi,
+                        'id_simpanan' => $id_transaksi,
                         'id_jenis_simpanan' => $simpanan['id'],
                         'setor' => $simpanan['setor'],
                         'tarik' => 0,

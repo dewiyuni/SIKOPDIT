@@ -19,7 +19,7 @@ class LaporanModel extends Model
         $query = "
             SELECT 
                 'Simpanan' AS jenis_transaksi, 
-                ts.id_transaksi_simpanan AS id_transaksi, 
+                ts.id_simpanan AS id_transaksi, 
                 a.nama AS nama_anggota, 
                 ts.tanggal AS tanggal_transaksi, 
                 ts.saldo_total AS jumlah, 

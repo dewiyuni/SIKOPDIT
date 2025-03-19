@@ -12,7 +12,7 @@ class TransaksiPinjamanModel extends Model
     protected $returnType = 'object';
     protected $useSoftDeletes = false;
     protected $protectFields = true;
-    protected $allowedFields = ['id_anggota', 'tanggal_pinjaman', 'jumlah_pinjaman', 'jangka_waktu', 'bunga', 'jaminan', 'status', 'created_at', 'updated_at'];
+    protected $allowedFields = ['id_anggota', 'tanggal_pinjaman', 'jumlah_pinjaman', 'jangka_waktu', 'jaminan', 'status', 'created_at', 'updated_at'];
 
     public function getDataPinjaman()
     {

@@ -7,7 +7,7 @@ use CodeIgniter\Model;
 class TransaksiSimpananModel extends Model
 {
     protected $table = 'transaksi_simpanan';
-    protected $primaryKey = 'id_transaksi_simpanan';
+    protected $primaryKey = 'id_simpanan';
     protected $useAutoIncrement = true;
     protected $returnType = 'object';
     protected $useSoftDeletes = false;
@@ -16,126 +16,62 @@ class TransaksiSimpananModel extends Model
 
     protected $allowedFields = [
         'id_anggota',
+        'id_pinjaman',
         'tanggal',
-        'saldo_sw',
-        'saldo_swp',
-        'saldo_ss',
-        'saldo_sp',
-        'saldo_total',
-        'keterangan',
+        'setor_sw',
+        'tarik_sw',
+        'setor_swp',
+        'tarik_swp',
+        'setor_ss',
+        'tarik_ss',
+        'setor_sp',
+        'tarik_sp',
         'created_at',
         'updated_at'
     ];
 
     public function hitungSaldo($id_anggota)
     {
-        return $this->select('
-            id_anggota,
-            SUM(CASE WHEN id_jenis_simpanan = 1 THEN setor - tarik ELSE 0 END) AS saldo_sw,
-            SUM(CASE WHEN id_jenis_simpanan = 2 THEN setor - tarik ELSE 0 END) AS saldo_swp,
-            SUM(CASE WHEN id_jenis_simpanan = 3 THEN setor - tarik ELSE 0 END) AS saldo_ss,
-            SUM(CASE WHEN id_jenis_simpanan = 4 THEN setor - tarik ELSE 0 END) AS saldo_sp
-        ')
+        return $this->db->table($this->table)
+            ->select('id_anggota, 
+        COALESCE(SUM(setor_sw) - SUM(tarik_sw), 0) AS saldo_sw, 
+        COALESCE(SUM(setor_swp) - SUM(tarik_swp), 0) AS saldo_swp, 
+        COALESCE(SUM(setor_ss) - SUM(tarik_ss), 0) AS saldo_ss, 
+        COALESCE(SUM(setor_sp) - SUM(tarik_sp), 10000) AS saldo_sp, 
+        COALESCE(
+            (SUM(setor_sw) + SUM(setor_swp) + SUM(setor_ss) + SUM(setor_sp)) - 
+            (SUM(tarik_sw) + SUM(tarik_swp) + SUM(tarik_ss) + SUM(tarik_sp)), 
+            10000
+        ) AS saldo_total')
+
             ->where('id_anggota', $id_anggota)
             ->groupBy('id_anggota')
-            ->first();
+            ->get()
+            ->getRow();
     }
+
 
     public function simpanTransaksi($data)
     {
-        $idAnggota = $data['id_anggota'];
-        $tanggal = $data['tanggal'];
+        $this->db->transStart();
 
-        // Cek apakah transaksi sudah ada di tanggal yang sama
-        $transaksiExist = $this->where('id_anggota', $idAnggota)->where('tanggal', $tanggal)->first();
+        // Simpan transaksi baru
+        $this->insert($data);
 
-        // Ambil saldo terakhir
-        $saldoSebelumnya = $this->select('saldo_sw, saldo_swp, saldo_ss, saldo_total')
-            ->where('id_anggota', $idAnggota)
-            ->orderBy('created_at', 'DESC')
-            ->first();
+        // Hitung saldo terbaru
+        $saldoBaru = $this->hitungSaldo($data['id_anggota']);
 
-        $saldoSebelumnya = $saldoSebelumnya ? (object) $saldoSebelumnya : (object) [
-            'saldo_sw' => 0,
-            'saldo_swp' => 0,
-            'saldo_ss' => 0,
-            'saldo_total' => 10000 // Minimal saldo total
-        ];
+        // Pastikan saldo minimal 10.000 (batasan dari sistem)
+        $saldoTotal = max(10000, $saldoBaru->saldo_total);
 
-        // Validasi sebelum perhitungan
-        if (!empty($data['tarik_sw']) || !empty($data['tarik_swp'])) {
-            return ['error' => 'Penarikan hanya diperbolehkan untuk Simpanan Sukarela (SS).'];
-        }
+        // Update saldo di tabel anggota
+        $this->db->table('anggota')
+            ->where('id_anggota', $data['id_anggota'])
+            ->update(['saldo_total' => $saldoTotal]);
 
-        if ($saldoSebelumnya->saldo_ss < ($data['tarik_ss'] ?? 0)) {
-            return ['error' => 'Saldo Simpanan Sukarela (SS) tidak mencukupi untuk penarikan.'];
-        }
-
-        // Hitung saldo baru (untuk setor dan tarik)
-        $saldoBaru = [
-            'saldo_sw' => max(0, $saldoSebelumnya->saldo_sw + ($data['setor_sw'] ?? 0) - ($data['tarik_sw'] ?? 0)),
-            'saldo_swp' => max(0, $saldoSebelumnya->saldo_swp + ($data['setor_swp'] ?? 0) - ($data['tarik_swp'] ?? 0)),
-            'saldo_ss' => max(0, $saldoSebelumnya->saldo_ss + ($data['setor_ss'] ?? 0) - ($data['tarik_ss'] ?? 0)),
-            'saldo_total' => max(10000, ($saldoSebelumnya->saldo_total +
-                ($data['setor_sw'] ?? 0) + ($data['setor_swp'] ?? 0) + ($data['setor_ss'] ?? 0) -
-                ($data['tarik_sw'] ?? 0) - ($data['tarik_swp'] ?? 0) - ($data['tarik_ss'] ?? 0)))
-        ];
-
-        // Pastikan saldo total tidak kurang dari Rp10.000 setelah transaksi
-        if ($saldoBaru['saldo_total'] < 10000) {
-            return ['error' => 'Saldo total tidak boleh kurang dari Rp10.000'];
-        }
-
-        // Data transaksi utama
-        $transaksiData = [
-            'id_anggota' => $idAnggota,
-            'tanggal' => $tanggal,
-            'saldo_sw' => $saldoBaru['saldo_sw'],
-            'saldo_swp' => $saldoBaru['saldo_swp'],
-            'saldo_ss' => $saldoBaru['saldo_ss'],
-            'saldo_total' => $saldoBaru['saldo_total'],
-            'keterangan' => $data['keterangan'] ?? '',
-            'updated_at' => date('Y-m-d H:i:s')
-        ];
-
-        if ($transaksiExist) {
-            $this->update($transaksiExist->id_transaksi_simpanan, $transaksiData);
-            $idTransaksi = $transaksiExist->id_transaksi_simpanan;
-        } else {
-            $transaksiData['created_at'] = date('Y-m-d H:i:s');
-            $this->insert($transaksiData);
-            $idTransaksi = $this->insertID();
-
-            if (!$idTransaksi) {
-                return ['error' => 'Gagal menyimpan transaksi.'];
-            }
-        }
-
-        // Simpan detail transaksi
-        $jenisSimpanan = [1 => 'sw', 2 => 'swp', 3 => 'ss'];
-
-        foreach ($jenisSimpanan as $idJenis => $field) {
-            if (!empty($data['setor_' . $field]) || !empty($data['tarik_' . $field])) {
-                $detailExist = $this->db->table('transaksi_simpanan_detail')
-                    ->where('id_transaksi_simpanan', $idTransaksi)
-                    ->where('id_jenis_simpanan', $idJenis)
-                    ->countAllResults();
-
-                if ($detailExist == 0) {
-                    $this->db->table('transaksi_simpanan_detail')->insert([
-                        'id_transaksi_simpanan' => $idTransaksi,
-                        'id_jenis_simpanan' => $idJenis,
-                        'setor' => $data['setor_' . $field] ?? 0,
-                        'tarik' => $data['tarik_' . $field] ?? 0,
-                        'saldo_akhir' => $saldoBaru['saldo_' . $field],
-                        'created_at' => date('Y-m-d H:i:s')
-                    ]);
-                }
-            }
-        }
-
-        return true; // Kembalikan `true` jika berhasil
+        return $this->db->transComplete();
     }
+
 
     public function getTransaksiWithAnggota()
     {
@@ -154,13 +90,26 @@ class TransaksiSimpananModel extends Model
             ->orderBy('tanggal', 'DESC')
             ->first();
 
+        if (!$lastTransaksi) {
+            // Jika tidak ada transaksi, kembalikan nilai default
+            return [
+                'saldo_sw' => 0,
+                'saldo_swp' => 0,
+                'saldo_ss' => 0,
+                'saldo_sp' => 10000, // Default SP untuk anggota baru
+            ];
+        }
+
+        // Pastikan setiap properti ada sebelum diakses
         return [
-            'saldo_sw' => $lastTransaksi ? $lastTransaksi->saldo_sw : 0,
-            'saldo_swp' => $lastTransaksi ? $lastTransaksi->saldo_swp : 0,
-            'saldo_ss' => $lastTransaksi ? $lastTransaksi->saldo_ss : 0,
-            'saldo_sp' => $lastTransaksi ? $lastTransaksi->saldo_sp : 10000, // Default SP untuk anggota baru
+            'saldo_sw' => isset($lastTransaksi->setor_sw, $lastTransaksi->tarik_sw) ? ($lastTransaksi->setor_sw - $lastTransaksi->tarik_sw) : 0,
+            'saldo_swp' => isset($lastTransaksi->setor_swp, $lastTransaksi->tarik_swp) ? ($lastTransaksi->setor_swp - $lastTransaksi->tarik_swp) : 0,
+            'saldo_ss' => isset($lastTransaksi->setor_ss, $lastTransaksi->tarik_ss) ? ($lastTransaksi->setor_ss - $lastTransaksi->tarik_ss) : 0,
+            'saldo_sp' => isset($lastTransaksi->setor_sp, $lastTransaksi->tarik_sp) ? ($lastTransaksi->setor_sp - $lastTransaksi->tarik_sp) : 10000,
         ];
     }
+
+
 
     public function getTransaksiByAnggota($id_anggota)
     {
@@ -170,20 +119,23 @@ class TransaksiSimpananModel extends Model
     }
     public function getLatestTransaksiPerAnggota()
     {
-        return $this->db->table('transaksi_simpanan t1')
-            ->select('a.nama, a.no_ba, 
-                      t1.saldo_sw, t1.saldo_swp, t1.saldo_ss, t1.saldo_sp,
-                      (t1.saldo_sw + t1.saldo_swp + t1.saldo_ss + t1.saldo_sp) AS saldo_total,
-                      a.id_anggota')
-            ->join('anggota a', 'a.id_anggota = t1.id_anggota', 'left')
-            ->join(
-                '(SELECT id_anggota, MAX(updated_at) AS max_date FROM transaksi_simpanan GROUP BY id_anggota) t2',
-                't1.id_anggota = t2.id_anggota AND t1.updated_at = t2.max_date',
-                'inner'
+        return $this->db->table('anggota a')
+            ->select('a.nama, a.no_ba, a.id_anggota, 
+                COALESCE(SUM(ts.setor_sw - ts.tarik_sw), 0) AS saldo_sw, 
+                COALESCE(SUM(ts.setor_swp - ts.tarik_swp), 0) AS saldo_swp, 
+                COALESCE(SUM(ts.setor_ss - ts.tarik_ss), 0) AS saldo_ss, 
+                COALESCE(SUM(ts.setor_sp - ts.tarik_sp), 0) AS saldo_sp,
+                (COALESCE(SUM(ts.setor_sw - ts.tarik_sw), 0) + 
+                 COALESCE(SUM(ts.setor_swp - ts.tarik_swp), 0) + 
+                 COALESCE(SUM(ts.setor_ss - ts.tarik_ss), 0) + 
+                 COALESCE(SUM(ts.setor_sp - ts.tarik_sp), 0)) AS saldo_total'
             )
+            ->join('transaksi_simpanan ts', 'a.id_anggota = ts.id_anggota', 'left')
+            ->groupBy('a.id_anggota')
             ->get()
             ->getResult();
     }
+
 
     public function getTransaksiWithSaldoSP()
     {
@@ -195,35 +147,38 @@ class TransaksiSimpananModel extends Model
     }
     public function updateSaldoSWP($id_anggota, $swp)
     {
-        $transaksi = $this->where('id_anggota', $id_anggota)->orderBy('id_transaksi_simpanan', 'DESC')->first();
-        if ($transaksi) {
-            $this->update($transaksi->id_transaksi_simpanan, [
-                'saldo_swp' => $transaksi->saldo_swp + $swp,
-                'saldo_total' => $transaksi->saldo_total + $swp
-            ]);
-        } else {
-            // Jika tidak ada transaksi sebelumnya, buat baru
-            $this->insert([
-                'id_anggota' => $id_anggota,
-                'tanggal' => date('d-m-Y'),
-                'saldo_sw' => 0,
-                'saldo_swp' => $swp,
-                'saldo_ss' => 0,
-                'saldo_total' => $swp
-            ]);
-        }
+        // Ambil total saldo terbaru anggota
+        $totalSaldo = $this->db->table('transaksi_simpanan')
+            ->select('
+                SUM(setor_sw - tarik_sw) AS saldo_sw,
+                SUM(setor_swp - tarik_swp) AS saldo_swp,
+                SUM(setor_ss - tarik_ss) AS saldo_ss,
+                SUM(setor_sp - tarik_sp) AS saldo_sp
+            ')
+            ->where('id_anggota', $id_anggota)
+            ->get()
+            ->getRow();
+
+        // Hitung saldo total dari seluruh jenis simpanan
+        $saldo_total = ($totalSaldo->saldo_sw + $totalSaldo->saldo_swp + $totalSaldo->saldo_ss + $totalSaldo->saldo_sp) + $swp;
+
+        // Simpan transaksi baru
+        $this->insert([
+            'id_anggota' => $id_anggota,
+            'tanggal' => date('Y-m-d'),
+            'setor_swp' => $swp
+        ]);
     }
+
 
     // ====== dashboard total simpanan =========
     public function getTotalSimpanan()
     {
-        $query = $this->db->table('transaksi_simpanan AS ts')
-            ->select('SUM(ts.saldo_total) AS total_saldo')
-            ->where('ts.id_transaksi_simpanan IN (
-                SELECT MAX(id_transaksi_simpanan) 
-                FROM transaksi_simpanan 
-                GROUP BY id_anggota
-            )')
+        $query = $this->db->table('transaksi_simpanan AS t1')
+            ->select('SUM(
+            (t1.setor_sw + t1.setor_swp + t1.setor_ss + t1.setor_sp) - 
+            (t1.tarik_sw + t1.tarik_swp + t1.tarik_ss + t1.tarik_sp)
+        ) AS total_saldo')
             ->get();
 
         $result = $query->getRow();

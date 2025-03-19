@@ -16,7 +16,7 @@
             <h5 class="mb-0">Form Edit Transaksi</h5>
         </div>
         <div class="card-body">
-            <form action="<?= site_url('karyawan/transaksi_simpanan/update/' . $transaksi->id_transaksi_simpanan) ?>"
+            <form action="<?= site_url('karyawan/transaksi_simpanan/update/' . $transaksi->id_simpanan) ?>"
                 method="post">
                 <?= csrf_field() ?>
 
