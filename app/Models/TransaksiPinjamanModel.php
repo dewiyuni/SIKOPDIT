@@ -72,12 +72,11 @@ class TransaksiPinjamanModel extends Model
     }
 
 
-    public function getAngsuranByPinjaman($id)
+    public function getAngsuranByPinjaman($id_pinjaman)
     {
         return $this->db->table('angsuran')
-            ->select("id_angsuran, id_pinjaman, tanggal_angsuran, jumlah_angsuran, sisa_pinjaman, status, DATE_FORMAT(tanggal_angsuran, '%d %M %Y') AS tanggal_format")
-            ->where('id_pinjaman', $id)
-            ->orderBy('tanggal_angsuran', 'DESC')
+            ->where('id_pinjaman', $id_pinjaman)
+            ->orderBy('tanggal_angsuran', 'ASC')
             ->get()
             ->getResult();
     }

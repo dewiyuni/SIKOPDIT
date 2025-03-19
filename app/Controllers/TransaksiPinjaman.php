@@ -28,24 +28,43 @@ class TransaksiPinjaman extends BaseController
     }
     public function index()
     {
+        // First, get all loans with basic information
         $pinjaman = $this->transaksiPinjamanModel
-            ->select('transaksi_pinjaman.*, anggota.nama, anggota.no_ba, 
-              (transaksi_pinjaman.jumlah_pinjaman - COALESCE(SUM(angsuran.jumlah_angsuran), 0)) AS saldo_terakhir')
+            ->select('transaksi_pinjaman.*, anggota.nama, anggota.no_ba')
             ->join('anggota', 'anggota.id_anggota = transaksi_pinjaman.id_anggota', 'left')
-            ->join('angsuran', 'angsuran.id_pinjaman = transaksi_pinjaman.id_pinjaman', 'left')
-            ->groupBy('transaksi_pinjaman.id_pinjaman') // Pastikan data tidak duplikat karena join
             ->findAll();
 
+        // For each loan, get the latest payment record to determine the current status
         foreach ($pinjaman as &$row) {
-            $angsuran = $this->angsuranModel->where('id_pinjaman', $row->id_pinjaman)
+            // Get the latest payment record for this loan
+            $latestPayment = $this->angsuranModel
+                ->where('id_pinjaman', $row->id_pinjaman)
+                ->orderBy('id_angsuran', 'DESC') // Get the most recent payment
+                ->first();
+
+            if ($latestPayment) {
+                // If there's a payment record, use its sisa_pinjaman value
+                $row->saldo_terakhir = $latestPayment->sisa_pinjaman;
+                $row->status_pembayaran = $latestPayment->status;
+            } else {
+                // If no payment records, the remaining balance is the full loan amount
+                $row->saldo_terakhir = $row->jumlah_pinjaman;
+                $row->status_pembayaran = 'belum bayar';
+            }
+
+            // Calculate total payments made
+            $totalPayments = $this->angsuranModel
                 ->selectSum('jumlah_angsuran')
+                ->where('id_pinjaman', $row->id_pinjaman)
                 ->get()
                 ->getRow();
-            $row->total_angsuran = $angsuran ? $angsuran->jumlah_angsuran : 0;
+
+            $row->total_angsuran = $totalPayments ? $totalPayments->jumlah_angsuran : 0;
         }
 
         return view('karyawan/transaksi_pinjaman/index', ['pinjaman' => $pinjaman]);
     }
+
     public function tambah()
     {
         // Ambil data anggota untuk ditampilkan di dropdown
@@ -63,7 +82,7 @@ class TransaksiPinjaman extends BaseController
                 'id_anggota' => 'required|integer',
                 'jumlah_pinjaman' => 'required|greater_than[0]',
                 'jangka_waktu' => 'required|integer',
-                'jaminan' => 'required'
+                'jaminan' => 'permit_empty' // Make jaminan optional
             ])
         ) {
             return redirect()->back()->withInput()->with('error', 'Pastikan semua data terisi dengan benar.');
@@ -71,10 +90,9 @@ class TransaksiPinjaman extends BaseController
 
         // Ambil data dari form
         $id_anggota = $this->request->getPost('id_anggota');
-        $jumlah_pinjaman = $this->request->getPost('jumlah_pinjaman');
+        $jumlah_pinjaman = $this->request->getPost('jumlah_pinjaman'); // This should include the total amount (Principal + Interest)
         $jangka_waktu = $this->request->getPost('jangka_waktu');
-        $bunga = $this->request->getPost('bunga');
-        $jaminan = $this->request->getPost('jaminan');
+        $jaminan = $this->request->getPost('jaminan') ?: 'Tidak ada'; // Default to 'Tidak ada' if not provided
 
         // Periksa apakah anggota ada
         if (!$this->anggotaModel->find($id_anggota)) {
@@ -125,6 +143,7 @@ class TransaksiPinjaman extends BaseController
             return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
+
     public function edit($id_angsuran)
     {
         $pinjamanModel = new transaksiPinjamanModel();
@@ -219,33 +238,58 @@ class TransaksiPinjaman extends BaseController
         $model = new TransaksiPinjamanModel();
 
         try {
-            // Ambil data pinjaman berdasarkan ID
-            $pinjaman = $model->getDataById($id);
+            // Get loan data by ID with member information
+            $pinjaman = $model->select('transaksi_pinjaman.*, anggota.nama, anggota.no_ba, anggota.nik, anggota.alamat')
+                ->join('anggota', 'anggota.id_anggota = transaksi_pinjaman.id_anggota', 'left')
+                ->where('transaksi_pinjaman.id_pinjaman', $id)
+                ->first();
 
-            // Jika data pinjaman tidak ditemukan, tampilkan error 404
+            // If loan data not found, show error
             if (!$pinjaman) {
                 return redirect()->to('karyawan/transaksi_pinjaman')->with('error', 'Data pinjaman tidak ditemukan.');
             }
 
-            // Ambil data angsuran berdasarkan ID pinjaman
+            // Get installment data for this loan
             $angsuran = $model->getAngsuranByPinjaman($id);
 
-            // Jika tidak ada data angsuran
-            if (!$angsuran) {
-                return redirect()->to('karyawan/transaksi_pinjaman')->with('error', 'Tidak ada riwayat angsuran untuk pinjaman ini.');
+            // Calculate payment summary
+            $totalAngsuran = 0;
+            $totalBunga = 0;
+
+            if ($angsuran) {
+                foreach ($angsuran as $row) {
+                    $totalAngsuran += $row->jumlah_angsuran;
+                    $totalBunga += ($row->bunga / 100) * $row->jumlah_angsuran;
+                }
             }
 
-            // Kirim data ke tampilan
+            $sisaPinjaman = $pinjaman->jumlah_pinjaman - $totalAngsuran;
+            $persentaseLunas = ($pinjaman->jumlah_pinjaman > 0)
+                ? round(($totalAngsuran / $pinjaman->jumlah_pinjaman) * 100, 2)
+                : 0;
+
+            // Calculate expected installment amount
+            $angsuranPerBulan = ($pinjaman->jangka_waktu > 0)
+                ? $pinjaman->jumlah_pinjaman / $pinjaman->jangka_waktu
+                : 0;
+
+            // Send data to view
             return view('karyawan/transaksi_pinjaman/detail', [
                 'pinjaman' => $pinjaman,
-                'angsuran' => $angsuran
+                'angsuran' => $angsuran,
+                'totalAngsuran' => $totalAngsuran,
+                'totalBunga' => $totalBunga,
+                'sisaPinjaman' => $sisaPinjaman,
+                'persentaseLunas' => $persentaseLunas,
+                'angsuranPerBulan' => $angsuranPerBulan
             ]);
 
         } catch (\Exception $e) {
-            // Tangani kesalahan dan tampilkan pesan error
+            // Handle errors
             return redirect()->to('karyawan/transaksi_pinjaman')->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
+
 
     public function tambahAngsuran($id_pinjaman)
     {
