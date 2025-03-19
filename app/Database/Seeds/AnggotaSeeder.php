@@ -11,7 +11,6 @@ class AnggotaSeeder extends Seeder
         $db = \Config\Database::connect();
         $builderAnggota = $db->table('anggota');
         $builderTransaksi = $db->table('transaksi_simpanan');
-        $builderDetail = $db->table('transaksi_simpanan_detail');
 
         $dataAnggota = [
             [
@@ -39,63 +38,37 @@ class AnggotaSeeder extends Seeder
                 'status' => 'aktif',
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
-            ],
-            [
-                'no_ba' => '003',
-                'nama' => 'Citra Dewi',
-                'nik' => '3456789012345678',
-                'dusun' => 'Gerjen',
-                'alamat' => 'Jl. Diponegoro No. 3',
-                'pekerjaan' => 'Guru',
-                'tgl_lahir' => '1992-11-20',
-                'nama_pasangan' => null,
-                'status' => 'aktif',
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
             ]
         ];
 
         foreach ($dataAnggota as $anggota) {
-            // Insert data anggota
-            $builderAnggota->insert($anggota);
-            $idAnggota = $db->insertID(); // Ambil ID anggota yang baru dibuat
+            // Cek apakah anggota sudah ada
+            $existingAnggota = $builderAnggota->where('nik', $anggota['nik'])->get()->getRow();
+            if (!$existingAnggota) {
+                $builderAnggota->insert($anggota);
+                $idAnggota = $db->insertID();
+            } else {
+                $idAnggota = $existingAnggota->id_anggota;
+            }
 
-            // Insert transaksi simpanan (mendapatkan id_transaksi_simpanan)
-            $builderTransaksi->insert([
-                'id_anggota' => $idAnggota,
-                'tanggal' => date('Y-m-d'),
-                'saldo_sw' => 75000,
-                'saldo_swp' => 0,
-                'saldo_ss' => 5000,
-                'saldo_sp' => 10000,
-                'saldo_total' => 90000,
-                'keterangan' => 'Saldo Awal Pendaftaran',
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s')
-            ]);
-            $idTransaksiSimpanan = $db->insertID(); // Ambil ID transaksi_simpanan
-
-            // ID Jenis Simpanan (sesuaikan dengan tabel `jenis_simpanan`)
-            $idJenisSimpanan = [
-                'SW' => 1,  // Simpanan Wajib
-                'SWP' => 2,  // Simpanan Wajib Pokok
-                'SS' => 3,  // Simpanan Sukarela
-                'SP' => 4,  // Simpanan Pokok
-            ];
-
-            // Insert ke transaksi_simpanan_detail
-            $simpananAwal = [
-                ['id_jenis_simpanan' => $idJenisSimpanan['SW'], 'setor' => 75000, 'tarik' => 0, 'saldo_akhir' => 75000],
-                ['id_jenis_simpanan' => $idJenisSimpanan['SWP'], 'setor' => 0, 'tarik' => 0, 'saldo_akhir' => 0],
-                ['id_jenis_simpanan' => $idJenisSimpanan['SS'], 'setor' => 5000, 'tarik' => 0, 'saldo_akhir' => 5000],
-                ['id_jenis_simpanan' => $idJenisSimpanan['SP'], 'setor' => 10000, 'tarik' => 0, 'saldo_akhir' => 10000],
-            ];
-
-            foreach ($simpananAwal as $simpanan) {
-                $simpanan['id_transaksi_simpanan'] = $idTransaksiSimpanan;
-                $simpanan['created_at'] = date('Y-m-d H:i:s');
-                $simpanan['updated_at'] = date('Y-m-d H:i:s');
-                $builderDetail->insert($simpanan);
+            // Cek apakah transaksi simpanan sudah ada
+            $existingTransaksi = $builderTransaksi->where('id_anggota', $idAnggota)->get()->getRow();
+            if (!$existingTransaksi) {
+                $builderTransaksi->insert([
+                    'id_anggota' => $idAnggota,
+                    'id_pinjaman' => null, // Sesuaikan jika ada pinjaman
+                    'tanggal' => date('Y-m-d'),
+                    'setor_sw' => 75000,
+                    'tarik_sw' => 0,
+                    'setor_swp' => 0,
+                    'tarik_swp' => 0,
+                    'setor_ss' => 5000,
+                    'tarik_ss' => 0,
+                    'setor_sp' => 10000,
+                    'tarik_sp' => 0,
+                    'created_at' => date('Y-m-d H:i:s'),
+                    'updated_at' => date('Y-m-d H:i:s')
+                ]);
             }
         }
     }

@@ -23,7 +23,8 @@ class TransaksiSimpanan extends Migration
             'id_pinjaman' => [
                 'type' => 'INT',
                 'constraint' => 11,
-                'unsigned' => true
+                'unsigned' => true,
+                'null' => true
             ],
             'tanggal' => [
                 'type' => 'DATE'
