@@ -51,7 +51,7 @@
 
                                 <td>
                                     <a href="<?= base_url('karyawan/transaksi_pinjaman/detail/' . $row->id_pinjaman) ?>"
-                                        class="btn btn-info btn-sm">Detail</a>
+                                        class="btn btn-primary">Detail</a>
                                     <a href="<?= base_url('karyawan/transaksi_pinjaman/tambahAngsuran/' . $row->id_pinjaman) ?>"
                                         class="btn btn-warning btn-sm">Tambah Angsuran</a>
                                 </td>

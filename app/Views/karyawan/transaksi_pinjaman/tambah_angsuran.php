@@ -24,9 +24,16 @@
 
             <div class="form-group">
                 <label for="jumlah_angsuran">Jumlah Angsuran</label>
-                <input type="text" id="jumlah_angsuran" class="form-control" required oninput="formatRibuan(this)"
-                    autocomplete="off">
+                <input type="text" id="jumlah_angsuran" class="form-control" required
+                    oninput="formatRibuan(this, 'jumlah_angsuran_hidden')" autocomplete="off">
                 <input type="hidden" name="jumlah_angsuran" id="jumlah_angsuran_hidden">
+            </div>
+
+            <div class="form-group">
+                <label for="bunga">Bunga</label>
+                <input type="text" id="bunga" class="form-control" required
+                    oninput="formatRibuan(this, 'bunga_hidden')">
+                <input type="hidden" name="bunga" id="bunga_hidden">
             </div>
 
             <button type="submit" class="btn btn-success">Simpan Angsuran</button>
@@ -35,13 +42,16 @@
 </div>
 
 <script>
-    function formatRibuan(input) {
+    function formatRibuan(input, hiddenFieldId) {
         let angka = input.value.replace(/\D/g, ""); // Hapus semua non-angka
-        input.value = angka.replace(/\B(?=(\d{3})+(?!\d))/g, "."); // Tambah titik sebagai pemisah ribuan
-
-        // Simpan nilai asli tanpa pemisah ke input hidden untuk dikirim ke server
-        document.getElementById("jumlah_angsuran_hidden").value = angka;
+        input.value = angka.replace(/\B(?=(\d{3})+(?!\d))/g, "."); // Tambah titik pemisah ribuan
+        document.getElementById(hiddenFieldId).value = angka; // Simpan tanpa titik
     }
+
+    document.getElementById("bunga").addEventListener("input", function () {
+        document.getElementById("bunga_hidden").value = this.value.replace(/\D/g, "");
+    });
+
 </script>
 
 <?= $this->endSection() ?>

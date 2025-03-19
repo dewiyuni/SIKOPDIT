@@ -38,7 +38,7 @@ class TransaksiPinjaman extends BaseController
 
         foreach ($pinjaman as &$row) {
             $angsuran = $this->angsuranModel->where('id_pinjaman', $row->id_pinjaman)
-                ->selectSum(select: 'jumlah_angsuran')
+                ->selectSum('jumlah_angsuran')
                 ->get()
                 ->getRow();
             $row->total_angsuran = $angsuran ? $angsuran->jumlah_angsuran : 0;
@@ -280,72 +280,49 @@ class TransaksiPinjaman extends BaseController
     }
     public function simpanAngsuran()
     {
-        // Validasi input
-        if (
-            !$this->validate([
-                'id_pinjaman' => 'required|integer',
-                'tanggal_angsuran' => 'required|valid_date[Y-m-d]',
-                'jumlah_angsuran' => 'required|greater_than[0]',
-            ])
-        ) {
-            return redirect()->back()->withInput()->with('error', 'Pastikan semua data diisi dengan benar.');
-        }
+        $id_pinjaman = $this->request->getPost('id_pinjaman');
+        $tanggal_angsuran = $this->request->getPost('tanggal_angsuran');
+        $jumlah_angsuran = str_replace('.', '', $this->request->getPost('jumlah_angsuran')); // Hilangkan pemisah ribuan
+        $bunga = str_replace('.', '', $this->request->getPost('bunga')); // Jika ada input bunga manual
 
-        // Ambil data dari form
-        $idPinjaman = $this->request->getPost('id_pinjaman');
-        $tanggalAngsuran = $this->request->getPost('tanggal_angsuran');
-        $jumlahAngsuran = (float) $this->request->getPost('jumlah_angsuran');
-
-        // Cek apakah pinjaman valid
-        $pinjaman = $this->transaksiPinjamanModel->find($idPinjaman);
+        // Ambil data pinjaman berdasarkan ID
+        $pinjaman = $this->transaksiPinjamanModel->where('id_pinjaman', $id_pinjaman)->first();
         if (!$pinjaman) {
             return redirect()->back()->with('error', 'Pinjaman tidak ditemukan.');
         }
 
-        // Hitung total angsuran yang sudah dibayar
-        $totalAngsuran = (float) $this->angsuranModel
-            ->where('id_pinjaman', $idPinjaman)
+        // Hitung total angsuran sebelumnya
+        $totalAngsuran = $this->angsuranModel
+            ->where('id_pinjaman', $id_pinjaman)
             ->selectSum('jumlah_angsuran')
-            ->first()->jumlah_angsuran ?? 0;
+            ->get()
+            ->getRow()
+            ->jumlah_angsuran ?? 0;
 
-        $sisaPinjaman = $pinjaman->jumlah_pinjaman - $totalAngsuran;
+        // Hitung sisa pinjaman setelah angsuran baru
+        $sisa_pinjaman = $pinjaman->jumlah_pinjaman - $totalAngsuran - $jumlah_angsuran;
 
-        if ($jumlahAngsuran > $sisaPinjaman) {
-            return redirect()->back()->with('error', 'Jumlah angsuran melebihi sisa pinjaman.');
+        // Tentukan status pinjaman
+        $status = ($sisa_pinjaman <= 0) ? 'Lunas' : 'Belum Lunas';
+
+        // Simpan angsuran ke database (termasuk sisa pinjaman & bunga)
+        $this->angsuranModel->insert([
+            'id_pinjaman' => $id_pinjaman,
+            'tanggal_angsuran' => $tanggal_angsuran,
+            'jumlah_angsuran' => $jumlah_angsuran,
+            'bunga' => $bunga, // Simpan bunga ke tabel angsuran
+            'sisa_pinjaman' => max(0, $sisa_pinjaman), // Jangan sampai negatif
+            'status' => $status,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s')
+        ]);
+
+        // Update status pinjaman jika lunas
+        if ($status == 'Lunas') {
+            $this->transaksiPinjamanModel->update($id_pinjaman, ['status' => 'Lunas']);
         }
 
-        // Mulai transaksi database
-        $this->db->transStart();
-        try {
-            // Simpan angsuran baru
-            $this->angsuranModel->insert([
-                'id_pinjaman' => $idPinjaman,
-                'tanggal_angsuran' => $tanggalAngsuran,
-                'jumlah_angsuran' => $jumlahAngsuran,
-                'sisa_pinjaman' => $sisaPinjaman - $jumlahAngsuran,
-                'status' => ($sisaPinjaman - $jumlahAngsuran) == 0 ? 'Lunas' : 'Berjalan',
-                'created_at' => date('Y-m-d H:i:s'),
-                'updated_at' => date('Y-m-d H:i:s'),
-            ]);
-
-            // **UPDATE saldo di `transaksi_pinjaman`**
-            $this->transaksiPinjamanModel->update($idPinjaman, [
-                'status' => ($sisaPinjaman - $jumlahAngsuran) == 0 ? 'Lunas' : 'Berjalan',
-                'updated_at' => date('Y-m-d H:i:s'),
-            ]);
-
-            $this->db->transComplete();
-
-            if ($this->db->transStatus() === false) {
-                throw new \Exception("Gagal menyimpan angsuran.");
-            }
-
-            return redirect()->to('/karyawan/transaksi_pinjaman')->with('success', 'Angsuran berhasil ditambahkan.');
-        } catch (\Exception $e) {
-            $this->db->transRollback();
-            log_message('error', 'Error saat menyimpan angsuran: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
-        }
+        return redirect()->to('karyawan/transaksi_pinjaman')->with('success', 'Angsuran berhasil ditambahkan.');
     }
 
 }

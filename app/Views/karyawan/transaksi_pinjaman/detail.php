@@ -40,6 +40,7 @@
                         <th>No</th>
                         <th>Tanggal</th>
                         <th>Saldo Awal</th>
+                        <th>Bunga</th>
                         <th>Angsuran</th>
                         <th>Saldo Akhir</th>
                         <th>Aksi</th>
@@ -57,9 +58,12 @@
                                 <!-- Menampilkan Saldo Awal -->
                                 <td>Rp <?= number_format($saldo_awal, 0, ',', '.') ?></td>
 
+                                <!-- Menampilkan Bunga -->
+                                <td>Rp <?= number_format($row->bunga, 0, ',', '.') ?></td>
+                                
                                 <!-- Menampilkan Angsuran -->
                                 <td>Rp <?= number_format($row->jumlah_angsuran, 0, ',', '.') ?></td>
-
+                               
                                 <!-- Menampilkan Saldo Akhir: Saldo awal dikurangi dengan angsuran -->
                                 <td>Rp <?= number_format($saldo_awal - $row->jumlah_angsuran, 0, ',', '.') ?></td>
 
