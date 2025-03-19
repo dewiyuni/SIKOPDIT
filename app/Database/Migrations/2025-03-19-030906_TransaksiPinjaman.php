@@ -31,12 +31,6 @@ class TransaksiPinjaman extends Migration
                 'type' => 'INT',
                 'constraint' => 3
             ],
-            'bunga' => [
-                'type' => 'DECIMAL',
-                'constraint' => '5,2',
-                'default' => 5,
-                'null' => false,
-            ],
             'jaminan' => [
                 'type' => 'VARCHAR',
                 'constraint' => '255',

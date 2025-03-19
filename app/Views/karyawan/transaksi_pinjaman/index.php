@@ -44,7 +44,7 @@
                                 <td><?= isset($row->tanggal_pinjaman) ? date('d M Y', strtotime($row->tanggal_pinjaman)) : '-' ?>
                                 </td>
                                 <td><?= esc($row->jangka_waktu ?? '-') ?> bulan</td>
-                                <td>2%</td>
+                                <td>2,5%</td>
                                 <td>Rp <?= number_format($row->jumlah_pinjaman ?? 0, 0, ',', '.') ?></td>
                                 <td>Rp <?= number_format($row->saldo_terakhir ?? 0, 0, ',', '.') ?></td>
                                 <td><?= esc($row->jaminan ?? '-') ?></td>

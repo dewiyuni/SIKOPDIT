@@ -9,7 +9,7 @@ class TransaksiSimpanan extends Migration
     public function up()
     {
         $this->forge->addField([
-            'id_transaksi_simpanan' => [
+            'id_simpanan' => [
                 'type' => 'INT',
                 'constraint' => 11,
                 'unsigned' => true,
@@ -20,37 +20,53 @@ class TransaksiSimpanan extends Migration
                 'constraint' => 11,
                 'unsigned' => true
             ],
+            'id_pinjaman' => [
+                'type' => 'INT',
+                'constraint' => 11,
+                'unsigned' => true
+            ],
             'tanggal' => [
                 'type' => 'DATE'
             ],
-            'saldo_sw' => [
+            'setor_sw' => [
                 'type' => 'DECIMAL',
                 'constraint' => '10,2',
                 'default' => 0.00
             ],
-            'saldo_swp' => [
+            'tarik_sw' => [
                 'type' => 'DECIMAL',
                 'constraint' => '10,2',
                 'default' => 0.00
             ],
-            'saldo_ss' => [
+            'setor_swp' => [
                 'type' => 'DECIMAL',
                 'constraint' => '10,2',
                 'default' => 0.00
             ],
-            'saldo_sp' => [
-                'type' => 'INT',
-                'constraint' => 11,
-                'default' => 10000, // Simpanan Pokok awal 10K
-            ],
-            'saldo_total' => [
+            'tarik_swp' => [
                 'type' => 'DECIMAL',
                 'constraint' => '10,2',
                 'default' => 0.00
             ],
-            'keterangan' => [
-                'type' => 'TEXT',
-                'null' => true
+            'setor_ss' => [
+                'type' => 'DECIMAL',
+                'constraint' => '10,2',
+                'default' => 0.00
+            ],
+            'tarik_ss' => [
+                'type' => 'DECIMAL',
+                'constraint' => '10,2',
+                'default' => 0.00
+            ],
+            'setor_sp' => [
+                'type' => 'DECIMAL',
+                'constraint' => '10,2',
+                'default' => 0.00
+            ],
+            'tarik_sp' => [
+                'type' => 'DECIMAL',
+                'constraint' => '10,2',
+                'default' => 0.00
             ],
             'created_at' => [
                 'type' => 'DATETIME',
@@ -62,8 +78,9 @@ class TransaksiSimpanan extends Migration
             ]
         ]);
 
-        $this->forge->addKey('id_transaksi_simpanan', true);
+        $this->forge->addKey('id_simpanan', true);
         $this->forge->addForeignKey('id_anggota', 'anggota', 'id_anggota', 'CASCADE', 'CASCADE');
+        $this->forge->addForeignKey('id_pinjaman', 'transaksi_pinjaman', 'id_pinjaman', 'CASCADE', 'CASCADE');
         $this->forge->createTable('transaksi_simpanan');
     }
 

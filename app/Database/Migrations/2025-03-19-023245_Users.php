@@ -22,7 +22,6 @@ class Users extends Migration
             'email' => [
                 'type' => 'VARCHAR',
                 'constraint' => 100,
-                'unique' => true
             ],
             'password' => [
                 'type' => 'VARCHAR',
@@ -52,7 +51,8 @@ class Users extends Migration
             ]
         ]);
 
-        $this->forge->addKey('id_user', true);
+        $this->forge->addPrimaryKey('id_user');
+        $this->forge->addUniqueKey('email'); // Menjadikan email unik
         $this->forge->createTable('users');
     }
 

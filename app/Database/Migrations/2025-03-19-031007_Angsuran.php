@@ -23,6 +23,12 @@ class Angsuran extends Migration
             'tanggal_angsuran' => [
                 'type' => 'DATE'
             ],
+            'bunga' => [
+                'type' => 'DECIMAL',
+                'constraint' => '5,2',
+                'default' => 5,
+                'null' => false,
+            ],
             'jumlah_angsuran' => [
                 'type' => 'DECIMAL',
                 'constraint' => '10,2'

@@ -31,7 +31,26 @@ class Anggota extends Migration
             ],
             'dusun' => [
                 'type' => 'ENUM',
-                'constraint' => ['Sapon', 'Jekeling', 'Gerjen', 'Tubin', 'Senden', 'Karang', 'Kwarakan', 'Diran', 'Geden', 'Bekelan', 'Sedan', 'Jurug', 'Ledok', 'Gentan'],
+                'constraint' => [
+                    'Sapon',
+                    'Jekeling',
+                    'Gerjen',
+                    'Tubin',
+                    'Senden',
+                    'Karang',
+                    'Kwarakan',
+                    'Diran',
+                    'Geden',
+                    'Bekelan',
+                    'Sedan',
+                    'Jurug',
+                    'Ledok',
+                    'Gentan',
+                    'Pleret',
+                    'Tuksono',
+                    'Kelompok',
+                    'Luar'
+                ],
                 'null' => false,
             ],
             'alamat' => [

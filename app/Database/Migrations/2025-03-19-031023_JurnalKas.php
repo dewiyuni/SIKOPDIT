@@ -4,7 +4,7 @@ namespace App\Database\Migrations;
 
 use CodeIgniter\Database\Migration;
 
-class JurnalKasHarian extends Migration
+class JurnalKas extends Migration
 {
     public function up()
     {
@@ -37,11 +37,11 @@ class JurnalKasHarian extends Migration
         ]);
 
         $this->forge->addKey('id', true);
-        $this->forge->createTable('jurnal_kas_harian');
+        $this->forge->createTable('jurnal_kas');
     }
 
     public function down()
     {
-        $this->forge->dropTable('jurnal_kas_harian');
+        $this->forge->dropTable('jurnal_kas');
     }
 }
