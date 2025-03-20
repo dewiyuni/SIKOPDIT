@@ -51,52 +51,73 @@ class TransaksiSimpanan extends Controller
             return redirect()->back()->with('error', 'Transaksi pada tanggal ini sudah ada!');
         }
 
+        // Prepare data for insertion
         $data = [
             'id_anggota' => $id_anggota,
             'tanggal' => $tanggal,
-            'setor_sw' => $this->request->getPost('setor_sw') ?? 0,
-            'setor_swp' => $this->request->getPost('setor_swp') ?? 0,
-            'setor_ss' => $this->request->getPost('setor_ss') ?? 0,
-            'tarik_sw' => $this->request->getPost('tarik_sw') ?? 0,
-            'tarik_swp' => $this->request->getPost('tarik_swp') ?? 0,
-            'tarik_ss' => $this->request->getPost('tarik_ss') ?? 0,
+            'setor_sw' => str_replace('.', '', $this->request->getPost('setor_sw')) ?? 0,
+            'setor_swp' => str_replace('.', '', $this->request->getPost('setor_swp')) ?? 0,
+            'setor_ss' => str_replace('.', '', $this->request->getPost('setor_ss')) ?? 0,
+            'tarik_sw' => str_replace('.', '', $this->request->getPost('tarik_sw')) ?? 0,
+            'tarik_swp' => str_replace('.', '', $this->request->getPost('tarik_swp')) ?? 0,
+            'tarik_ss' => str_replace('.', '', $this->request->getPost('tarik_ss')) ?? 0,
             'keterangan' => $this->request->getPost('keterangan'),
         ];
 
+        // Insert the transaction
         $this->transaksiModel->insert($data);
+
+        // Retrieve the last inserted ID
+        $id_simpanan = $this->transaksiModel->getInsertID();
+
+        // Now update the saldo for this member in the anggota table
+        $this->updateSaldoAnggota($id_anggota, $id_simpanan);
 
         return redirect()->to('/karyawan/transaksi_simpanan/')->with('message', 'Transaksi berhasil disimpan');
     }
+
+    private function updateSaldoAnggota($id_anggota, $id_simpanan)
+    {
+        // Calculate the total balance based on the latest transaction
+        $lastSaldo = $this->transaksiModel->hitungSaldo($id_anggota);
+
+        // Update the saldo_total in the anggota table
+        $this->anggotaModel->update($id_anggota, [
+            'saldo_total' => $lastSaldo->saldo_total ?? 0
+        ]);
+    }
+
     public function setor()
     {
         $id_anggota = $this->request->getPost('id_anggota');
         $setor_sw = (int) $this->request->getPost('setor_sw');
         $setor_ss = (int) $this->request->getPost('setor_ss');
 
-        // **Cek apakah ada transaksi terakhir anggota ini**
+        // Check for the latest transaction for this member
         $transaksi = $this->transaksiModel
             ->where('id_anggota', $id_anggota)
             ->orderBy('id_simpanan', 'DESC')
             ->first();
 
+        // Initialize saldo values
         if ($transaksi) {
-            // Jika transaksi sudah ada, ambil saldo terakhir
-            $saldo_sw = $transaksi->saldo_sw;
-            $saldo_ss = $transaksi->saldo_ss;
-            $saldo_total = $transaksi->saldo_total;
+            // If there is a transaction, get the last saldo values
+            $saldo_sw = $transaksi->saldo_sw ?? 0; // Ensure it defaults to 0 if not set
+            $saldo_ss = $transaksi->saldo_ss ?? 0; // Ensure it defaults to 0 if not set
+            $saldo_total = $transaksi->saldo_total ?? 0; // Ensure it defaults to 0 if not set
         } else {
-            // Jika belum ada transaksi, mulai saldo dari nol
+            // If no transactions exist, start balances from zero
             $saldo_sw = 0;
             $saldo_ss = 0;
             $saldo_total = 0;
         }
 
-        // **Hitung saldo baru setelah setoran**
+        // Calculate new balances after deposit
         $saldo_sw_baru = $saldo_sw + $setor_sw;
         $saldo_ss_baru = $saldo_ss + $setor_ss;
         $saldo_total_baru = $saldo_sw_baru + $saldo_ss_baru;
 
-        // **Tambahkan transaksi baru ke `transaksi_simpanan`**
+        // Add new transaction to `transaksi_simpanan`
         $this->transaksiModel->insert([
             'id_anggota' => $id_anggota,
             'tanggal' => date('Y-m-d H:i:s'),
@@ -473,21 +494,21 @@ class TransaksiSimpanan extends Controller
     /**
      * Fungsi untuk update saldo anggota setelah transaksi dihapus.
      */
-    private function updateSaldoAnggota($id_anggota)
-    {
-        // Hitung saldo terbaru berdasarkan transaksi yang masih ada
-        $saldo = $this->db->table('transaksi_simpanan')
-            ->where('id_anggota', $id_anggota)
-            ->selectSum('saldo_total')
-            ->get()
-            ->getRow()
-            ->saldo_total ?? 0;
+    // private function updateSaldoAnggota($id_anggota)
+    // {
+    //     // Hitung saldo terbaru berdasarkan transaksi yang masih ada
+    //     $saldo = $this->db->table('transaksi_simpanan')
+    //         ->where('id_anggota', $id_anggota)
+    //         ->selectSum('saldo_total')
+    //         ->get()
+    //         ->getRow()
+    //         ->saldo_total ?? 0;
 
-        // Update saldo anggota di tabel anggota (jika ada kolom saldo)
-        $this->db->table('anggota')
-            ->where('id_anggota', $id_anggota)
-            ->update(['saldo' => $saldo]);
-    }
+    //     // Update saldo anggota di tabel anggota (jika ada kolom saldo)
+    //     $this->db->table('anggota')
+    //         ->where('id_anggota', $id_anggota)
+    //         ->update(['saldo' => $saldo]);
+    // }
 
 
     // ==================== Jenis simpanan ==================================== 

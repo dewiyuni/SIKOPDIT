@@ -33,22 +33,22 @@ class TransaksiSimpananModel extends Model
     public function hitungSaldo($id_anggota)
     {
         return $this->db->table($this->table)
-            ->select('id_anggota, 
-        COALESCE(SUM(setor_sw) - SUM(tarik_sw), 0) AS saldo_sw, 
-        COALESCE(SUM(setor_swp) - SUM(tarik_swp), 0) AS saldo_swp, 
-        COALESCE(SUM(setor_ss) - SUM(tarik_ss), 0) AS saldo_ss, 
-        COALESCE(SUM(setor_sp) - SUM(tarik_sp), 10000) AS saldo_sp, 
-        COALESCE(
-            (SUM(setor_sw) + SUM(setor_swp) + SUM(setor_ss) + SUM(setor_sp)) - 
-            (SUM(tarik_sw) + SUM(tarik_swp) + SUM(tarik_ss) + SUM(tarik_sp)), 
-            10000
-        ) AS saldo_total')
-
+            ->select('
+                COALESCE(SUM(setor_sw) - SUM(tarik_sw), 0) AS saldo_sw, 
+                COALESCE(SUM(setor_swp) - SUM(tarik_swp), 0) AS saldo_swp, 
+                COALESCE(SUM(setor_ss) - SUM(tarik_ss), 0) AS saldo_ss, 
+                COALESCE(SUM(setor_sp) - SUM(tarik_sp), 0) AS saldo_sp,
+                (COALESCE(SUM(setor_sw) - SUM(tarik_sw), 0) + 
+                 COALESCE(SUM(setor_swp) - SUM(tarik_swp), 0) + 
+                 COALESCE(SUM(setor_ss) - SUM(tarik_ss), 0) + 
+                 COALESCE(SUM(setor_sp) - SUM(tarik_sp), 0)) AS saldo_total
+            ')
             ->where('id_anggota', $id_anggota)
             ->groupBy('id_anggota')
             ->get()
             ->getRow();
     }
+
 
 
     public function simpanTransaksi($data)

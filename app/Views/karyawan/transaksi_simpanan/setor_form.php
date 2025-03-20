@@ -2,7 +2,7 @@
 
 <?= $this->section('content') ?>
 <div class="container mt-4">
-    <div class="d-flex justify-content-between align-items-center">
+    <div class="d-flex justify-content-between align-items-center mb-3">
         <h3>Transaksi Setor Simpanan</h3>
         <a href="<?= site_url('karyawan/transaksi_simpanan') ?>" class="btn btn-warning">Kembali</a>
     </div>
@@ -17,16 +17,20 @@
             <input type="hidden" name="id_jenis_simpanan_ss" value="<?= esc($id_simpanan_sukarela ?? '') ?>">
 
             <!-- Simpanan Wajib -->
-            <label for="setor_sw">Simpanan Wajib:</label>
-            <input type="text" id="setor_sw" class="form-control" placeholder="Masukkan jumlah setoran Wajib" required
-                oninput="formatRibuan(this)" value="5.000">
-            <input type="hidden" name="setor_sw" id="setor_sw_hidden" value="5000">
+            <div class="mb-3">
+                <label for="setor_sw" class="form-label">Simpanan Wajib:</label>
+                <input type="text" id="setor_sw" class="form-control" placeholder="Masukkan jumlah setoran Wajib"
+                    required oninput="formatRibuan(this)" value="5000">
+                <input type="hidden" name="setor_sw" id="setor_sw_hidden" value="5000">
+            </div>
 
             <!-- Simpanan Sukarela -->
-            <label for="setor_ss">Simpanan Sukarela:</label>
-            <input type="text" id="setor_ss" class="form-control" placeholder="Masukkan jumlah setoran Sukarela"
-                required oninput="formatRibuan(this)">
-            <input type="hidden" name="setor_ss" id="setor_ss_hidden">
+            <div class="mb-3">
+                <label for="setor_ss" class="form-label">Simpanan Sukarela:</label>
+                <input type="text" id="setor_ss" class="form-control" placeholder="Masukkan jumlah setoran Sukarela"
+                    oninput="formatRibuan(this)">
+                <input type="hidden" name="setor_ss" id="setor_ss_hidden">
+            </div>
 
             <button type="submit" class="btn btn-primary mt-3">Setor</button>
         </form>
@@ -54,6 +58,7 @@
 
     // Pastikan nilai default sudah diformat dengan benar saat halaman dimuat
     window.onload = function () {
+        // Set default value for Simpanan Wajib
         let setorSwInput = document.getElementById('setor_sw');
         if (setorSwInput.value === '') {
             setorSwInput.value = '5.000';
