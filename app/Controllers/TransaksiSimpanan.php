@@ -278,85 +278,16 @@ class TransaksiSimpanan extends Controller
             return redirect()->to('karyawan/transaksi_simpanan')->with('error', 'Anggota tidak ditemukan.');
         }
 
-        // Ambil data transaksi simpanan langsung dari `transaksi_simpanan`
+        // Ambil data transaksi simpanan berdasarkan id_anggota
         $transaksi_simpanan = $transaksiSimpananModel->getTransaksiByAnggota($id_anggota);
 
-        // Kelompokkan transaksi berdasarkan tanggal transaksi
-        $transaksi_dikelompokkan = [];
-
-        foreach ($transaksi_simpanan as $transaksi) {
-            $tanggal_key = date('Y-m-d H:i:s', strtotime($transaksi->created_at));
-
-            if (!isset($transaksi_dikelompokkan[$tanggal_key])) {
-                $transaksi_dikelompokkan[$tanggal_key] = [
-                    'waktu' => $tanggal_key,
-                    'id_transaksi' => $transaksi->id_simpanan,
-                    'setor_sw' => $transaksi->setor_sw ?? 0,
-                    'tarik_sw' => $transaksi->tarik_sw ?? 0,
-                    'setor_swp' => $transaksi->setor_swp ?? 0,
-                    'tarik_swp' => $transaksi->tarik_swp ?? 0,
-                    'setor_ss' => $transaksi->setor_ss ?? 0,
-                    'tarik_ss' => $transaksi->tarik_ss ?? 0,
-                    'setor_sp' => $transaksi->setor_sp ?? 0,
-                    'tarik_sp' => $transaksi->tarik_sp ?? 0,
-                ];
-            }
-        }
-
-        // Konversi array asosiatif menjadi array numerik untuk view
-        $riwayat_transaksi_final = array_values($transaksi_dikelompokkan);
-
-        // Urutkan berdasarkan waktu (terbaru dulu)
-        usort($riwayat_transaksi_final, function ($a, $b) {
-            return strtotime($b['waktu']) - strtotime($a['waktu']);
-        });
-
-        // Hitung total untuk setiap jenis simpanan
-        $total_sw_setor = 0;
-        $total_sw_tarik = 0;
-        $total_swp_setor = 0;
-        $total_swp_tarik = 0;
-        $total_ss_setor = 0;
-        $total_ss_tarik = 0;
-        $total_sp_setor = 0;
-        $total_sp_tarik = 0;
-
-        foreach ($riwayat_transaksi_final as $transaksi) {
-            $total_sw_setor += $transaksi['setor_sw'];
-            $total_sw_tarik += $transaksi['tarik_sw'];
-            $total_swp_setor += $transaksi['setor_swp'];
-            $total_swp_tarik += $transaksi['tarik_swp'];
-            $total_ss_setor += $transaksi['setor_ss'];
-            $total_ss_tarik += $transaksi['tarik_ss'];
-            $total_sp_setor += $transaksi['setor_sp'];
-            $total_sp_tarik += $transaksi['tarik_sp'];
-        }
-
-        // Ambil saldo akhir dari transaksi terakhir
-        $saldo_akhir = $transaksiSimpananModel->getLastSaldo($id_anggota);
-
-        // Konversi ke objek untuk konsistensi
-        $saldo_akhir = (object) [
-            'sw' => $saldo_akhir['saldo_sw'],
-            'swp' => $saldo_akhir['saldo_swp'],
-            'ss' => $saldo_akhir['saldo_ss'],
-            'sp' => $saldo_akhir['saldo_sp']
-        ];
-
+        // Kirim data ke view
         return view('karyawan/transaksi_simpanan/detail', [
             'anggota' => $anggota,
-            'riwayat_transaksi' => $riwayat_transaksi_final,
-            'saldo_akhir' => $saldo_akhir,
-            'total_sw_setor' => $total_sw_setor,
-            'total_sw_tarik' => $total_sw_tarik,
-            'total_swp_setor' => $total_swp_setor,
-            'total_swp_tarik' => $total_swp_tarik,
-            'total_ss_setor' => $total_ss_setor,
-            'total_ss_tarik' => $total_ss_tarik,
-            'total_sp_setor' => $total_sp_setor,
-            'total_sp_tarik' => $total_sp_tarik
+            'riwayat_transaksi' => $transaksi_simpanan, // Langsung kirim data transaksi
         ]);
     }
+
 
     public function simpan()
     {
@@ -447,34 +378,23 @@ class TransaksiSimpanan extends Controller
         }
     }
 
-
-    public function delete($id_transaksi)
+    public function delete($id_simpanan)
     {
-        $id_transaksi = (int) $id_transaksi;
+        $id_simpanan = (int) $id_simpanan;
 
-        // Ambil informasi anggota dari transaksi
-        $transaksi = $this->db->table('transaksi_simpanan')
-            ->select('id_anggota')
-            ->where('id_simpanan', $id_transaksi)
-            ->get()
-            ->getRow();
+        // Ambil informasi transaksi
+        $transaksi = $this->transaksiModel->find($id_simpanan);
 
         if (!$transaksi) {
             return redirect()->to('karyawan/transaksi_simpanan')->with('error', 'Transaksi tidak ditemukan.');
         }
 
-        $id_anggota = $transaksi->id_anggota;
-
+        // Mulai transaksi database
         $this->db->transStart();
 
         try {
-            // Hapus transaksi utama karena tidak ada lagi detail transaksi
-            $this->db->table('transaksi_simpanan')
-                ->where('id_simpanan', $id_transaksi)
-                ->delete();
-
-            // Jika transaksi dihapus, mungkin perlu update saldo anggota
-            $this->updateSaldoAnggota($id_anggota);
+            // Hapus transaksi berdasarkan id_simpanan
+            $this->transaksiModel->delete($id_simpanan);
 
             $this->db->transComplete();
 
@@ -482,14 +402,15 @@ class TransaksiSimpanan extends Controller
                 throw new \Exception("Gagal menghapus transaksi.");
             }
 
-            return redirect()->to('karyawan/transaksi_simpanan/detail/' . $id_anggota)
+            return redirect()->to('karyawan/transaksi_simpanan/detail/' . $transaksi->id_anggota)
                 ->with('success', 'Transaksi berhasil dihapus.');
         } catch (\Exception $e) {
             $this->db->transRollback();
-            return redirect()->to('karyawan/transaksi_simpanan/detail/' . $id_anggota)
+            return redirect()->to('karyawan/transaksi_simpanan/detail/' . $transaksi->id_anggota)
                 ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
+
 
     /**
      * Fungsi untuk update saldo anggota setelah transaksi dihapus.

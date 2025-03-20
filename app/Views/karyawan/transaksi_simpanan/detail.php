@@ -4,7 +4,9 @@
 <div class="container">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h3>Detail Transaksi Simpanan</h3>
-        <a href="javascript:history.back()" class="btn btn-warning">Kembali</a>
+        <div>
+            <a href="javascript:history.back()" class="btn btn-warning">Kembali</a>
+        </div>
     </div>
 
     <?php if (session()->getFlashdata('error')): ?>
@@ -57,6 +59,17 @@
                 </thead>
                 <tbody>
                     <?php $no = 1; ?>
+                    <?php
+                    // Inisialisasi total
+                    $total_setor_sw = 0;
+                    $total_tarik_sw = 0;
+                    $total_setor_swp = 0;
+                    $total_tarik_swp = 0;
+                    $total_setor_ss = 0;
+                    $total_tarik_ss = 0;
+                    $total_setor_sp = 0;
+                    $total_tarik_sp = 0;
+                    ?>
 
                     <!-- Riwayat Transaksi -->
                     <?php if (!empty($riwayat_transaksi)): ?>
@@ -66,8 +79,8 @@
                             $t = is_object($transaksi) ? $transaksi : (object) $transaksi;
 
                             // Ensure all properties exist
-                            $id_transaksi = $t->id_transaksi ?? '';
-                            $waktu = $t->waktu ?? date('Y-m-d H:i:s');
+                            $id_simpanan = $t->id_simpanan ?? '';
+                            $tanggal = $t->tanggal ?? date('Y-m-d');
                             $setor_sw = $t->setor_sw ?? 0;
                             $tarik_sw = $t->tarik_sw ?? 0;
                             $setor_swp = $t->setor_swp ?? 0;
@@ -76,45 +89,50 @@
                             $tarik_ss = $t->tarik_ss ?? 0;
                             $setor_sp = $t->setor_sp ?? 0;
                             $tarik_sp = $t->tarik_sp ?? 0;
+
+                            // Akumulasi total
+                            $total_setor_sw += $setor_sw;
+                            $total_tarik_sw += $tarik_sw;
+                            $total_setor_swp += $setor_swp;
+                            $total_tarik_swp += $tarik_swp;
+                            $total_setor_ss += $setor_ss;
+                            $total_tarik_ss += $tarik_ss;
+                            $total_setor_sp += $setor_sp;
+                            $total_tarik_sp += $tarik_sp;
                             ?>
-                            <tr data-transaction-id="<?= $id_transaksi ?>" data-created-at="<?= $waktu ?>">
+                            <tr data-transaction-id="<?= $id_simpanan ?>">
                                 <td class="text-center"><?= $no++ ?></td>
-                                <td><?= date('d M Y H:i:s', strtotime($waktu)) ?></td>
+                                <td><?= date('d M Y', strtotime($tanggal)) ?></td>
 
-                                <td class="text-end editable-cell" data-field="setor_sw" data-created="<?= $waktu ?>">
-                                    <?= $setor_sw > 0 ? 'Rp ' . number_format($setor_sw, 0, ',', '.') : '-' ?>
+                                <td class="text-end"><?= $setor_sw > 0 ? 'Rp ' . number_format($setor_sw, 0, ',', '.') : '-' ?>
                                 </td>
-                                <td class="text-end editable-cell" data-field="tarik_sw" data-created="<?= $waktu ?>">
-                                    <?= $tarik_sw > 0 ? 'Rp ' . number_format($tarik_sw, 0, ',', '.') : '-' ?>
+                                <td class="text-end"><?= $tarik_sw > 0 ? 'Rp ' . number_format($tarik_sw, 0, ',', '.') : '-' ?>
                                 </td>
 
-                                <td class="text-end editable-cell" data-field="setor_swp" data-created="<?= $waktu ?>">
-                                    <?= $setor_swp > 0 ? 'Rp ' . number_format($setor_swp, 0, ',', '.') : '-' ?>
+                                <td class="text-end">
+                                    <?= $setor_swp > 0 ? 'Rp ' . number_format($setor_swp, 0, ',', '.') : '-' ?></td>
+                                <td class="text-end">
+                                    <?= $tarik_swp > 0 ? 'Rp ' . number_format($tarik_swp, 0, ',', '.') : '-' ?></td>
+
+                                <td class="text-end"><?= $setor_ss > 0 ? 'Rp ' . number_format($setor_ss, 0, ',', '.') : '-' ?>
                                 </td>
-                                <td class="text-end editable-cell" data-field="tarik_swp" data-created="<?= $waktu ?>">
-                                    <?= $tarik_swp > 0 ? 'Rp ' . number_format($tarik_swp, 0, ',', '.') : '-' ?>
+                                <td class="text-end"><?= $tarik_ss > 0 ? 'Rp ' . number_format($tarik_ss, 0, ',', '.') : '-' ?>
                                 </td>
 
-                                <td class="text-end editable-cell" data-field="setor_ss" data-created="<?= $waktu ?>">
-                                    <?= $setor_ss > 0 ? 'Rp ' . number_format($setor_ss, 0, ',', '.') : '-' ?>
+                                <td class="text-end"><?= $setor_sp > 0 ? 'Rp ' . number_format($setor_sp, 0, ',', '.') : '-' ?>
                                 </td>
-                                <td class="text-end editable-cell" data-field="tarik_ss" data-created="<?= $waktu ?>">
-                                    <?= $tarik_ss > 0 ? 'Rp ' . number_format($tarik_ss, 0, ',', '.') : '-' ?>
-                                </td>
-
-                                <td class="text-end editable-cell" data-field="setor_sp" data-created="<?= $waktu ?>">
-                                    <?= $setor_sp > 0 ? 'Rp ' . number_format($setor_sp, 0, ',', '.') : '-' ?>
-                                </td>
-                                <td class="text-end editable-cell" data-field="tarik_sp" data-created="<?= $waktu ?>">
-                                    <?= $tarik_sp > 0 ? 'Rp ' . number_format($tarik_sp, 0, ',', '.') : '-' ?>
+                                <td class="text-end"><?= $tarik_sp > 0 ? 'Rp ' . number_format($tarik_sp, 0, ',', '.') : '-' ?>
                                 </td>
 
                                 <td class="text-center">
                                     <div class="btn-group">
-                                        <a href="<?= site_url('karyawan/transaksi_simpanan/edit/' . $id_transaksi . '?created_at=' . urlencode($waktu)) ?>"
+                                        <a href="<?= site_url('karyawan/transaksi_simpanan/edit/' . $id_simpanan) ?>"
                                             class="btn btn-warning btn-sm">Edit</a>
-                                        <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                            data-id="<?= $id_transaksi ?>" data-created="<?= $waktu ?>">Hapus</button>
+                                        <form action="<?= site_url('karyawan/transaksi_simpanan/delete/' . $id_simpanan) ?>"
+                                            method="post" class="d-inline delete-form">
+                                            <?= csrf_field() ?>
+                                            <button type="button" class="btn btn-danger btn-sm delete-btn">Hapus</button>
+                                        </form>
                                     </div>
                                 </td>
                             </tr>
@@ -124,122 +142,30 @@
                             <td colspan="11" class="text-center">Tidak ada riwayat transaksi</td>
                         </tr>
                     <?php endif; ?>
-
-                    <!-- Saldo Sekarang di akhir tabel -->
+                </tbody>
+                <tfoot>
                     <tr class="table-warning fw-bold">
-                        <td></td> <!-- Tidak ada nomor -->
-                        <td><strong>Total</strong></td>
-                        <td class="text-end">Rp <?= number_format($total_sw_setor, 0, ',', '.') ?></td>
-                        <td class="text-end">
-                            <?= $total_sw_tarik > 0 ? 'Rp ' . number_format($total_sw_tarik, 0, ',', '.') : '-' ?>
-                        </td>
-                        <td class="text-end">Rp <?= number_format($total_swp_setor, 0, ',', '.') ?></td>
-                        <td class="text-end">
-                            <?= $total_swp_tarik > 0 ? 'Rp ' . number_format($total_swp_tarik, 0, ',', '.') : '-' ?>
-                        </td>
-                        <td class="text-end">Rp <?= number_format($total_ss_setor, 0, ',', '.') ?></td>
-                        <td class="text-end">
-                            <?= $total_ss_tarik > 0 ? 'Rp ' . number_format($total_ss_tarik, 0, ',', '.') : '-' ?>
-                        </td>
-                        <td class="text-end">Rp <?= number_format($total_sp_setor, 0, ',', '.') ?></td>
-                        <td class="text-end">
-                            <?= $total_sp_tarik > 0 ? 'Rp ' . number_format($total_sp_tarik, 0, ',', '.') : '-' ?>
-                        </td>
+                        <td colspan="2" class="text-center"><strong>Total</strong></td>
+                        <td class="text-end">Rp <?= number_format($total_setor_sw, 0, ',', '.') ?></td>
+                        <td class="text-end">Rp <?= number_format($total_tarik_sw, 0, ',', '.') ?></td>
+                        <td class="text-end">Rp <?= number_format($total_setor_swp, 0, ',', '.') ?></td>
+                        <td class="text-end">Rp <?= number_format($total_tarik_swp, 0, ',', '.') ?></td>
+                        <td class="text-end">Rp <?= number_format($total_setor_ss, 0, ',', '.') ?></td>
+                        <td class="text-end">Rp <?= number_format($total_tarik_ss, 0, ',', '.') ?></td>
+                        <td class="text-end">Rp <?= number_format($total_setor_sp, 0, ',', '.') ?></td>
+                        <td class="text-end">Rp <?= number_format($total_tarik_sp, 0, ',', '.') ?></td>
                         <td class="text-end">Rp <?= number_format(
-                            ($total_sw_setor - $total_sw_tarik) +
-                            ($total_swp_setor - $total_swp_tarik) +
-                            ($total_ss_setor - $total_ss_tarik) +
-                            ($total_sp_setor - $total_sp_tarik),
+                            ($total_setor_sw - $total_tarik_sw) +
+                            ($total_setor_swp - $total_tarik_swp) +
+                            ($total_setor_ss - $total_tarik_ss) +
+                            ($total_setor_sp - $total_tarik_sp),
                             0,
                             ',',
                             '.'
                         ) ?></td>
                     </tr>
-                </tbody>
+                </tfoot>
             </table>
-        </div>
-    </div>
-</div>
-
-<!-- Modal Tambah Transaksi -->
-<div class="modal fade" id="addTransactionModal" tabindex="-1" aria-labelledby="addTransactionModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header bg-success text-white">
-                <h5 class="modal-title" id="addTransactionModalLabel">Tambah Transaksi Baru</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form action="<?= site_url('karyawan/transaksi_simpanan/store') ?>" method="post">
-                <div class="modal-body">
-                    <input type="hidden" name="id_anggota" value="<?= $anggota->id_anggota ?>">
-
-                    <div class="mb-3">
-                        <label for="tanggal" class="form-label">Tanggal Transaksi</label>
-                        <input type="datetime-local" class="form-control" id="tanggal" name="tanggal"
-                            value="<?= date('Y-m-d\TH:i') ?>" required>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="mb-3">Simpanan Wajib (SW)</h6>
-                            <div class="mb-3">
-                                <label for="setor_sw" class="form-label">Setor</label>
-                                <input type="text" class="form-control money-format" id="setor_sw" name="setor_sw">
-                            </div>
-                            <div class="mb-3">
-                                <label for="tarik_sw" class="form-label">Tarik</label>
-                                <input type="text" class="form-control money-format" id="tarik_sw" name="tarik_sw">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <h6 class="mb-3">Simpanan Wajib Pokok (SWP)</h6>
-                            <div class="mb-3">
-                                <label for="setor_swp" class="form-label">Setor</label>
-                                <input type="text" class="form-control money-format" id="setor_swp" name="setor_swp">
-                            </div>
-                            <div class="mb-3">
-                                <label for="tarik_swp" class="form-label">Tarik</label>
-                                <input type="text" class="form-control money-format" id="tarik_swp" name="tarik_swp">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row">
-                        <div class="col-md-6">
-                            <h6 class="mb-3">Simpanan Sukarela (SS)</h6>
-                            <div class="mb-3">
-                                <label for="setor_ss" class="form-label">Setor</label>
-                                <input type="text" class="form-control money-format" id="setor_ss" name="setor_ss">
-                            </div>
-                            <div class="mb-3">
-                                <label for="tarik_ss" class="form-label">Tarik</label>
-                                <input type="text" class="form-control money-format" id="tarik_ss" name="tarik_ss">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <h6 class="mb-3">Simpanan Pokok (SP)</h6>
-                            <div class="mb-3">
-                                <label for="setor_sp" class="form-label">Setor</label>
-                                <input type="text" class="form-control money-format" id="setor_sp" name="setor_sp">
-                            </div>
-                            <div class="mb-3">
-                                <label for="tarik_sp" class="form-label">Tarik</label>
-                                <input type="text" class="form-control money-format" id="tarik_sp" name="tarik_sp">
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="keterangan" class="form-label">Keterangan</label>
-                        <textarea class="form-control" id="keterangan" name="keterangan" rows="2"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                    <button type="submit" class="btn btn-success">Simpan Transaksi</button>
-                </div>
-            </form>
         </div>
     </div>
 </div>
@@ -258,123 +184,29 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
-                <a href="#" id="confirmDeleteBtn" class="btn btn-danger">Hapus</a>
+                <button type="button" id="confirmDeleteBtn" class="btn btn-danger">Hapus</button>
             </div>
         </div>
     </div>
 </div>
 
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/cleave.js@1.6.0/dist/cleave.min.js"></script>
-
 <script>
     $(document).ready(function () {
-        // Inisialisasi format input uang
-        $('.money-format').each(function () {
-            new Cleave(this, {
-                numeral: true,
-                numeralThousandsGroupStyle: 'thousand',
-                numeralDecimalMark: ',',
-                delimiter: '.'
-            });
-        });
-
-        // Tampilkan modal tambah transaksi
-        $('#btnAddTransaction').click(function () {
-            $('#addTransactionModal').modal('show');
-        });
-
-        // Buat sel-sel jumlah transaksi menjadi bisa diedit
-        $('.editable-cell').click(function () {
-            if ($(this).find('input').length === 0) {
-                const value = $(this).text().trim() === '-' ? '' :
-                    $(this).text().replace('Rp ', '').replace(/\./g, '');
-                const fieldName = $(this).data('field');
-                const transactionId = $(this).closest('tr').data('transaction-id');
-                const createdAt = $(this).data('created');
-
-                $(this).html(`<input type="text" class="form-control form-control-sm amount-input" 
-                         data-field="${fieldName}" data-id="${transactionId}" data-created="${createdAt}"
-                         value="${value}">`);
-                $(this).find('input').focus();
-
-                // Tambahkan format uang ke input
-                new Cleave($(this).find('input')[0], {
-                    numeral: true,
-                    numeralThousandsGroupStyle: 'thousand',
-                    numeralDecimalMark: ',',
-                    delimiter: '.'
-                });
-            }
-        });
-
-        // Tangani blur input untuk menyimpan perubahan
-        $(document).on('blur', '.amount-input', function () {
-            const value = $(this).val();
-            const fieldName = $(this).data('field');
-            const transactionId = $(this).data('id');
-            const createdAt = $(this).data('created');
-            const formattedValue = value && value !== '0' ? 'Rp ' + formatNumber(value) : '-';
-
-            $(this).parent().html(formattedValue);
-
-            // Kirim permintaan AJAX untuk memperbarui nilai
-            $.ajax({
-                url: '<?= site_url('karyawan/transaksi_simpanan/update_field') ?>',
-                type: 'POST',
-                data: {
-                    id: transactionId,
-                    field: fieldName,
-                    value: value.replace(/\./g, ''),
-                    created_at: createdAt
-                },
-                success: function (response) {
-                    if (response.success) {
-                        showToast('Data berhasil diperbarui', 'success');
-
-                        // Refresh halaman setelah 1 detik untuk memperbarui total
-                        setTimeout(function () {
-                            location.reload();
-                        }, 1000);
-                    } else {
-                        showToast('Gagal memperbarui data: ' + response.message, 'error');
-                    }
-                },
-                error: function () {
-                    showToast('Gagal memperbarui data', 'error');
-                }
-            });
-        });
-
-        // Format angka dengan pemisah ribuan
-        function formatNumber(num) {
-            return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
-        }
-
-        // Notifikasi toast
-        function showToast(message, type) {
-            $('body').append(`
-            <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 5">
-                <div class="toast align-items-center text-white bg-${type === 'success' ? 'success' : 'danger'}" role="alert" aria-live="assertive" aria-atomic="true">
-                    <div class="d-flex">
-                        <div class="toast-body">${message}</div>
-                        <button type="button" class="btn-close me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
-                    </div>
-                </div>
-            </div>
-        `);
-            $('.toast').toast('show');
-        }
-
         // Tampilkan modal konfirmasi hapus
         $('.delete-btn').click(function () {
-            const id = $(this).data('id');
-            const created = $(this).data('created');
-            const deleteUrl = `<?= site_url('karyawan/transaksi_simpanan/delete/') ?>${id}?created_at=${encodeURIComponent(created)}`;
+            // Simpan referensi ke form yang akan di-submit
+            let currentForm = $(this).closest('form');
 
-            $('#confirmDeleteBtn').attr('href', deleteUrl);
+            // Tampilkan modal konfirmasi
             $('#deleteConfirmModal').modal('show');
+
+            // Ketika tombol konfirmasi hapus diklik
+            $('#confirmDeleteBtn').off('click').on('click', function () {
+                // Sembunyikan modal
+                $('#deleteConfirmModal').modal('hide');
+                // Submit form
+                currentForm.submit();
+            });
         });
     });
 </script>

@@ -58,6 +58,7 @@ $routes->post('karyawan/transaksi_simpanan/proses', 'TransaksiSimpanan::proses')
 $routes->get('karyawan/transaksi_simpanan/edit/(:num)', 'TransaksiSimpanan::edit/$1');
 $routes->post('karyawan/transaksi_simpanan/update/(:num)', 'TransaksiSimpanan::update/$1');
 $routes->get('karyawan/transaksi_simpanan/delete/(:num)', 'TransaksiSimpanan::delete/$1');
+$routes->post('karyawan/transaksi_simpanan/delete/(:num)', 'TransaksiSimpanan::delete/$1');
 
 $routes->get('karyawan/transaksi_simpanan/import_simpanan', 'ImportSimpanan::index');
 $routes->post('karyawan/transaksi_simpanan/import_simpanan/upload', 'ImportSimpanan::upload');
