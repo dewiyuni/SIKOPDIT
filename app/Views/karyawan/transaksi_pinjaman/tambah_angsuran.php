@@ -2,52 +2,80 @@
 
 <?= $this->section('content') ?>
 <div class="container">
-    <div class="d-flex justify-content-between align-items-center">
+    <div class="d-flex justify-content-between align-items-center mb-3">
         <h3>Tambah Angsuran - <?= esc($pinjaman->nama) ?></h3>
         <a href="<?= site_url('karyawan/transaksi_pinjaman/') ?>" class="btn btn-warning">Kembali</a>
     </div>
+
     <?php if (session()->getFlashdata('error')): ?>
         <div class="alert alert-danger">
             <?= session()->getFlashdata('error') ?>
         </div>
     <?php endif; ?>
-    <br>
+
     <div class="card p-3">
         <form method="post" action="<?= site_url('karyawan/transaksi_pinjaman/simpan_angsuran') ?>">
             <?= csrf_field() ?>
             <input type="hidden" name="id_pinjaman" value="<?= esc($pinjaman->id_pinjaman) ?>">
 
-            <div class="form-group">
-                <label for="tanggal_angsuran">Tanggal Angsuran</label>
-                <input type="date" name="tanggal_angsuran" class="form-control" required>
-            </div>
-
-            <div class="form-group">
-                <label for="jumlah_angsuran">Jumlah Angsuran</label>
-                <input type="text" id="jumlah_angsuran" class="form-control" required
-                    oninput="formatRibuan(this, 'jumlah_angsuran_hidden'); hitungTotalBayar();" autocomplete="off">
-                <input type="hidden" name="jumlah_angsuran" id="jumlah_angsuran_hidden">
-            </div>
-
-            <div class="form-group">
-                <label for="bunga">Bunga (%)</label>
-                <div class="input-group">
-                    <input type="text" id="bunga" class="form-control" required
-                        oninput="formatBunga(this); hitungTotalBayar();">
-                    <div class="input-group-append">
-                        <span class="input-group-text">%</span>
+            <div class="row">
+                <!-- Kolom Kiri -->
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="tanggal_angsuran">Tanggal Angsuran</label>
+                        <input type="date" name="tanggal_angsuran" class="form-control" required
+                            value="<?= date('Y-m-d') ?>">
                     </div>
-                    <input type="hidden" name="bunga" id="bunga_hidden">
+
+                    <div class="form-group mb-3">
+                        <label for="jumlah_pinjaman">Jumlah Pinjaman</label>
+                        <input type="text" id="jumlah_pinjaman" class="form-control"
+                            value="<?= number_format($pinjaman->jumlah_pinjaman, 0, ',', '.') ?>" readonly>
+                        <input type="hidden" name="jumlah_pinjaman" id="jumlah_pinjaman_hidden"
+                            value="<?= esc($pinjaman->jumlah_pinjaman) ?>">
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="jumlah_angsuran">Jumlah Angsuran</label>
+                        <input type="text" id="jumlah_angsuran" class="form-control" required
+                            oninput="formatRibuan(this, 'jumlah_angsuran_hidden'); hitungTotalBayar();"
+                            autocomplete="off">
+                        <input type="hidden" name="jumlah_angsuran" id="jumlah_angsuran_hidden">
+                    </div>
+                </div>
+
+                <!-- Kolom Kanan -->
+                <div class="col-md-6">
+                    <div class="form-group mb-3">
+                        <label for="bunga">Bunga (%)</label>
+                        <div class="input-group">
+                            <input type="text" id="bunga" class="form-control" required
+                                oninput="formatBunga(this); hitungTotalBayar();" value="2">
+                            <div class="input-group-append">
+                                <span class="input-group-text">%</span>
+                            </div>
+                            <input type="hidden" name="bunga" id="bunga_hidden" value="2">
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="jumlah_bunga">Jumlah Bunga</label>
+                        <input type="text" id="jumlah_bunga" class="form-control" readonly>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="total_bayar">Total Bayar</label>
+                        <input type="text" id="total_bayar" class="form-control" readonly>
+                        <input type="hidden" name="total_bayar" id="total_bayar_hidden">
+                    </div>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label for="total_bayar">Total Bayar</label>
-                <input type="text" id="total_bayar" class="form-control" readonly>
-                <input type="hidden" name="total_bayar" id="total_bayar_hidden">
+            <div class="row mt-3">
+                <div class="col-12">
+                    <button type="submit" class="btn btn-success btn-block w-100">Simpan Angsuran</button>
+                </div>
             </div>
-
-            <button type="submit" class="btn btn-success">Simpan Angsuran</button>
         </form>
     </div>
 </div>
@@ -81,16 +109,20 @@
     }
 
     function hitungTotalBayar() {
-        // Ambil nilai jumlah angsuran
+        // Ambil nilai jumlah angsuran dan jumlah pinjaman
         const jumlahAngsuran = parseInt(document.getElementById("jumlah_angsuran_hidden").value || 0);
+        const jumlahPinjaman = parseInt(document.getElementById("jumlah_pinjaman_hidden").value || 0);
 
         // Ambil nilai bunga (dalam persen)
         const bungaPersen = parseFloat(document.getElementById("bunga_hidden").value || 0);
 
-        // Hitung jumlah bunga
-        const jumlahBunga = jumlahAngsuran * (bungaPersen / 100);
+        // Hitung jumlah bunga berdasarkan jumlah pinjaman
+        const jumlahBunga = Math.round(jumlahPinjaman * (bungaPersen / 100));
 
-        // Hitung total bayar
+        // Tampilkan jumlah bunga dengan format ribuan
+        document.getElementById("jumlah_bunga").value = jumlahBunga.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+        // Hitung total bayar = jumlah angsuran + jumlah bunga
         const totalBayar = jumlahAngsuran + jumlahBunga;
 
         // Tampilkan total bayar dengan format ribuan
@@ -100,6 +132,10 @@
 
     // Inisialisasi perhitungan saat halaman dimuat
     document.addEventListener("DOMContentLoaded", function () {
+        // Set nilai default untuk bunga (2%)
+        document.getElementById("bunga").value = "2";
+        document.getElementById("bunga_hidden").value = "2";
+
         hitungTotalBayar();
     });
 </script>

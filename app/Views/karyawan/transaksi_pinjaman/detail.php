@@ -48,7 +48,7 @@
                                         <p class="mb-1"><strong>Tanggal Cair:</strong> <?= date('d-m-Y', strtotime($pinjaman->tanggal_pinjaman)) ?></p>
                                         <p class="mb-1"><strong>Jangka Waktu:</strong> <?= $pinjaman->jangka_waktu ?> bulan</p>
                                         <?php 
-                                        $bungaPerbulan = 2.5; // Change this to match your input
+                                        $bungaPerbulan = 2; // Change this to match your input
                                         $totalBungaAwal = ($bungaPerbulan / 100) * $pinjaman->jumlah_pinjaman;
                                         ?>
                                         <p class="mb-1"><strong>Bunga:</strong> <?= rtrim(rtrim(number_format($bungaPerbulan, 2), '0'), '.') ?>% (Rp <?= number_format($totalBungaAwal, 0, ',', '.') ?>)</p>
@@ -56,7 +56,7 @@
                                     <div class="col-md-6">
                                         <p class="mb-1"><strong>Besar Pinjaman:</strong> Rp <?= number_format($pinjaman->jumlah_pinjaman, 0, ',', '.') ?></p>
                                         <p class="mb-1"><strong>Jaminan:</strong> <?= esc($pinjaman->jaminan) ?></p>
-                                        <p class="mb-1"><strong>Angsuran/bulan:</strong> Rp <?= number_format($angsuranPerBulan, 0, ',', '.') ?></p>
+                                        <p class="mb-1"><strong>Angsuran/bulan:</strong> Rp <?= number_format($angsuranPerBulan + $totalBungaAwal, 0, ',', '.') ?></p>
                                     </div>
                                 </div>
                             </div>
@@ -81,6 +81,7 @@
                                         <div class="h5">Sisa Pinjaman</div>
                                         <div class="h3 text-danger">Rp <?= number_format($sisaPinjaman, 0, ',', '.') ?></div>
                                     </div>
+                                    
                                     <div class="col-md-3 text-center mb-3">
                                         <div class="h5">Total Bunga</div>
                                         <div class="h3 text-primary">Rp <?= number_format($totalBunga, 0, ',', '.') ?></div>
@@ -161,8 +162,8 @@
                                         <td>Rp <?= number_format($saldo_awal, 0, ',', '.') ?></td>
                                         <td>Rp <?= number_format($row->jumlah_angsuran, 0, ',', '.') ?></td>
                                         <td><?= $bungaDisplay ?>%</td>
-                                        <td>Rp <?= number_format($jumlah_bunga, 0, ',', '.') ?></td>
-                                        <td>Rp <?= number_format($total_bayar, 0, ',', '.') ?></td>
+                                        <td>Rp <?= number_format($totalBungaAwal, 0, ',', '.') ?></td>
+                                        <td>Rp <?= number_format($row->jumlah_angsuran + $totalBungaAwal, 0, ',', '.') ?></td>
                                         <td>Rp <?= number_format($saldo_akhir, 0, ',', '.') ?></td>
                                         <td>
                                             <div class="btn-group">
