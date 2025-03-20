@@ -33,7 +33,6 @@
                         <th style="min-width: 100px;">Tgl Cair</th>
                         <th style="min-width: 80px;">Jangka</th>
                         <th style="min-width: 120px;">Pinjaman</th>
-                        <th style="min-width: 100px;">Bunga</th>
                         <th style="min-width: 120px;">Saldo</th>
                         <th style="min-width: 80px;">Status</th>
                         <th style="min-width: 180px;">Aksi</th>
@@ -67,7 +66,6 @@
                                 </td>
                                 <td><?= esc($row->jangka_waktu ?? '-') ?> bln</td>
                                 <td>Rp <?= number_format($row->jumlah_pinjaman ?? 0, 0, ',', '.') ?></td>
-                                <td>Rp <?= number_format(($row->jumlah_pinjaman ?? 0) * 0.025, 0, ',', '.') ?></td>
                                 <td>Rp <?= number_format($row->saldo_terakhir ?? 0, 0, ',', '.') ?></td>
                                 <td class="searchable text-center"><?= $statusBadge ?></td>
                                 <td>

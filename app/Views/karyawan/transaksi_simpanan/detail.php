@@ -61,54 +61,60 @@
                     <!-- Riwayat Transaksi -->
                     <?php if (!empty($riwayat_transaksi)): ?>
                         <?php foreach ($riwayat_transaksi as $transaksi): ?>
-                            <tr data-transaction-id="<?= $transaksi->id_transaksi ?>"
-                                data-created-at="<?= $transaksi->waktu ?>">
+                            <?php
+                            // Convert to object if it's an array
+                            $t = is_object($transaksi) ? $transaksi : (object) $transaksi;
+
+                            // Ensure all properties exist
+                            $id_transaksi = $t->id_transaksi ?? '';
+                            $waktu = $t->waktu ?? date('Y-m-d H:i:s');
+                            $setor_sw = $t->setor_sw ?? 0;
+                            $tarik_sw = $t->tarik_sw ?? 0;
+                            $setor_swp = $t->setor_swp ?? 0;
+                            $tarik_swp = $t->tarik_swp ?? 0;
+                            $setor_ss = $t->setor_ss ?? 0;
+                            $tarik_ss = $t->tarik_ss ?? 0;
+                            $setor_sp = $t->setor_sp ?? 0;
+                            $tarik_sp = $t->tarik_sp ?? 0;
+                            ?>
+                            <tr data-transaction-id="<?= $id_transaksi ?>" data-created-at="<?= $waktu ?>">
                                 <td class="text-center"><?= $no++ ?></td>
-                                <td><?= date('d M Y H:i:s', strtotime($transaksi->waktu)) ?></td>
+                                <td><?= date('d M Y H:i:s', strtotime($waktu)) ?></td>
 
-                                <td class="text-end editable-cell" data-field="setor_sw"
-                                    data-created="<?= $transaksi->waktu ?>">
-                                    <?= $transaksi->setor_sw > 0 ? 'Rp ' . number_format($transaksi->setor_sw, 0, ',', '.') : '-' ?>
+                                <td class="text-end editable-cell" data-field="setor_sw" data-created="<?= $waktu ?>">
+                                    <?= $setor_sw > 0 ? 'Rp ' . number_format($setor_sw, 0, ',', '.') : '-' ?>
                                 </td>
-                                <td class="text-end editable-cell" data-field="tarik_sw"
-                                    data-created="<?= $transaksi->waktu ?>">
-                                    <?= $transaksi->tarik_sw > 0 ? 'Rp ' . number_format($transaksi->tarik_sw, 0, ',', '.') : '-' ?>
+                                <td class="text-end editable-cell" data-field="tarik_sw" data-created="<?= $waktu ?>">
+                                    <?= $tarik_sw > 0 ? 'Rp ' . number_format($tarik_sw, 0, ',', '.') : '-' ?>
                                 </td>
 
-                                <td class="text-end editable-cell" data-field="setor_swp"
-                                    data-created="<?= $transaksi->waktu ?>">
-                                    <?= $transaksi->setor_swp > 0 ? 'Rp ' . number_format($transaksi->setor_swp, 0, ',', '.') : '-' ?>
+                                <td class="text-end editable-cell" data-field="setor_swp" data-created="<?= $waktu ?>">
+                                    <?= $setor_swp > 0 ? 'Rp ' . number_format($setor_swp, 0, ',', '.') : '-' ?>
                                 </td>
-                                <td class="text-end editable-cell" data-field="tarik_swp"
-                                    data-created="<?= $transaksi->waktu ?>">
-                                    <?= $transaksi->tarik_swp > 0 ? 'Rp ' . number_format($transaksi->tarik_swp, 0, ',', '.') : '-' ?>
+                                <td class="text-end editable-cell" data-field="tarik_swp" data-created="<?= $waktu ?>">
+                                    <?= $tarik_swp > 0 ? 'Rp ' . number_format($tarik_swp, 0, ',', '.') : '-' ?>
                                 </td>
 
-                                <td class="text-end editable-cell" data-field="setor_ss"
-                                    data-created="<?= $transaksi->waktu ?>">
-                                    <?= $transaksi->setor_ss > 0 ? 'Rp ' . number_format($transaksi->setor_ss, 0, ',', '.') : '-' ?>
+                                <td class="text-end editable-cell" data-field="setor_ss" data-created="<?= $waktu ?>">
+                                    <?= $setor_ss > 0 ? 'Rp ' . number_format($setor_ss, 0, ',', '.') : '-' ?>
                                 </td>
-                                <td class="text-end editable-cell" data-field="tarik_ss"
-                                    data-created="<?= $transaksi->waktu ?>">
-                                    <?= $transaksi->tarik_ss > 0 ? 'Rp ' . number_format($transaksi->tarik_ss, 0, ',', '.') : '-' ?>
+                                <td class="text-end editable-cell" data-field="tarik_ss" data-created="<?= $waktu ?>">
+                                    <?= $tarik_ss > 0 ? 'Rp ' . number_format($tarik_ss, 0, ',', '.') : '-' ?>
                                 </td>
 
-                                <td class="text-end editable-cell" data-field="setor_sp"
-                                    data-created="<?= $transaksi->waktu ?>">
-                                    <?= $transaksi->setor_sp > 0 ? 'Rp ' . number_format($transaksi->setor_sp, 0, ',', '.') : '-' ?>
+                                <td class="text-end editable-cell" data-field="setor_sp" data-created="<?= $waktu ?>">
+                                    <?= $setor_sp > 0 ? 'Rp ' . number_format($setor_sp, 0, ',', '.') : '-' ?>
                                 </td>
-                                <td class="text-end editable-cell" data-field="tarik_sp"
-                                    data-created="<?= $transaksi->waktu ?>">
-                                    <?= $transaksi->tarik_sp > 0 ? 'Rp ' . number_format($transaksi->tarik_sp, 0, ',', '.') : '-' ?>
+                                <td class="text-end editable-cell" data-field="tarik_sp" data-created="<?= $waktu ?>">
+                                    <?= $tarik_sp > 0 ? 'Rp ' . number_format($tarik_sp, 0, ',', '.') : '-' ?>
                                 </td>
 
                                 <td class="text-center">
                                     <div class="btn-group">
-                                        <a href="<?= site_url('karyawan/transaksi_simpanan/edit/' . $transaksi->id_transaksi . '?created_at=' . urlencode($transaksi->waktu)) ?>"
+                                        <a href="<?= site_url('karyawan/transaksi_simpanan/edit/' . $id_transaksi . '?created_at=' . urlencode($waktu)) ?>"
                                             class="btn btn-warning btn-sm">Edit</a>
                                         <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                            data-id="<?= $transaksi->id_transaksi ?>"
-                                            data-created="<?= $transaksi->waktu ?>">Hapus</button>
+                                            data-id="<?= $id_transaksi ?>" data-created="<?= $waktu ?>">Hapus</button>
                                     </div>
                                 </td>
                             </tr>

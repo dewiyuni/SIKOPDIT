@@ -145,30 +145,35 @@ class TransaksiSimpananModel extends Model
             ->get()
             ->getResult();
     }
-    public function updateSaldoSWP($id_anggota, $swp)
+    // Modify this method in your TransaksiSimpananModel
+    public function updateSaldoSWP($id_anggota, $swp, $id_pinjaman = null)
     {
-        // Ambil total saldo terbaru anggota
-        $totalSaldo = $this->db->table('transaksi_simpanan')
-            ->select('
-                SUM(setor_sw - tarik_sw) AS saldo_sw,
-                SUM(setor_swp - tarik_swp) AS saldo_swp,
-                SUM(setor_ss - tarik_ss) AS saldo_ss,
-                SUM(setor_sp - tarik_sp) AS saldo_sp
-            ')
-            ->where('id_anggota', $id_anggota)
-            ->get()
-            ->getRow();
+        // Get the latest savings record for this member
+        $latestSimpanan = $this->where('id_anggota', $id_anggota)
+            ->orderBy('id_simpanan', 'DESC')
+            ->first();
 
-        // Hitung saldo total dari seluruh jenis simpanan
-        $saldo_total = ($totalSaldo->saldo_sw + $totalSaldo->saldo_swp + $totalSaldo->saldo_ss + $totalSaldo->saldo_sp) + $swp;
-
-        // Simpan transaksi baru
-        $this->insert([
+        // If there's an existing record, create a new record with updated values
+        $data = [
             'id_anggota' => $id_anggota,
+            'id_pinjaman' => $id_pinjaman, // Add the loan ID
             'tanggal' => date('Y-m-d'),
-            'setor_swp' => $swp
-        ]);
+            'setor_sw' => 0,
+            'tarik_sw' => 0,
+            'setor_swp' => $swp,
+            'tarik_swp' => 0,
+            'setor_ss' => 0,
+            'tarik_ss' => 0,
+            'setor_sp' => 0,
+            'tarik_sp' => 0,
+            'created_at' => date('Y-m-d H:i:s'),
+            'updated_at' => date('Y-m-d H:i:s')
+        ];
+
+        // Insert the new record
+        return $this->insert($data);
     }
+
 
 
     // ====== dashboard total simpanan =========
@@ -185,5 +190,6 @@ class TransaksiSimpananModel extends Model
 
         return $result->total_saldo ?? 0;
     }
+
 
 }

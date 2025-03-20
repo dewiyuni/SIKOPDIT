@@ -90,9 +90,10 @@ class TransaksiPinjaman extends BaseController
 
         // Ambil data dari form
         $id_anggota = $this->request->getPost('id_anggota');
-        $jumlah_pinjaman = $this->request->getPost('jumlah_pinjaman'); // This should include the total amount (Principal + Interest)
+        $jumlah_pinjaman = $this->request->getPost('jumlah_pinjaman');
         $jangka_waktu = $this->request->getPost('jangka_waktu');
         $jaminan = $this->request->getPost('jaminan') ?: 'Tidak ada'; // Default to 'Tidak ada' if not provided
+        $tanggal_pinjaman = $this->request->getPost('tanggal_pinjaman') ?: date('Y-m-d');
 
         // Periksa apakah anggota ada
         if (!$this->anggotaModel->find($id_anggota)) {
@@ -109,26 +110,32 @@ class TransaksiPinjaman extends BaseController
 
         try {
             // Simpan pinjaman
-            $this->transaksiPinjamanModel->insert([
+            $data_pinjaman = [
                 'id_anggota' => $id_anggota,
-                'tanggal_pinjaman' => date('Y-m-d H:i:s'),
+                'tanggal_pinjaman' => $tanggal_pinjaman,
                 'jumlah_pinjaman' => $jumlah_pinjaman,
                 'jangka_waktu' => $jangka_waktu,
                 'jaminan' => $jaminan,
-                'status' => 'berjalan',
+                'status' => 'aktif',
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
-            ]);
+            ];
+
+            // Insert pinjaman
+            $this->transaksiPinjamanModel->insert($data_pinjaman);
+
+            // Get the ID of the newly inserted loan
+            $id_pinjaman = $this->transaksiPinjamanModel->getInsertID();
+
+            if (!$id_pinjaman) {
+                throw new \Exception("Gagal mendapatkan ID pinjaman.");
+            }
 
             // Perhitungan SWP (Simpanan Wajib Pinjaman)
             $swp = $jumlah_pinjaman * 0.025;
 
-            // Pastikan model transaksi simpanan sudah dideklarasikan sebelumnya
-            if (method_exists($this->transaksiSimpananModel, 'updateSaldoSWP')) {
-                $this->transaksiSimpananModel->updateSaldoSWP($id_anggota, $swp);
-            } else {
-                throw new \Exception("Method updateSaldoSWP tidak ditemukan.");
-            }
+            // Update saldo SWP anggota dengan ID pinjaman
+            $this->transaksiSimpananModel->updateSaldoSWP($id_anggota, $swp, $id_pinjaman);
 
             $this->db->transComplete();
 
@@ -136,7 +143,7 @@ class TransaksiPinjaman extends BaseController
                 throw new \Exception("Gagal menyimpan data pinjaman.");
             }
 
-            return redirect()->to('/karyawan/transaksi_pinjaman/')->with('success', 'Pinjaman berhasil ditambahkan.');
+            return redirect()->to('/karyawan/transaksi_pinjaman/')->with('message', 'Pinjaman berhasil ditambahkan.');
         } catch (\Exception $e) {
             $this->db->transRollback();
             log_message('error', 'Error saat menyimpan pinjaman: ' . $e->getMessage());
