@@ -48,11 +48,10 @@
                                         <p class="mb-1"><strong>Tanggal Cair:</strong> <?= date('d-m-Y', strtotime($pinjaman->tanggal_pinjaman)) ?></p>
                                         <p class="mb-1"><strong>Jangka Waktu:</strong> <?= $pinjaman->jangka_waktu ?> bulan</p>
                                         <?php 
-                                        // Calculate fixed interest rate (2.5% of loan amount)
-                                        $bungaPerbulan = 2.5;
+                                        $bungaPerbulan = 2.5; // Change this to match your input
                                         $totalBungaAwal = ($bungaPerbulan / 100) * $pinjaman->jumlah_pinjaman;
                                         ?>
-                                        <p class="mb-1"><strong>Bunga:</strong> Rp <?= number_format($totalBungaAwal, 0, ',', '.') ?> (<?= $bungaPerbulan ?>%)</p>
+                                        <p class="mb-1"><strong>Bunga:</strong> <?= rtrim(rtrim(number_format($bungaPerbulan, 2), '0'), '.') ?>% (Rp <?= number_format($totalBungaAwal, 0, ',', '.') ?>)</p>
                                     </div>
                                     <div class="col-md-6">
                                         <p class="mb-1"><strong>Besar Pinjaman:</strong> Rp <?= number_format($pinjaman->jumlah_pinjaman, 0, ',', '.') ?></p>
@@ -145,13 +144,23 @@
                                         $jumlah_bunga = ($row->bunga / 100) * $row->jumlah_angsuran;
                                         $total_bayar = $row->jumlah_angsuran + $jumlah_bunga;
                                         $saldo_akhir = $saldo_awal - $row->jumlah_angsuran;
+                                        
+                                        // Format the interest rate to remove trailing zeros
+                                        $bungaDisplay = (float)$row->bunga;
+                                        if (floor($bungaDisplay) == $bungaDisplay) {
+                                            // If it's a whole number, show without decimal
+                                            $bungaDisplay = number_format($bungaDisplay, 0);
+                                        } else {
+                                            // If it has decimal part, remove trailing zeros
+                                            $bungaDisplay = rtrim(rtrim(number_format($bungaDisplay, 2), '0'), '.');
+                                        }
                                     ?>
                                     <tr>
                                         <td><?= $no++ ?></td>
                                         <td><?= date('d M Y', strtotime($row->tanggal_angsuran)) ?></td>
                                         <td>Rp <?= number_format($saldo_awal, 0, ',', '.') ?></td>
                                         <td>Rp <?= number_format($row->jumlah_angsuran, 0, ',', '.') ?></td>
-                                        <td><?= $row->bunga ?>%</td>
+                                        <td><?= $bungaDisplay ?>%</td>
                                         <td>Rp <?= number_format($jumlah_bunga, 0, ',', '.') ?></td>
                                         <td>Rp <?= number_format($total_bayar, 0, ',', '.') ?></td>
                                         <td>Rp <?= number_format($saldo_akhir, 0, ',', '.') ?></td>
@@ -161,11 +170,14 @@
                                                     class="btn btn-warning btn-sm">
                                                     <i class="fas fa-edit"></i>
                                                 </a>
-                                                <a href="<?= base_url('karyawan/transaksi_pinjaman/delete/' . $row->id_angsuran) ?>"
-                                                    onclick="return confirm('Apakah Anda yakin ingin menghapus angsuran ini?')"
-                                                    class="btn btn-danger btn-sm">
-                                                    <i class="fas fa-trash"></i>
-                                                </a>
+                                                <button type="button" class="btn btn-danger btn-sm delete-btn"
+        data-id="<?= $row->id_angsuran ?>"
+        data-created="<?= $row->tanggal_angsuran ?>" 
+        data-bs-toggle="modal" 
+        data-bs-target="#deleteConfirmModal">
+    <i class="fas fa-trash"></i>
+</button>
+
                                             </div>
                                         </td>
                                     </tr>
@@ -183,8 +195,37 @@
         </div>
     </div>
 </div>
+<!-- Modal Konfirmasi Hapus -->
+<div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title" id="deleteConfirmModalLabel">Konfirmasi Hapus</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>Apakah Anda yakin ingin menghapus angsuran ini? Tindakan ini tidak dapat dibatalkan.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                <a href="#" id="confirmDeleteBtn" class="btn btn-danger">Hapus</a>
+            </div>
+        </div>
+    </div>
+</div>
 
 <script>
+$(document).ready(function () {
+    // Show delete confirmation modal
+    $('.delete-btn').click(function () {
+        const id = $(this).data('id');
+        const deleteUrl = `<?= site_url('karyawan/transaksi_pinjaman/delete/') ?>${id}`;
+
+        $('#confirmDeleteBtn').attr('href', deleteUrl);
+        $('#deleteConfirmModal').modal('show');
+    });
+});
+
 $(document).ready(function() {
     $('#tabelAngsuran').DataTable({
         "responsive": true,
