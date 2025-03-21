@@ -18,18 +18,18 @@
 
             <!-- Simpanan Wajib -->
             <div class="mb-3">
-                <label for="setor_sw" class="form-label">Simpanan Wajib:</label>
-                <input type="text" id="setor_sw" class="form-control" placeholder="Masukkan jumlah setoran Wajib"
+                <label for="setor_ss" class="form-label">Simpanan Wajib:</label>
+                <input type="text" id="setor_ss" class="form-control" placeholder="Masukkan jumlah setoran Wajib"
                     required oninput="formatRibuan(this)" value="5000">
-                <input type="hidden" name="setor_sw" id="setor_sw_hidden" value="5000">
+                <input type="hidden" name="setor_ss" id="setor_ss_hidden" value="5000">
             </div>
 
             <!-- Simpanan Sukarela -->
             <div class="mb-3">
-                <label for="setor_ss" class="form-label">Simpanan Sukarela:</label>
-                <input type="text" id="setor_ss" class="form-control" placeholder="Masukkan jumlah setoran Sukarela"
+                <label for="setor_sp" class="form-label">Simpanan Sukarela:</label>
+                <input type="text" id="setor_sp" class="form-control" placeholder="Masukkan jumlah setoran Sukarela"
                     oninput="formatRibuan(this)">
-                <input type="hidden" name="setor_ss" id="setor_ss_hidden">
+                <input type="hidden" name="setor_sp" id="setor_sp_hidden">
             </div>
 
             <button type="submit" class="btn btn-primary mt-3">Setor</button>
@@ -60,10 +60,13 @@
     window.onload = function () {
         // Set default value for Simpanan Wajib
         let setorSwInput = document.getElementById('setor_sw');
-        if (setorSwInput.value === '') {
+        if (setorSwInput && setorSwInput.value === '') {
             setorSwInput.value = '5.000';
             document.getElementById('setor_sw_hidden').value = '5000';
         }
+
+        // Initialize other fields if needed
+        formatRibuan(document.getElementById('setor_sw'));
     };
 </script>
 

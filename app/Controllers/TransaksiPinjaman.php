@@ -18,6 +18,7 @@ class TransaksiPinjaman extends BaseController
     protected $angsuranModel;
     protected $db;
 
+
     public function __construct()
     {
         $this->transaksiPinjamanModel = new TransaksiPinjamanModel();
@@ -221,62 +222,82 @@ class TransaksiPinjaman extends BaseController
         return redirect()->to('karyawan/transaksi_pinjaman/detail/' . $id_pinjaman)
             ->with('success', 'Angsuran berhasil dihapus.');
     }
-
     public function detail($id)
     {
-        $model = new TransaksiPinjamanModel();
+        // Initialize models
+        $pinjamanModel = new TransaksiPinjamanModel();
+        $anggotaModel = new AnggotaModel();
+        $angsuranModel = new AngsuranModel();
 
-        try {
-            // Get loan data by ID with member information
-            $pinjaman = $model->select('transaksi_pinjaman.*, anggota.nama, anggota.no_ba, anggota.nik, anggota.alamat')
-                ->join('anggota', 'anggota.id_anggota = transaksi_pinjaman.id_anggota', 'left')
-                ->where('transaksi_pinjaman.id_pinjaman', $id)
-                ->first();
+        // Get loan data with JOIN to get member information in one query
+        $pinjaman = $pinjamanModel
+            ->select('transaksi_pinjaman.*, anggota.nama, anggota.no_ba, anggota.nik, anggota.alamat')
+            ->join('anggota', 'anggota.id_anggota = transaksi_pinjaman.id_anggota')
+            ->find($id);
 
-            // If loan data not found, show error
-            if (!$pinjaman) {
-                return redirect()->to('karyawan/transaksi_pinjaman')->with('error', 'Data pinjaman tidak ditemukan.');
-            }
-
-            // Get installment data for this loan
-            $angsuran = $model->getAngsuranByPinjaman($id);
-
-            // Calculate payment summary
-            $totalAngsuran = 0;
-            $totalBunga = 0;
-
-            if ($angsuran) {
-                foreach ($angsuran as $row) {
-                    $totalAngsuran += $row->jumlah_angsuran;
-                    $totalBunga += ($row->bunga / 100) * $row->jumlah_angsuran;
-                }
-            }
-
-            $sisaPinjaman = $pinjaman->jumlah_pinjaman - $totalAngsuran;
-            $persentaseLunas = ($pinjaman->jumlah_pinjaman > 0)
-                ? round(($totalAngsuran / $pinjaman->jumlah_pinjaman) * 100, 2)
-                : 0;
-
-            // Calculate expected installment amount
-            $angsuranPerBulan = ($pinjaman->jangka_waktu > 0)
-                ? $pinjaman->jumlah_pinjaman / $pinjaman->jangka_waktu
-                : 0;
-
-            // Send data to view
-            return view('karyawan/transaksi_pinjaman/detail', [
-                'pinjaman' => $pinjaman,
-                'angsuran' => $angsuran,
-                'totalAngsuran' => $totalAngsuran,
-                'totalBunga' => $totalBunga,
-                'sisaPinjaman' => $sisaPinjaman,
-                'persentaseLunas' => $persentaseLunas,
-                'angsuranPerBulan' => $angsuranPerBulan
-            ]);
-
-        } catch (\Exception $e) {
-            // Handle errors
-            return redirect()->to('karyawan/transaksi_pinjaman')->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
+        if (!$pinjaman) {
+            return redirect()->to('/karyawan/transaksi_pinjaman')->with('error', 'Data pinjaman tidak ditemukan');
         }
+
+        // Get installment data ordered by date
+        $angsuran = $angsuranModel
+            ->where('id_pinjaman', $id)
+            ->orderBy('tanggal_angsuran', 'ASC')
+            ->findAll();
+
+        // Calculate loan statistics
+        $totalAngsuran = 0;
+        $totalBunga = 0;
+
+        foreach ($angsuran as $row) {
+            $totalAngsuran += $row->jumlah_angsuran;
+
+            // Calculate interest amount for each installment using the interest rate from the database
+            // Interest is calculated as a percentage of the total loan amount
+            $jumlahBunga = ($row->bunga / 100) * $pinjaman->jumlah_pinjaman;
+            $totalBunga += $jumlahBunga;
+        }
+
+        // Calculate remaining balance
+        $sisaPinjaman = $pinjaman->jumlah_pinjaman - $totalAngsuran;
+        $sisaPinjaman = max(0, $sisaPinjaman); // Ensure it's not negative
+
+        // Calculate payment percentage
+        $persentaseLunas = 0;
+        if ($pinjaman->jumlah_pinjaman > 0) {
+            $persentaseLunas = min(100, round(($totalAngsuran / $pinjaman->jumlah_pinjaman) * 100));
+        }
+
+        // Get the interest rate from the first installment (if available)
+        $bungaPerbulan = 2; // Default value
+        if (!empty($angsuran)) {
+            $bungaPerbulan = $angsuran[0]->bunga;
+        }
+
+        // Calculate fixed interest amount per installment
+        $totalBungaAwal = ($bungaPerbulan / 100) * $pinjaman->jumlah_pinjaman;
+
+        // Calculate monthly installment amount (principal only)
+        $angsuranPerBulan = 0;
+        if ($pinjaman->jangka_waktu > 0) {
+            $angsuranPerBulan = $pinjaman->jumlah_pinjaman / $pinjaman->jangka_waktu;
+        }
+
+        $data = [
+            'pinjaman' => $pinjaman,
+            'angsuran' => $angsuran,
+            'totalAngsuran' => $totalAngsuran,
+            'totalBunga' => $totalBunga,
+            'sisaPinjaman' => $sisaPinjaman,
+            'persentaseLunas' => $persentaseLunas,
+            'bungaPerbulan' => $bungaPerbulan,
+            'totalBungaAwal' => $totalBungaAwal,
+            'angsuranPerBulan' => $angsuranPerBulan,
+            'title' => 'Detail Pinjaman'
+        ];
+
+        // Return the view with the correct path
+        return view('karyawan/transaksi_pinjaman/detail', $data);
     }
 
 
