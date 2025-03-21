@@ -74,9 +74,9 @@
             <li class="nav-item">
                 <a class="nav-link" href="/karyawan/transaksi_pinjaman">🏦 <span>Transaksi Pinjaman</span></a>
             </li>
-            <li class="nav-item">
+            <!-- <li class="nav-item">
                 <a class="nav-link" href="/karyawan/laporan_transaksi">📄 <span>Laporan Transaksi</span></a>
-            </li>
+            </li> -->
         <?php endif; ?>
     </ul>
 

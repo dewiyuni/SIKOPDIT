@@ -8,28 +8,41 @@ use Dompdf\Options;
 
 class LaporanTransaksi extends BaseController
 {
+    protected $laporanModel;
+
+    public function __construct()
+    {
+        $this->laporanModel = new LaporanModel();
+    }
+
     public function index()
     {
-        $laporanModel = new LaporanModel();
-        $data['laporan'] = $laporanModel->getLaporanTransaksi();
+        $data = [
+            'laporan' => $this->laporanModel->getLaporanTransaksi()
+        ];
 
         return view('karyawan/laporan_transaksi', $data);
     }
 
     public function cetak()
     {
-        $laporanModel = new LaporanModel();
-        $data['laporan'] = $laporanModel->getLaporanTransaksi();
+        $data = [
+            'laporan' => $this->laporanModel->getLaporanTransaksi()
+        ];
 
-        $dompdf = new Dompdf();
+        // Set opsi Dompdf
         $options = new Options();
         $options->set('defaultFont', 'Arial');
-        $dompdf->setOptions($options);
+        $options->set('isHtml5ParserEnabled', true);
+
+        $dompdf = new Dompdf($options);
 
         $html = view('karyawan/cetak_laporan', $data);
         $dompdf->loadHtml($html);
         $dompdf->setPaper('A4', 'landscape');
         $dompdf->render();
-        $dompdf->stream('Laporan_Transaksi.pdf', ["Attachment" => false]);
+
+        // Menyimpan file PDF ke browser tanpa mendownload otomatis
+        $dompdf->stream('Laporan_Transaksi.pdf', ['Attachment' => false]);
     }
 }

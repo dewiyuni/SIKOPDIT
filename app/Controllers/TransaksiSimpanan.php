@@ -91,54 +91,48 @@ class TransaksiSimpanan extends Controller
     {
         $id_anggota = $this->request->getPost('id_anggota');
         $setor_sw = (int) $this->request->getPost('setor_sw');
+        $setor_swp = (int) $this->request->getPost('setor_swp'); // Tambahkan SW Penyertaan jika ada
         $setor_ss = (int) $this->request->getPost('setor_ss');
-        $setor_sp = (int) $this->request->getPost('setor_sp'); // Add this line
+        $setor_sp = (int) $this->request->getPost('setor_sp');
 
-        // Check for the latest transaction for this member
+        // Ambil saldo terakhir anggota
         $transaksi = $this->transaksiModel
             ->where('id_anggota', $id_anggota)
             ->orderBy('id_simpanan', 'DESC')
             ->first();
 
-        // Initialize saldo values
-        if ($transaksi) {
-            // If there is a transaction, get the last saldo values
-            $saldo_sw = $transaksi->saldo_sw ?? 0;
-            $saldo_ss = $transaksi->saldo_ss ?? 0;
-            $saldo_sp = $transaksi->saldo_sp ?? 0; // Add this line
-            $saldo_total = $transaksi->saldo_total ?? 0;
-        } else {
-            // If no transactions exist, start balances from zero
-            $saldo_sw = 0;
-            $saldo_ss = 0;
-            $saldo_sp = 0; // Add this line
-            $saldo_total = 0;
-        }
+        // Inisialisasi saldo jika belum ada transaksi
+        $saldo_sw = $transaksi->saldo_sw ?? 0;
+        $saldo_swp = $transaksi->saldo_swp ?? 0; // Tambahkan SW Penyertaan
+        $saldo_ss = $transaksi->saldo_ss ?? 0;
+        $saldo_sp = $transaksi->saldo_sp ?? 0;
+        $saldo_total = $transaksi->saldo_total ?? 0;
 
-        // Calculate new balances after deposit
+        // Hitung saldo baru
         $saldo_sw_baru = $saldo_sw + $setor_sw;
+        $saldo_swp_baru = $saldo_swp + $setor_swp; // Tambahkan SW Penyertaan
         $saldo_ss_baru = $saldo_ss + $setor_ss;
-        $saldo_sp_baru = $saldo_sp + $setor_sp; // Add this line
-        $saldo_total_baru = $saldo_sw_baru + $saldo_ss_baru + $saldo_sp_baru; // Update this line
+        $saldo_sp_baru = $saldo_sp + $setor_sp;
+        $saldo_total_baru = $saldo_sw_baru + $saldo_swp_baru + $saldo_ss_baru + $saldo_sp_baru;
 
-        // Add new transaction to `transaksi_simpanan`
+        // Simpan transaksi baru
         $this->transaksiModel->insert([
             'id_anggota' => $id_anggota,
             'tanggal' => date('Y-m-d H:i:s'),
             'setor_sw' => $setor_sw,
+            'setor_swp' => $setor_swp, // Tambahkan SW Penyertaan
             'setor_ss' => $setor_ss,
-            'setor_sp' => $setor_sp, // Add this line
+            'setor_sp' => $setor_sp,
             'saldo_sw' => $saldo_sw_baru,
+            'saldo_swp' => $saldo_swp_baru, // Tambahkan SW Penyertaan
             'saldo_ss' => $saldo_ss_baru,
-            'saldo_sp' => $saldo_sp_baru, // Add this line
+            'saldo_sp' => $saldo_sp_baru,
             'saldo_total' => $saldo_total_baru,
             'keterangan' => 'Setoran Simpanan'
         ]);
 
         return redirect()->to('karyawan/transaksi_simpanan')->with('success', 'Setoran berhasil ditambahkan.');
     }
-
-
     public function tarik()
     {
         $id_anggota = $this->request->getPost('id_anggota');
@@ -301,8 +295,8 @@ class TransaksiSimpanan extends Controller
         // Hitung total simpanan dan penarikan untuk setiap jenis
         $totalSimpananWajib = 0;
         $totalPenarikanWajib = 0;
-        $totalSimpananWajibPlus = 0;
-        $totalPenarikanWajibPlus = 0;
+        $totalSimpananWajibPenyertaan = 0;
+        $totalPenarikanWajibPenyertaan = 0;
         $totalSimpananSukarela = 0;
         $totalPenarikanSukarela = 0;
         $totalSimpananPokok = 0;
@@ -311,8 +305,8 @@ class TransaksiSimpanan extends Controller
         foreach ($transaksiSimpanan as $transaksi) {
             $totalSimpananWajib += (float) $transaksi->setor_sw;
             $totalPenarikanWajib += (float) $transaksi->tarik_sw;
-            $totalSimpananWajibPlus += (float) $transaksi->setor_swp;
-            $totalPenarikanWajibPlus += (float) $transaksi->tarik_swp;
+            $totalSimpananWajibPenyertaan += (float) $transaksi->setor_swp;
+            $totalPenarikanWajibPenyertaan += (float) $transaksi->tarik_swp;
             $totalSimpananSukarela += (float) $transaksi->setor_ss;
             $totalPenarikanSukarela += (float) $transaksi->tarik_ss;
             $totalSimpananPokok += (float) $transaksi->setor_sp;
@@ -326,14 +320,14 @@ class TransaksiSimpanan extends Controller
             'pinjaman' => $pinjaman,
             'totalSimpananWajib' => $totalSimpananWajib,
             'totalPenarikanWajib' => $totalPenarikanWajib,
-            'totalSimpananWajibPlus' => $totalSimpananWajibPlus,
-            'totalPenarikanWajibPlus' => $totalPenarikanWajibPlus,
+            'totalSimpananWajibPenyertaan' => $totalSimpananWajibPenyertaan,
+            'totalPenarikanWajibPenyertaan' => $totalPenarikanWajibPenyertaan,
             'totalSimpananSukarela' => $totalSimpananSukarela,
             'totalPenarikanSukarela' => $totalPenarikanSukarela,
             'totalSimpananPokok' => $totalSimpananPokok,
             'totalPenarikanPokok' => $totalPenarikanPokok,
             'saldoWajib' => $totalSimpananWajib - $totalPenarikanWajib,
-            'saldoWajibPlus' => $totalSimpananWajibPlus - $totalPenarikanWajibPlus,
+            'saldoWajibPenyertaan' => $totalSimpananWajibPenyertaan - $totalPenarikanWajibPenyertaan,
             'saldoSukarela' => $totalSimpananSukarela - $totalPenarikanSukarela,
             'saldoPokok' => $totalSimpananPokok - $totalPenarikanPokok,
         ]);

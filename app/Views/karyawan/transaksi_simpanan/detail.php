@@ -93,7 +93,7 @@
                                         </div>
                                     </div>
                                     <div class="col-md-3 text-center mb-3">
-                                        <div class="h5">Simpanan Wajib Plus</div>
+                                        <div class="h5">Simpanan Wajib Penyertaan</div>
                                         <div class="h3 text-success">Rp <?= number_format($saldoSWP, 0, ',', '.') ?>
                                         </div>
                                     </div>
@@ -139,8 +139,8 @@
                                 <th>Tanggal</th>
                                 <th>Simpanan Wajib</th>
                                 <th>Penarikan Wajib</th>
-                                <th>Simpanan Wajib Plus</th>
-                                <th>Penarikan Wajib Plus</th>
+                                <th>Simpanan Wajib Penyertaan</th>
+                                <th>Penarikan Wajib Penyertaan</th>
                                 <th>Simpanan Sukarela</th>
                                 <th>Penarikan Sukarela</th>
                                 <th>Simpanan Pokok</th>

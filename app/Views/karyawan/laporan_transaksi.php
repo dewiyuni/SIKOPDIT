@@ -24,13 +24,14 @@
                             <td><?= $no++ ?></td>
                             <td><?= esc($row->jenis_transaksi) ?></td>
                             <td><?= esc($row->nama_anggota) ?></td>
-                            <td><?= date('d M Y', strtotime($row->tanggal_transaksi)) ?></td>
-                            <td>Rp <?= number_format($row->jumlah, 0, ',', '.') ?></td>
+                            <td><?= !empty($row->tanggal_transaksi) ? date('d M Y', strtotime(esc($row->tanggal_transaksi))) : '-' ?>
+                            </td>
+                            <td>Rp <?= number_format((float) $row->jumlah, 0, ',', '.') ?></td>
                         </tr>
                     <?php endforeach; ?>
                 <?php else: ?>
                     <tr>
-                        <td colspan="6" class="text-center">Belum ada data transaksi</td>
+                        <td colspan="5" class="text-center">Belum ada data transaksi</td>
                     </tr>
                 <?php endif; ?>
             </tbody>
