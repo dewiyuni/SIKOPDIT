@@ -7,10 +7,10 @@
 
         <h3>Edit Neraca Awal</h3>
 
-        <a href="/admin/neraca_awal" class="btn btn-warning">Kenbali</a>
+        <a href="/admin/neraca" class="btn btn-warning">Kenbali</a>
     </div>
     <div class="card p-3">
-        <form action="<?= base_url('admin/neraca_awal/update/' . $neraca['id_neraca']) ?>" method="post">
+        <form action="<?= base_url('admin/neraca/update/' . $neraca['id_neraca']) ?>" method="post">
             <label>Tanggal:</label>
             <input type="date" name="tanggal" value="<?= $neraca['tanggal']; ?>" required><br>
 

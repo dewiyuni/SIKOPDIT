@@ -5,11 +5,11 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center">
         <h3>Neraca Awal</h3>
-        <a href="<?= base_url('admin/neraca_awal/create') ?>" class="btn btn-success">Tambah Neraca Awal</a>
+        <a href="<?= base_url('admin/neraca/create') ?>" class="btn btn-success">Tambah Neraca Awal</a>
     </div>
     <!-- Form Pilihan Bulan & Tahun -->
     <div class="card p-3">
-        <form action="<?= base_url('admin/neraca_awal') ?>" method="GET" class="mb-3">
+        <form action="<?= base_url('admin/neraca') ?>" method="GET" class="mb-3">
             <div class="row">
                 <div class="col-md-3">
                     <label>Bulan:</label>
@@ -132,9 +132,8 @@
 
             <!-- Tombol Edit & Hapus -->
             <div class="mt-3">
-                <a href="<?= base_url('admin/neraca_awal/edit/' . $neraca['id_neraca_awal']) ?>"
-                    class="btn btn-warning">Edit</a>
-                <a href="<?= base_url('admin/neraca_awal/delete/' . $neraca['id_neraca_awal']) ?>" class="btn btn-danger"
+                <a href="<?= base_url('admin/neraca/edit/' . $neraca['id_neraca_awal']) ?>" class="btn btn-warning">Edit</a>
+                <a href="<?= base_url('admin/neraca/delete/' . $neraca['id_neraca_awal']) ?>" class="btn btn-danger"
                     onclick="return confirm('Apakah Anda yakin ingin menghapus?')">Hapus</a>
             </div>
         </div>

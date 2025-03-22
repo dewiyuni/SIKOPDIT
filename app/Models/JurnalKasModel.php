@@ -6,7 +6,7 @@ use CodeIgniter\Model;
 
 class JurnalKasModel extends Model
 {
-    protected $table = 'jurnal_kas_harian';
+    protected $table = 'jurnal_kas';
     protected $primaryKey = 'id';
     protected $useAutoIncrement = true;
     protected $returnType = 'array';
@@ -17,7 +17,7 @@ class JurnalKasModel extends Model
 
     public function getAllKas()
     {
-        return $this->db->table('jurnal_kas_harian')->get()->getResultArray();
+        return $this->db->table('jurnal_kas')->get()->getResultArray();
     }
     public function getRekapBulanan()
     {
@@ -37,7 +37,7 @@ class JurnalKasModel extends Model
                 SUM(CASE WHEN MONTH(tanggal) = 10 THEN jumlah ELSE 0 END) AS Oktober,
                 SUM(CASE WHEN MONTH(tanggal) = 11 THEN jumlah ELSE 0 END) AS November,
                 SUM(CASE WHEN MONTH(tanggal) = 12 THEN jumlah ELSE 0 END) AS Desember
-            FROM jurnal_kas_harian
+            FROM jurnal_kas
             GROUP BY kategori, uraian
             ORDER BY kategori, uraian"
         );

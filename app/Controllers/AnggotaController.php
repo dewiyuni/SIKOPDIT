@@ -115,7 +115,7 @@ class AnggotaController extends Controller
             'tarik_ss' => $tarik_ss,
             'tarik_sp' => $tarik_sp,
             'saldo_total' => $saldo_total,
-            'keterangan' => 'Saldo awal pendaftaran'
+            'keterangan' => ' '
         ]);
 
         // **4️⃣ Catat Uang Pangkal & Simpanan Pokok di `keuangan_koperasi`**

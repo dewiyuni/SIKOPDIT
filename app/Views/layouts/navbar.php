@@ -43,8 +43,8 @@
                     📒 <span>Jurnal Kas Harian</span>
                 </a>
                 <ul class="dropdown-menu" aria-labelledby="jurnalKasDropdown">
-                    <li><a class="dropdown-item" href="/admin/jurnal_neraca/jurnal_kas_harian">📋 Semua Jurnal Kas</a></li>
-                    <li><a class="dropdown-item" href="/admin/jurnal_neraca/jurnal_kas_harian?sort=month">📅 Sort by
+                    <li><a class="dropdown-item" href="/admin/jurnal/jurnal_kas">📋 Semua Jurnal Kas</a></li>
+                    <li><a class="dropdown-item" href="/admin/jurnal/jurnal_kas?sort=month">📅 Sort by
                             Bulan</a></li>
                 </ul>
             </li>
@@ -55,9 +55,9 @@
                     📋 <span>Neraca</span>
                 </a>
                 <ul class="dropdown-menu" aria-labelledby="neracaDropdown">
-                    <li><a class="dropdown-item" href="/admin/neraca_awal">📊 Neraca Awal</a></li>
+                    <li><a class="dropdown-item" href="/admin/neraca">📊 Neraca Awal</a></li>
                     <li><a class="dropdown-item" href="/admin/neraca_tahunan">📆 Neraca Tahunan</a></li>
-                    <li><a class="dropdown-item" href="/admin/neraca_awal/kategori_neraca">📂 Kategori Neraca</a></li>
+                    <li><a class="dropdown-item" href="/admin/neraca/kategori_neraca">📂 Kategori Neraca</a></li>
                 </ul>
             </li>
         <?php endif; ?>

@@ -35,13 +35,10 @@
                             <td><?= $jenis->nama_simpanan ?></td>
                             <td>
                                 <a href="<?= site_url('admin/edit_jenis_simpanan/' . $jenis->id_jenis_simpanan) ?>"
-                                    class="btn btn-warning">
+                                    class="btn btn-warning btn-sm">
                                     <i class="bi bi-pencil"></i> Edit
                                 </a>
-                                <a href="<?= site_url('admin/hapus_jenis_simpanan/' . $jenis->id_jenis_simpanan) ?>"
-                                    class="btn btn-danger" onclick="return confirm('Yakin hapus?')">
-                                    <i class="bi bi-trash"></i> Hapus
-                                </a>
+
                             </td>
                         </tr>
                     <?php endforeach; ?>

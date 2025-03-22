@@ -145,21 +145,16 @@ class AuthController extends BaseController
     {
         $anggotaModel = new \App\Models\AnggotaModel();
         $totalAnggota = $anggotaModel->countAll(); // Menghitung total anggota
+        $simpananModel = new TransaksiSimpananModel(); // Pastikan model sudah dibuat
+        $totalSimpanan = $simpananModel->getTotalSimpanan(); // Memanggil fungsi total simpanan
+        $pinjamanModel = new TransaksiPinjamanModel(); // Pastikan model sudah dibuat
+        $totalPinjaman = $pinjamanModel->getTotalPinjaman(); // Memanggil fungsi total pinjaman
 
-        $simpananModel = new \App\Models\TransaksiSimpananModel();
-        $pinjamanModel = new \App\Models\TransaksiPinjamanModel();
-        $angsuranModel = new \App\Models\AngsuranModel();
-
-        $totalSimpanan = $simpananModel->selectSum('saldo_total')->first()->saldo_total;
-        $totalPinjaman = $pinjamanModel->selectSum('jumlah_pinjaman')->first()->jumlah_pinjaman;
-        $totalAngsuran = $angsuranModel->selectSum('jumlah_angsuran')->first()->jumlah_angsuran;
-
+        // Kirim data ke view
         return view('dashboard_admin', [
             'totalAnggota' => $totalAnggota,
-            'totalSimpanan' => $totalSimpanan ?? 0,
-            'totalPinjaman' => $totalPinjaman ?? 0,
-            'totalAngsuran' => $totalAngsuran ?? 0,
-
+            'totalSimpanan' => $totalSimpanan,
+            'totalPinjaman' => $totalPinjaman
         ]);
 
     }
@@ -186,7 +181,13 @@ class AuthController extends BaseController
             ->findAll();
 
         // Simpanan bulanan
-        $simpananBulanan = $simpananModel->select("DATE_FORMAT(tanggal, '%Y-%m') as bulan, SUM(saldo_total) as total")
+        $simpananBulanan = $simpananModel->select("
+        DATE_FORMAT(tsd.created_at, '%Y-%m') as bulan, 
+        SUM(tsd.setor_sw) - SUM(tsd.tarik_sw) as saldo_sw,
+        SUM(tsd.setor_swp) - SUM(tsd.tarik_swp) as saldo_swp,
+        SUM(tsd.setor_ss) - SUM(tsd.tarik_ss) as saldo_ss,
+        SUM(tsd.setor_sp) - SUM(tsd.tarik_sp) as saldo_sp")
+            ->from('transaksi_simpanan_detail tsd')
             ->groupBy('bulan')
             ->findAll();
 

@@ -77,47 +77,45 @@ $routes->get('karyawan/laporan_transaksi', 'LaporanTransaksi::index');
 $routes->get('karyawan/laporan_transaksi/cetak', 'LaporanTransaksi::cetak');
 
 // =============== jurnal harian ====================
-$routes->get('admin/jurnal_neraca', 'JurnalKasController::index');
-$routes->post('admin/jurnal_neraca/tambah', 'JurnalKasController::tambahJurnalKas');
-$routes->post('admin/jurnal_neraca/update', 'JurnalKasController::update');
-$routes->get('/jurnal_neraca', 'JurnalKasController::index');
-$routes->get('/jurnal_neraca/data', 'JurnalKasController::getData');
-$routes->post('/jurnal_neraca/update', 'JurnalKasController::updateData');
+$routes->get('admin/jurnal', 'JurnalKasController::index');
+$routes->post('admin/jurnal/tambah', 'JurnalKasController::tambahJurnalKas');
+$routes->post('admin/jurnal/update', 'JurnalKasController::update');
+$routes->get('/jurnal', 'JurnalKasController::index');
+$routes->get('/jurnal/data', 'JurnalKasController::getData');
+$routes->post('/jurnal/update', 'JurnalKasController::updateData');
 
 $routes->post('api/updateKas', 'JurnalKasController::updateKas');
 $routes->post('admin/jurnal_harian', 'JurnalKasController::create');
-$routes->post('admin/jurnal_kas_harian/simpan', 'JurnalKasController::simpan');
-// $routes->match(['put', 'post'], 'jurnal_/updateKas', 'JurnalKasController::updateKas');
+$routes->post('admin/jurnal_kas/simpan', 'JurnalKasController::simpan');
 
-$routes->put('admin/jurnal_kas_harian/update', 'JurnalKasController::update');
+$routes->put('admin/jurnal_kas/update', 'JurnalKasController::update');
 
-$routes->get('admin/jurnal_neraca/jurnal_kas_harian', 'JurnalKasController::index');
-$routes->get('jurnal_neraca', 'JurnalKasController::getData'); // Menampilkan semua data
-$routes->post('jurnal_neraca/create', 'JurnalKasController::createKas'); // Menambah data
-$routes->put('jurnal_neraca/update', 'JurnalKasController::updateKas'); // Mengupdate data
+$routes->get('admin/jurnal/jurnal_kas', 'JurnalKasController::index');
+$routes->get('jurnal', 'JurnalKasController::getData'); // Menampilkan semua data
+$routes->post('jurnal/create', 'JurnalKasController::createKas'); // Menambah data
+$routes->put('jurnal/update', 'JurnalKasController::updateKas'); // Mengupdate data
 $routes->post('/jurnal/saveDUK', 'JurnalKasController::saveDUK');
 $routes->post('/jurnal/simpan', 'JurnalKasController::simpan');
 $routes->post('/jurnal/createKas', 'JurnalKasController::createKas');
 $routes->put('jurnal/update/(:num)', 'JurnalKasController::update/$1');
-$routes->delete('admin/jurnal_kas_harian/delete/(:num)', 'JurnalKasController::delete/$1'); //hapus
-
+$routes->delete('admin/jurnal_kas/delete/(:num)', 'JurnalKasController::delete/$1'); //hapus
 
 $routes->get('export-excel', 'JurnalKasController::exportExcel');
-$routes->post('admin/jurnal_neraca/import_excel', 'JurnalKasController::importExcel');
+$routes->post('admin/jurnal/import_excel', 'JurnalKasController::importExcel');
 
 $routes->group('admin', function ($routes) {
-    $routes->get('neraca_awal', 'NeracaAwalController::index');
-    $routes->get('neraca_awal/create', 'NeracaAwalController::create');
-    $routes->post('neraca_awal/store', 'NeracaAwalController::store');
-    $routes->get('neraca_awal/edit/(:num)', 'NeracaAwalController::edit/$1');
-    $routes->post('neraca_awal/update/(:num)', 'NeracaAwalController::update/$1');
-    $routes->get('neraca_awal/delete/(:num)', 'NeracaAwalController::delete/$1');
-    $routes->get('neraca_awal/kategori_neraca', 'KategoriNeraca::index');
-    $routes->get('neraca_awal/kategori_neraca/create', 'KategoriNeraca::create');
-    $routes->post('neraca_awal/kategori_neraca/store', 'KategoriNeraca::store');
-    $routes->get('neraca_awal/kategori_neraca/edit/(:num)', 'KategoriNeraca::edit/$1');
-    $routes->post('neraca_awal/kategori_neraca/update/(:num)', 'KategoriNeraca::update/$1');
-    $routes->get('neraca_awal/kategori_neraca/delete/(:num)', 'KategoriNeraca::delete/$1');
-
+    $routes->get('neraca', 'NeracaAwalController::index');
+    $routes->get('neraca/create', 'NeracaAwalController::create');
+    $routes->post('neraca/store', 'NeracaAwalController::store');
+    $routes->get('neraca/edit/(:num)', 'NeracaAwalController::edit/$1');
+    $routes->post('neraca/update/(:num)', 'NeracaAwalController::update/$1');
+    $routes->get('neraca/delete/(:num)', 'NeracaAwalController::delete/$1');
+    $routes->get('neraca/kategori_neraca', 'KategoriNeraca::index');
+    $routes->get('neraca/kategori_neraca/create', 'KategoriNeraca::create');
+    $routes->post('neraca/kategori_neraca/store', 'KategoriNeraca::store');
+    $routes->get('neraca/kategori_neraca/edit/(:num)', 'KategoriNeraca::edit/$1');
+    $routes->post('neraca/kategori_neraca/update/(:num)', 'KategoriNeraca::update/$1');
+    $routes->get('neraca/kategori_neraca/delete/(:num)', 'KategoriNeraca::delete/$1');
 });
+
 

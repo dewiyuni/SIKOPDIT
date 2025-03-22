@@ -5,14 +5,14 @@
 <div class="container mt-4">
     <div class="d-flex justify-content-between align-items-center">
         <h3>Tambah Neraca Awal</h3>
-        <a href="/admin/neraca_awal" class="btn btn-warning">Kembali</a>
+        <a href="/admin/neraca" class="btn btn-warning">Kembali</a>
     </div>
     <?php if (session()->getFlashdata('error')): ?>
         <div class="alert alert-danger"><?= session()->getFlashdata('error') ?></div>
     <?php endif; ?>
     <div class="card p-3">
         <div style="overflow-x: auto;">
-            <form action="<?= base_url('/admin/neraca_awal/store') ?>" method="post">
+            <form action="<?= base_url('/admin/neraca/store') ?>" method="post">
                 <?= csrf_field() ?>
 
                 <div class="form-group">
@@ -61,7 +61,7 @@
                 </table>
 
                 <button type="submit" class="btn btn-success">Simpan</button>
-                <a href="<?= base_url('/admin/neraca_awal') ?>" class="btn btn-secondary">Batal</a>
+                <a href="<?= base_url('/admin/neraca') ?>" class="btn btn-secondary">Batal</a>
             </form>
         </div>
     </div>

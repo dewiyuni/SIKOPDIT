@@ -22,11 +22,11 @@ class JurnalKasController extends ResourceController
 
     public function index()
     {
-        $data['jurnal_kas_harian'] = $this->jurnalkasModel->orderBy('tanggal', 'ASC')->findAll(); // Tambahkan orderBy
+        $data['jurnal_kas'] = $this->jurnalkasModel->orderBy('tanggal', 'ASC')->findAll(); // Tambahkan orderBy
 
-        log_message('debug', json_encode($data['jurnal_kas_harian'])); // Debugging
+        log_message('debug', json_encode($data['jurnal_kas'])); // Debugging
 
-        return view('admin/jurnal_neraca/jurnal_kas_harian', $data);
+        return view('admin/jurnal/jurnal_kas', $data);
     }
 
     public function getData()
@@ -405,7 +405,7 @@ class JurnalKasController extends ResourceController
             session()->setFlashdata('error', 'Terjadi kesalahan saat mengimport data: ' . $e->getMessage());
         }
 
-        return redirect()->to(base_url('admin/jurnal_neraca')); // Sesuaikan dengan route tujuan
+        return redirect()->to(base_url('admin/jurnal')); // Sesuaikan dengan route tujuan
     }
 
     /**

@@ -12,8 +12,8 @@
                 </a>
 
                 Form Upload Excel
-                <form action="<?= base_url('admin/jurnal_neraca/import_excel') ?>" method="post"
-                    enctype="multipart/form-data" class="d-flex flex-column flex-md-row align-items-center gap-2">
+                <form action="<?= base_url('admin/jurnal/import_excel') ?>" method="post" enctype="multipart/form-data"
+                    class="d-flex flex-column flex-md-row align-items-center gap-2">
                     <div>
                         <input type="file" class="form-control form-control-sm" name="file_excel" id="file_excel"
                             accept=".xls,.xlsx" required>
@@ -72,7 +72,7 @@
                     </thead>
                     <tbody id="dumBody">
                         <?php $no = 1;
-                        foreach ($jurnal_kas_harian as $k): ?>
+                        foreach ($jurnal_kas as $k): ?>
                             <?php if ($k['kategori'] == 'DUM'): ?>
                                 <tr data-id="<?= $k['id'] ?>">
                                     <td><?= $no++ ?></td>
@@ -89,8 +89,9 @@
                                             oninput="formatRibuan(this)">
                                     </td>
                                     <td style="text-align: center;">
-                                        <button class="btn btn-danger" onclick="hapusBaris(this, 'dum')">Hapus</button>
-                                        <button class="btn btn-primary" onclick="simpanBaris(this, 'dum')">Simpan</button>
+                                        <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'dum')">Hapus</button>
+                                        <button class="btn btn-success btn-sm"
+                                            onclick="simpanBaris(this, 'dum')">Simpan</button>
                                     </td>
                                 </tr>
                             <?php endif; ?>
@@ -123,7 +124,7 @@
                     </thead>
                     <tbody id="dukBody">
                         <?php $no = 1;
-                        foreach ($jurnal_kas_harian as $k): ?>
+                        foreach ($jurnal_kas as $k): ?>
                             <?php if ($k['kategori'] == 'DUK'): ?>
                                 <tr data-id="<?= $k['id'] ?>">
                                     <td><?= $no++ ?></td>
@@ -140,8 +141,9 @@
                                             oninput="formatRibuan(this)">
                                     </td>
                                     <td style="text-align: center;">
-                                        <button class="btn btn-danger" onclick="hapusBaris(this, 'duk')">Hapus</button>
-                                        <button class="btn btn-primary" onclick="simpanBaris(this, 'duk')">Simpan</button>
+                                        <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'duk')">Hapus</button>
+                                        <button class="btn btn-success btn-sm"
+                                            onclick="simpanBaris(this, 'duk')">Simpan</button>
                                     </td>
                                 </tr>
                             <?php endif; ?>
@@ -193,8 +195,8 @@
             <td><input type="text" class="form-control" placeholder="Uraian"></td>
             <td><input type="text" class="form-control dum" value="0" oninput="formatRibuan(this); hitungTotal();"></td>
             <td>
-                <button class="btn btn-danger" onclick="hapusBaris(this, 'dum')">Hapus</button>
-                <button class="btn btn-primary" onclick="simpanBaris(this, 'dum')">Simpan</button>
+                <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'dum')">Hapus</button>
+                <button class="btn btn-success btn-sm" onclick="simpanBaris(this, 'dum')">Simpan</button>
             </td>
         `;
 
@@ -331,7 +333,7 @@
         console.log("Saving row data:", data); // Log data being sent
 
         // Send the save request to the backend
-        fetch("<?= base_url('admin/jurnal_kas_harian/simpan') ?>", {
+        fetch("<?= base_url('admin/jurnal/simpan') ?>", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify([data]), // Wrap in an array for batch processing
@@ -357,7 +359,7 @@
         if (id) {
             // If the row has an ID, it exists in the database
             if (confirm("Apakah Anda yakin ingin menghapus data ini?")) {
-                fetch(`<?= base_url('admin/jurnal_kas_harian/delete/') ?>${id}`, {
+                fetch(`<?= base_url('admin/jurnal/delete/') ?>${id}`, {
                     method: "DELETE",
                 })
                     .then(response => response.json())
@@ -426,7 +428,7 @@
             return;
         }
 
-        fetch("<?= base_url('admin/jurnal_kas_harian/simpan') ?>", {
+        fetch("<?= base_url('admin/jurnal/simpan') ?>", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),

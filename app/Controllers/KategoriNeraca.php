@@ -16,12 +16,12 @@ class KategoriNeraca extends BaseController
     public function index()
     {
         $data['kategoriNeraca'] = $this->kategoriNeracaModel->findAll();
-        return view('admin/neraca_awal/kategori_neraca/index', $data);
+        return view('admin/neraca/kategori_neraca/index', $data);
     }
 
     public function create()
     {
-        return view('admin/neraca_awal/kategori_neraca/create');
+        return view('admin/neraca/kategori_neraca/create');
     }
 
     public function store()
@@ -30,13 +30,13 @@ class KategoriNeraca extends BaseController
             'nama_kategori' => $this->request->getPost('nama_kategori')
         ]);
 
-        return redirect()->to('/admin/neraca_awal/kategori_neraca')->with('success', 'Kategori berhasil ditambahkan');
+        return redirect()->to('/admin/neraca/kategori_neraca')->with('success', 'Kategori berhasil ditambahkan');
     }
 
     public function edit($id)
     {
         $data['kategori'] = $this->kategoriNeracaModel->find($id);
-        return view('admin/neraca_awal/kategori_neraca/edit', $data);
+        return view('admin/neraca/kategori_neraca/edit', $data);
     }
 
     public function update($id)
@@ -45,12 +45,12 @@ class KategoriNeraca extends BaseController
             'nama_kategori' => $this->request->getPost('nama_kategori')
         ]);
 
-        return redirect()->to('/admin/neraca_awal/kategori_neraca')->with('success', 'Kategori berhasil diperbarui');
+        return redirect()->to('/admin/neraca/kategori_neraca')->with('success', 'Kategori berhasil diperbarui');
     }
 
     public function delete($id)
     {
         $this->kategoriNeracaModel->delete($id);
-        return redirect()->to('/admin/neraca_awal/kategori_neraca')->with('success', 'Kategori berhasil dihapus');
+        return redirect()->to('/admin/neraca/kategori_neraca')->with('success', 'Kategori berhasil dihapus');
     }
 }

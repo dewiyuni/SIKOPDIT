@@ -5,7 +5,7 @@
 <div class="container mt-4">
     <h3>Edit Kategori Neraca</h3>
 
-    <form action="/admin/neraca_awal/kategori_neraca/update/<?= $kategori['id_kategori'] ?>" method="post">
+    <form action="/admin/neraca/kategori_neraca/update/<?= $kategori['id_kategori'] ?>" method="post">
         <?= csrf_field() ?>
         <div class="form-group">
             <label>Nama Kategori:</label>
@@ -13,7 +13,7 @@
                 required>
         </div>
         <button type="submit" class="btn btn-success">Update</button>
-        <a href="/admin/neraca_awal/kategori_neraca" class="btn btn-secondary">Batal</a>
+        <a href="/admin/neraca/kategori_neraca" class="btn btn-secondary">Batal</a>
     </form>
 </div>
 

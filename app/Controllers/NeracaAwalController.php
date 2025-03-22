@@ -46,7 +46,7 @@ class NeracaAwalController extends BaseController
             'tahun' => $tahun
         ];
 
-        return view('admin/neraca_awal/index', $data);
+        return view('admin/neraca/index', $data);
     }
 
 
@@ -56,7 +56,7 @@ class NeracaAwalController extends BaseController
         $bulan = date('n');
         $tahun = date('Y');
 
-        return view('admin/neraca_awal/create', [
+        return view('admin/neraca/create', [
             'kategoriNeraca' => $this->kategoriNeracaModel->findAll(),
             'bulan' => $bulan,
             'tahun' => $tahun
@@ -72,7 +72,7 @@ class NeracaAwalController extends BaseController
         // Cek apakah bulan & tahun sudah ada
         $cek = $this->neracaAwalModel->where(['bulan' => $bulan, 'tahun' => $tahun])->first();
         if ($cek) {
-            return redirect()->to('/admin/neraca_awal')->with('error', 'Data bulan ini sudah ada!');
+            return redirect()->to('/admin/neraca')->with('error', 'Data bulan ini sudah ada!');
         }
 
         // Gunakan transaksi database
@@ -88,7 +88,7 @@ class NeracaAwalController extends BaseController
 
         if (!$idNeraca) {
             $this->db->transRollback();
-            return redirect()->to('/admin/neraca_awal/create')->with('error', 'Gagal menyimpan neraca awal');
+            return redirect()->to('/admin/neraca/create')->with('error', 'Gagal menyimpan neraca awal');
         }
 
         // Simpan rincian kategori
@@ -118,7 +118,7 @@ class NeracaAwalController extends BaseController
         // Commit transaksi
         $this->db->transComplete();
 
-        return redirect()->to('/admin/neraca_awal')->with('success', 'Neraca Awal berhasil ditambahkan');
+        return redirect()->to('/admin/neraca')->with('success', 'Neraca Awal berhasil ditambahkan');
     }
 
     // Halaman Edit
@@ -126,10 +126,10 @@ class NeracaAwalController extends BaseController
     {
         $neraca = $this->neracaAwalModel->find($id);
         if (!$neraca) {
-            return redirect()->to('/admin/neraca_awal')->with('error', 'Data tidak ditemukan');
+            return redirect()->to('/admin/neraca')->with('error', 'Data tidak ditemukan');
         }
 
-        return view('admin/neraca_awal/edit', [
+        return view('admin/neraca/edit', [
             'neraca' => $neraca,
             'detailNeraca' => $this->detailNeracaModel->getDetailByNeraca($id),
             'kategoriNeraca' => $this->kategoriNeracaModel->findAll()
@@ -141,7 +141,7 @@ class NeracaAwalController extends BaseController
     {
         $neraca = $this->neracaAwalModel->find($id);
         if (!$neraca) {
-            return redirect()->to('/admin/neraca_awal')->with('error', 'Data tidak ditemukan');
+            return redirect()->to('/admin/neraca')->with('error', 'Data tidak ditemukan');
         }
 
         $this->db->transStart(); // Mulai transaksi
@@ -167,7 +167,7 @@ class NeracaAwalController extends BaseController
 
         $this->db->transComplete(); // Commit transaksi
 
-        return redirect()->to('/admin/neraca_awal')->with('success', 'Data berhasil diperbarui');
+        return redirect()->to('/admin/neraca')->with('success', 'Data berhasil diperbarui');
     }
 
     // Hapus Data
@@ -175,7 +175,7 @@ class NeracaAwalController extends BaseController
     {
         $neraca = $this->neracaAwalModel->find($id);
         if (!$neraca) {
-            return redirect()->to('/admin/neraca_awal')->with('error', 'Data tidak ditemukan');
+            return redirect()->to('/admin/neraca')->with('error', 'Data tidak ditemukan');
         }
 
         $this->db->transStart();
@@ -183,6 +183,6 @@ class NeracaAwalController extends BaseController
         $this->neracaAwalModel->delete($id);
         $this->db->transComplete();
 
-        return redirect()->to('/admin/neraca_awal')->with('success', 'Data berhasil dihapus');
+        return redirect()->to('/admin/neraca')->with('success', 'Data berhasil dihapus');
     }
 }
