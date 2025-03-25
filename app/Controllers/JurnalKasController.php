@@ -429,4 +429,45 @@ class JurnalKasController extends ResourceController
         return 0;
     }
 
+    public function prosesJurnalKeBukuBesar()
+    {
+        $jurnalModel = new \App\Models\JurnalKasModel();
+        $bukuBesarModel = new \App\Models\BukuBesarModel();
+
+        // Ambil semua data jurnal yang belum diproses
+        $jurnalEntries = $jurnalModel->findAll();
+
+        foreach ($jurnalEntries as $entry) {
+            $debit = 0;
+            $kredit = 0;
+
+            if ($entry['kategori'] === 'Pemasukan') {
+                $debit = $entry['jumlah'];
+            } else {
+                $kredit = $entry['jumlah'];
+            }
+
+            // Simpan ke Buku Besar
+            $bukuBesarModel->insert([
+                'tanggal' => $entry['tanggal'],
+                'akun' => $entry['uraian'],
+                'debit' => $debit,
+                'kredit' => $kredit,
+                'saldo' => 0, // Bisa dihitung berdasarkan saldo sebelumnya
+            ]);
+
+            // Tandai jurnal sebagai sudah diproses
+            $jurnalEntries = $jurnalModel->findAll();
+
+            if (empty($jurnalEntries)) {
+                return redirect()->back()->with('error', 'Tidak ada jurnal yang perlu diproses.');
+            }
+
+
+        }
+
+        return redirect()->to(base_url('admin/buku_besar'))->with('success', 'Jurnal berhasil diproses ke Buku Besar.');
+    }
+
+
 }

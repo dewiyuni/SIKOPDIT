@@ -26,7 +26,6 @@
             <li class="nav-item">
                 <a class="nav-link" href="/admin/jenis_simpanan">💰 <span>Jenis Simpanan</span></a>
             </li>
-
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="kelolaUserDropdown" role="button" data-bs-toggle="dropdown"
                     aria-expanded="false">
@@ -40,7 +39,7 @@
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="jurnalKasDropdown" role="button" data-bs-toggle="dropdown"
                     aria-expanded="false">
-                    📒 <span>Jurnal Kas Harian</span>
+                    📒 <span>Jurnal Kas</span>
                 </a>
                 <ul class="dropdown-menu" aria-labelledby="jurnalKasDropdown">
                     <li><a class="dropdown-item" href="/admin/jurnal/jurnal_kas">📋 Semua Jurnal Kas</a></li>
@@ -48,7 +47,17 @@
                             Bulan</a></li>
                 </ul>
             </li>
-
+            <!-- Nav Item - Buku Besar -->
+            <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="bukuBesarDropdown" role="button" data-bs-toggle="dropdown"
+                    aria-expanded="false">
+                    📘 <span>Buku Besar</span>
+                </a>
+                <ul class="dropdown-menu" aria-labelledby="bukuBesarDropdown">
+                    <li><a class="dropdown-item" href="/admin/buku_besar">📖 Lihat Buku Besar</a></li>
+                    <li><a class="dropdown-item" href="/admin/akun">📖 Akun</a></li>
+                </ul>
+            </li>
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="neracaDropdown" role="button" data-bs-toggle="dropdown"
                     aria-expanded="false">

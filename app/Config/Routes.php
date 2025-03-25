@@ -102,6 +102,8 @@ $routes->delete('admin/jurnal_kas/delete/(:num)', 'JurnalKasController::delete/$
 
 $routes->get('export-excel', 'JurnalKasController::exportExcel');
 $routes->post('admin/jurnal/import_excel', 'JurnalKasController::importExcel');
+$routes->get('admin/jurnal/prosesJurnalKeBukuBesar', 'JurnalKasController::prosesJurnalKeBukuBesar');
+
 
 $routes->group('admin', function ($routes) {
     $routes->get('neraca', 'NeracaAwalController::index');
@@ -117,5 +119,23 @@ $routes->group('admin', function ($routes) {
     $routes->post('neraca/kategori_neraca/update/(:num)', 'KategoriNeraca::update/$1');
     $routes->get('neraca/kategori_neraca/delete/(:num)', 'KategoriNeraca::delete/$1');
 });
+$routes->group('admin', function ($routes) {
+    $routes->get('akun', 'AkunKeuangan::index');
+    $routes->get('akun/create', 'AkunKeuangan::create');
+    $routes->post('akun/store', 'AkunKeuangan::store');
+    $routes->get('akun/edit/(:num)', 'AkunKeuangan::edit/$1');
+    $routes->post('akun/update/(:num)', 'AkunKeuangan::update/$1');
+    $routes->get('akun/delete/(:num)', 'AkunKeuangan::delete/$1');
+});
 
 
+// ============== Buku Besar ====================
+$routes->group('admin/buku_besar', function ($routes) {
+    $routes->get('/', 'BukuBesarController::index'); // Menampilkan daftar buku besar
+    $routes->get('create', 'BukuBesarController::create'); // Form tambah data
+    $routes->post('store', 'BukuBesarController::store'); // Proses simpan data baru
+    $routes->get('edit/(:num)', 'BukuBesarController::edit/$1'); // Form edit berdasarkan ID
+    $routes->post('update/(:num)', 'BukuBesarController::update/$1'); // Proses update
+    $routes->get('delete/(:num)', 'BukuBesarController::delete/$1'); // Hapus data berdasarkan ID
+    $routes->get('proses', 'BukuBesarController::proses'); // Pastikan ada metode ini di controller!
+});

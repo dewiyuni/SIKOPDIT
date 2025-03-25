@@ -1,10 +1,10 @@
 <?= $this->extend('layouts/main'); ?>
 <?= $this->section('content'); ?>
 <div class="container-fluid px-4">
-    <h3 class="mt-4">Jurnal Kas Harian</h3>
+    <h3 class="mt-4">Jurnal Kas </h3>
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Data Kas Harian</h5>
+            <h5 class="mb-0">Data Kas </h5>
             <div class="d-flex gap-3 flex-column flex-md-row align-items-center">
                 <!-- Tombol Ekspor -->
                 <a href="<?= base_url('export-excel'); ?>" class="btn btn-success btn-sm">
@@ -176,6 +176,9 @@
             <button class="btn btn-success" style="width: 100%; display: block;" onclick="simpanKeDatabase()">Simpan ke
                 Database</button>
         </div>
+        <a href="<?= base_url('admin/jurnal/prosesJurnalKeBukuBesar'); ?>" class="btn btn-success mt-3">
+            Proses Jurnal ke Buku Besar
+        </a>
     </div>
 </div>
 
