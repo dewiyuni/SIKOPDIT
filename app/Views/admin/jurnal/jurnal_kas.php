@@ -1,17 +1,17 @@
 <?= $this->extend('layouts/main'); ?>
 <?= $this->section('content'); ?>
 <div class="container-fluid px-4">
-    <h3 class="mt-4">Jurnal Kas </h3>
+    <h3 class="mt-4">Jurnal Kas</h3>
     <div class="card mb-4">
         <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">Data Kas </h5>
+            <h5 class="mb-0">Data Kas</h5>
             <div class="d-flex gap-3 flex-column flex-md-row align-items-center">
                 <!-- Tombol Ekspor -->
                 <a href="<?= base_url('export-excel'); ?>" class="btn btn-success btn-sm">
                     <i class="fas fa-file-excel"></i> Ekspor ke Excel
                 </a>
 
-                Form Upload Excel
+                <!-- Form Upload Excel -->
                 <form action="<?= base_url('admin/jurnal/import_excel') ?>" method="post" enctype="multipart/form-data"
                     class="d-flex flex-column flex-md-row align-items-center gap-2">
                     <div>
@@ -27,19 +27,19 @@
 
         <div class="card-body">
             <div class="row mb-3">
-                <div class="col-md-3 ">
+                <div class="col-md-3">
                     <label for="tahunSelect">Pilih Tahun</label>
                     <select id="tahunSelect" class="form-select" onchange="filterData()">
-                        <option value="">Semua Tahun</option>
+                        <option value="">Pilih Tahun</option>
                         <?php for ($year = date("Y"); $year >= 2015; $year--): ?>
                             <option value="<?= $year; ?>"><?= $year; ?></option>
                         <?php endfor; ?>
                     </select>
                 </div>
-                <div class="col-md-3 ">
+                <div class="col-md-3">
                     <label for="bulanSelect">Pilih Bulan</label>
                     <select id="bulanSelect" class="form-select" onchange="filterData()">
-                        <option value="">Semua Bulan</option>
+                        <option value="">Pilih Bulan</option>
                         <option value="01">Januari</option>
                         <option value="02">Februari</option>
                         <option value="03">Maret</option>
@@ -54,131 +54,135 @@
                         <option value="12">Desember</option>
                     </select>
                 </div>
+                <div class="col-md-3 d-flex align-items-end">
+                    <button class="btn btn-primary" onclick="filterData()">Tampilkan Data</button>
+                </div>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center">
-                <h4 class="mt-4">Data DUM</h4>
-            </div>
-            <div style="overflow-x: auto;">
+            <div id="dataContainer" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mt-4">Data DUM</h4>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="table table-bordered table-striped mt-3">
+                        <thead>
+                            <tr>
+                                <th>No</th>
+                                <th>Tanggal</th>
+                                <th>Uraian</th>
+                                <th>DUM</th>
+                                <th style="text-align: center;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dumBody">
+                            <?php $no = 1;
+                            foreach ($jurnal_kas as $k): ?>
+                                <?php if ($k['kategori'] == 'DUM'): ?>
+                                    <tr data-id="<?= $k['id'] ?>" class="data-row" style="display: none;">
+                                        <td><?= $no++ ?></td>
+                                        <td>
+                                            <input type="date" class="form-control date-dum"
+                                                value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" required
+                                                oninput="hitungTotalPerHari()">
+                                        </td>
+                                        <td><input type="text" class="form-control" value="<?= $k['uraian'] ?>"
+                                                data-id="<?= $k['id'] ?>"></td>
+                                        <td>
+                                            <input type="text" class="form-control dum"
+                                                value="<?= number_format($k['jumlah'], 0, ',', '.') ?>" data-id="<?= $k['id'] ?>"
+                                                oninput="formatRibuan(this)">
+                                        </td>
+                                        <td style="text-align: center;">
+                                            <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'dum')">Hapus</button>
+                                            <button class="btn btn-success btn-sm"
+                                                onclick="simpanBaris(this, 'dum')">Simpan</button>
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="3" class="text-end">Total DUM</th>
+                                <th id="totalDUM">0</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <button class="btn btn-info" style="width: 100%; display: block;" onclick="tambahDUM()">Tambah DUM</button>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <h4 class="mt-4">Data DUK</h4>
+                </div>
+                <div style="overflow-x: auto;">
+                    <table class="table table-bordered table-striped mt-3">
+                        <thead>
+                            <tr>
+                                <th style="text-align: center;">No</th>
+                                <th>Tanggal</th>
+                                <th>Uraian</th>
+                                <th>DUK</th>
+                                <th style="text-align: center;">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dukBody">
+                            <?php $no = 1;
+                            foreach ($jurnal_kas as $k): ?>
+                                <?php if ($k['kategori'] == 'DUK'): ?>
+                                    <tr data-id="<?= $k['id'] ?>" class="data-row" style="display: none;">
+                                        <td><?= $no++ ?></td>
+                                        <td>
+                                            <input type="date" class="form-control date-duk"
+                                                value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" required
+                                                oninput="hitungTotalPerHari()">
+                                        </td>
+                                        <td><input type="text" class="form-control" value="<?= $k['uraian'] ?>"
+                                                data-id="<?= $k['id'] ?>"></td>
+                                        <td>
+                                            <input type="text" class="form-control duk"
+                                                value="<?= number_format($k['jumlah'], 0, ',', '.') ?>" data-id="<?= $k['id'] ?>"
+                                                oninput="formatRibuan(this)">
+                                        </td>
+                                        <td style="text-align: center;">
+                                            <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'duk')">Hapus</button>
+                                            <button class="btn btn-success btn-sm"
+                                                onclick="simpanBaris(this, 'duk')">Simpan</button>
+                                        </td>
+                                    </tr>
+                                <?php endif; ?>
+                            <?php endforeach; ?>
+                        </tbody>
+                        <tfoot>
+                            <tr>
+                                <th colspan="3" class="text-end">Total DUK</th>
+                                <th id="totalDUK">0</th>
+                                <th></th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+                <button class="btn btn-info" style="width: 100%; display: block;" onclick="tambahDUK()">Tambah DUK</button>
+
+                <h4 class="mt-4">Total Per Bulan</h4>
                 <table class="table table-bordered table-striped mt-3">
                     <thead>
                         <tr>
-                            <th>No</th>
-                            <th>Tanggal</th>
-                            <th>Uraian</th>
-                            <th>DUM</th>
-                            <th style="text-align: center;">Aksi</th>
+                            <th>Periode</th>
+                            <th>Total DUM</th>
+                            <th>Total DUK</th>
+                            <th>Saldo</th>
                         </tr>
                     </thead>
-                    <tbody id="dumBody">
-                        <?php $no = 1;
-                        foreach ($jurnal_kas as $k): ?>
-                            <?php if ($k['kategori'] == 'DUM'): ?>
-                                <tr data-id="<?= $k['id'] ?>">
-                                    <td><?= $no++ ?></td>
-                                    <td>
-                                        <input type="date" class="form-control date-dum"
-                                            value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" required
-                                            oninput="hitungTotalPerHari()">
-                                    </td>
-                                    <td><input type="text" class="form-control" value="<?= $k['uraian'] ?>"
-                                            data-id="<?= $k['id'] ?>"></td>
-                                    <td>
-                                        <input type="text" class="form-control dum"
-                                            value="<?= number_format($k['jumlah'], 0, ',', '.') ?>" data-id="<?= $k['id'] ?>"
-                                            oninput="formatRibuan(this)">
-                                    </td>
-                                    <td style="text-align: center;">
-                                        <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'dum')">Hapus</button>
-                                        <button class="btn btn-success btn-sm"
-                                            onclick="simpanBaris(this, 'dum')">Simpan</button>
-                                    </td>
-                                </tr>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
+                    <tbody id="totalPerHariBody">
                     </tbody>
-                    <tfoot>
-                        <tr>
-                            <th colspan="3" class="text-end">Total DUM</th>
-                            <th id="totalDUM">0</th>
-                            <th></th>
-                        </tr>
-                    </tfoot>
                 </table>
             </div>
-            <button class="btn btn-info" style="width: 100%; display: block;" onclick="tambahDUM()">Tambah DUM</button>
-
-            <div class="d-flex justify-content-between align-items-center">
-                <h4 class="mt-4">Data DUK</h4>
+            
+            <div id="noDataMessage" class="alert alert-info mt-3">
+                Silakan pilih tahun dan bulan terlebih dahulu untuk menampilkan data.
             </div>
-            <div style="overflow-x: auto;">
-                <table class="table table-bordered table-striped mt-3">
-                    <thead>
-                        <tr>
-                            <th style="text-align: center;">No</th>
-                            <th>Tanggal</th>
-                            <th>Uraian</th>
-                            <th>DUK</th>
-                            <th style="text-align: center;">Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody id="dukBody">
-                        <?php $no = 1;
-                        foreach ($jurnal_kas as $k): ?>
-                            <?php if ($k['kategori'] == 'DUK'): ?>
-                                <tr data-id="<?= $k['id'] ?>">
-                                    <td><?= $no++ ?></td>
-                                    <td>
-                                        <input type="date" class="form-control date-duk"
-                                            value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" required
-                                            oninput="hitungTotalPerHari()">
-                                    </td>
-                                    <td><input type="text" class="form-control" value="<?= $k['uraian'] ?>"
-                                            data-id="<?= $k['id'] ?>"></td>
-                                    <td>
-                                        <input type="text" class="form-control duk"
-                                            value="<?= number_format($k['jumlah'], 0, ',', '.') ?>" data-id="<?= $k['id'] ?>"
-                                            oninput="formatRibuan(this)">
-                                    </td>
-                                    <td style="text-align: center;">
-                                        <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'duk')">Hapus</button>
-                                        <button class="btn btn-success btn-sm"
-                                            onclick="simpanBaris(this, 'duk')">Simpan</button>
-                                    </td>
-                                </tr>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
-                    </tbody>
-                    <tfoot>
-                        <tr>
-                            <th colspan="3" class="text-end">Total DUK</th>
-                            <th id="totalDUK">0</th>
-                            <th></th>
-                        </tr>
-                    </tfoot>
-                </table>
-            </div>
-            <button class="btn btn-info" style="width: 100%; display: block;" onclick="tambahDUK()">Tambah DUK</button>
-
-            <h4 class="mt-4">Total Per Hari</h4>
-            <table class="table table-bordered table-striped mt-3">
-                <thead>
-                    <tr>
-                        <th>Tanggal</th>
-                        <th>Total DUM</th>
-                        <th>Total DUK</th>
-                        <th>Saldo</th>
-                    </tr>
-                </thead>
-                <tbody id="totalPerHariBody">
-                </tbody>
-            </table>
-            <button class="btn btn-success" style="width: 100%; display: block;" onclick="simpanKeDatabase()">Simpan ke
-                Database</button>
         </div>
-        <a href="<?= base_url('admin/jurnal/prosesJurnalKeBukuBesar'); ?>" class="btn btn-success mt-3">
-            Proses Jurnal ke Buku Besar
-        </a>
     </div>
 </div>
 
@@ -203,6 +207,18 @@
             </td>
         `;
 
+        // Set default date based on selected filters
+        let selectedYear = document.getElementById("tahunSelect").value;
+        let selectedMonth = document.getElementById("bulanSelect").value;
+        if (selectedYear && selectedMonth) {
+            let defaultDate = `${selectedYear}-${selectedMonth}-01`;
+            row.querySelector(".date-dum").value = defaultDate;
+        } else {
+            // Use current date if no filters selected
+            let today = new Date().toISOString().split('T')[0];
+            row.querySelector(".date-dum").value = today;
+        }
+
         // Trigger calculations after adding a new row
         hitungTotal();
         hitungTotalPerHari();
@@ -220,10 +236,22 @@
             <td><input type="text" class="form-control" placeholder="Uraian"></td>
             <td><input type="text" class="form-control duk" value="0" oninput="formatRibuan(this); hitungTotal();"></td>
             <td>
-                <button class="btn btn-danger" onclick="hapusBaris(this, 'duk')">Hapus</button>
-                <button class="btn btn-primary" onclick="simpanBaris(this, 'duk')">Simpan</button>
+                <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'duk')">Hapus</button>
+                <button class="btn btn-success btn-sm" onclick="simpanBaris(this, 'duk')">Simpan</button>
             </td>
         `;
+
+        // Set default date based on selected filters
+        let selectedYear = document.getElementById("tahunSelect").value;
+        let selectedMonth = document.getElementById("bulanSelect").value;
+        if (selectedYear && selectedMonth) {
+            let defaultDate = `${selectedYear}-${selectedMonth}-01`;
+            row.querySelector(".date-duk").value = defaultDate;
+        } else {
+            // Use current date if no filters selected
+            let today = new Date().toISOString().split('T')[0];
+            row.querySelector(".date-duk").value = today;
+        }
 
         // Trigger calculations after adding a new row
         hitungTotal();
@@ -249,11 +277,15 @@
         let totalDUK = 0;
 
         document.querySelectorAll(".dum").forEach(input => {
-            totalDUM += cleanNumber(input.value);
+            if (input.closest('tr').style.display !== 'none') {
+                totalDUM += cleanNumber(input.value);
+            }
         });
 
         document.querySelectorAll(".duk").forEach(input => {
-            totalDUK += cleanNumber(input.value);
+            if (input.closest('tr').style.display !== 'none') {
+                totalDUK += cleanNumber(input.value);
+            }
         });
 
         document.getElementById("totalDUM").textContent = totalDUM.toLocaleString("id-ID");
@@ -262,12 +294,14 @@
         hitungTotalPerHari();
     }
 
-    // Function to calculate total per month (previously per day)
+    // Function to calculate total per month
     function hitungTotalPerHari() {
         let totals = {};
 
         document.querySelectorAll(".date-dum, .date-duk").forEach(tanggalInput => {
             let row = tanggalInput.closest("tr");
+            if (row.style.display === 'none') return; // Skip hidden rows
+            
             let tanggal = tanggalInput.value.trim();
             if (tanggal === "") return; // Skip if date is empty
 
@@ -305,11 +339,11 @@
             let saldo = totals[yearMonth].dum - totals[yearMonth].duk;
             let row = tbody.insertRow();
             row.innerHTML = `
-            <td>${monthName} ${year}</td>
-            <td>${totals[yearMonth].dum.toLocaleString("id-ID")}</td>
-            <td>${totals[yearMonth].duk.toLocaleString("id-ID")}</td>
-            <td>${saldo.toLocaleString("id-ID")}</td>
-        `;
+                <td>${monthName} ${year}</td>
+                <td>${totals[yearMonth].dum.toLocaleString("id-ID")}</td>
+                <td>${totals[yearMonth].duk.toLocaleString("id-ID")}</td>
+                <td>${saldo.toLocaleString("id-ID")}</td>
+            `;
         });
     }
 
@@ -392,6 +426,8 @@
 
         // Process DUM entries
         document.querySelectorAll("#dumBody tr").forEach(row => {
+            if (row.style.display === 'none') return; // Skip hidden rows
+            
             let tanggal = row.querySelector(".date-dum")?.value;
             let uraian = row.querySelector("input[type='text']")?.value;
             let jumlah = cleanNumber(row.querySelector(".dum")?.value || "0");
@@ -410,6 +446,8 @@
 
         // Process DUK entries
         document.querySelectorAll("#dukBody tr").forEach(row => {
+            if (row.style.display === 'none') return; // Skip hidden rows
+            
             let tanggal = row.querySelector(".date-duk")?.value;
             let uraian = row.querySelector("input[type='text']")?.value;
             let jumlah = cleanNumber(row.querySelector(".duk")?.value || "0");
@@ -447,44 +485,74 @@
             });
     }
 
-    // Run hitungTotal() after page loads
-    document.addEventListener("DOMContentLoaded", function () {
-        hitungTotal();
-
-        // Set default date to today for new entries
-        let today = new Date().toISOString().split('T')[0];
-        document.querySelectorAll(".date-dum, .date-duk").forEach(input => {
-            if (!input.value) {
-                input.value = today;
-            }
-        });
-    });
-
+    // Function to filter data based on selected year and month
     function filterData() {
         let selectedYear = document.getElementById("tahunSelect").value;
         let selectedMonth = document.getElementById("bulanSelect").value;
-
+        
+        // Check if both year and month are selected
+        if (selectedYear === "" || selectedMonth === "") {
+            document.getElementById("dataContainer").style.display = "none";
+            document.getElementById("noDataMessage").style.display = "block";
+            return;
+        }
+        
+        // Show data container and hide message
+        document.getElementById("dataContainer").style.display = "block";
+        document.getElementById("noDataMessage").style.display = "none";
+        
+        // Reset display of all rows
+        document.querySelectorAll("#dumBody tr, #dukBody tr").forEach(row => {
+            row.style.display = "none";
+        });
+        
+        // Show rows that match the filter
         document.querySelectorAll("#dumBody tr, #dukBody tr").forEach(row => {
             let dateInput = row.querySelector("input[type='date']");
             if (dateInput) {
                 let rowDate = new Date(dateInput.value);
                 let rowYear = rowDate.getFullYear();
                 let rowMonth = rowDate.getMonth() + 1; // Month starts from 0
-
+                
                 let monthStr = rowMonth < 10 ? '0' + rowMonth : '' + rowMonth;
-
-                row.style.display = (selectedYear === "" || rowYear == selectedYear) &&
-                    (selectedMonth === "" || monthStr == selectedMonth) ? "" : "none";
+                
+                if (rowYear == selectedYear && monthStr == selectedMonth) {
+                    row.style.display = "";
+                }
             }
         });
-
-        // Recalculate totals after filtering
+        
+        // Update totals after filtering
         hitungTotal();
+        hitungTotalPerHari();
+        
+        // Renumber visible rows
+        renumberRows("#dumBody");
+        renumberRows("#dukBody");
+    }
+    
+    // Function to renumber rows after filtering
+    function renumberRows(tableSelector) {
+        let visibleRows = document.querySelectorAll(`${tableSelector} tr:not([style*="display: none"])`);
+        visibleRows.forEach((row, index) => {
+            row.cells[0].textContent = index + 1;
+        });
     }
 
-    // Call filter again after data update
-    document.getElementById("tahunSelect").addEventListener("change", filterData);
-    document.getElementById("bulanSelect").addEventListener("change", filterData);
-
+    // Run on page load
+    document.addEventListener("DOMContentLoaded", function () {
+        // Hide data container initially
+        document.getElementById("dataContainer").style.display = "none";
+        document.getElementById("noDataMessage").style.display = "block";
+        
+        // Set default date to today for new entries
+        let today = new Date();
+        let currentYear = today.getFullYear();
+        let currentMonth = (today.getMonth() + 1).toString().padStart(2, '0');
+        
+        // Pre-select current year and month
+        document.getElementById("tahunSelect").value = currentYear;
+        document.getElementById("bulanSelect").value = currentMonth;
+    });
 </script>
 <?= $this->endSection(); ?>
