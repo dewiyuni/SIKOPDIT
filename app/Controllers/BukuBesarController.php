@@ -458,16 +458,23 @@ class BukuBesarController extends BaseController
     }
     public function pemetaanOtomatis()
     {
-        $result = $this->bukuBesarModel->buatPemetaanOtomatis();
+        try {
+            $result = $this->bukuBesarModel->buatPemetaanOtomatis();
 
-        if ($result) {
+            if ($result && $result['success']) {
+                return redirect()->to(base_url('admin/buku_besar/pemetaan'))
+                    ->with('success', "Pemetaan akun otomatis berhasil dibuat: {$result['count_dum']} DUM, {$result['count_duk']} DUK");
+            } else {
+                return redirect()->to(base_url('admin/buku_besar/pemetaan'))
+                    ->with('error', 'Terjadi kesalahan saat membuat pemetaan akun otomatis. Silakan periksa log untuk detail error.');
+            }
+        } catch (\Exception $e) {
+            log_message('error', "Error pada pemetaanOtomatis: " . $e->getMessage());
             return redirect()->to(base_url('admin/buku_besar/pemetaan'))
-                ->with('success', 'Pemetaan akun otomatis berhasil dibuat');
-        } else {
-            return redirect()->to(base_url('admin/buku_besar/pemetaan'))
-                ->with('error', 'Terjadi kesalahan saat membuat pemetaan akun otomatis');
+                ->with('error', 'Terjadi kesalahan: ' . $e->getMessage());
         }
     }
+
 
     public function pemetaan()
     {
@@ -1410,4 +1417,41 @@ class BukuBesarController extends BaseController
 
         return $this->response->download($filePath, null)->setFileName($filename);
     }
+    public function debugPemetaan()
+    {
+        try {
+            $jurnalModel = new \App\Models\JurnalKasModel();
+            $pemetaanModel = new \App\Models\PemetaanAkunModel();
+            $akunModel = new \App\Models\AkunModel();
+
+            // Ambil semua uraian unik dari jurnal
+            $dumUraian = $jurnalModel->select('uraian')->where('kategori', 'DUM')->groupBy('uraian')->findAll();
+            $dukUraian = $jurnalModel->select('uraian')->where('kategori', 'DUK')->groupBy('uraian')->findAll();
+
+            // Ambil semua pemetaan yang ada
+            $pemetaan = $pemetaanModel->findAll();
+
+            // Ambil semua akun
+            $akun = $akunModel->findAll();
+
+            $data = [
+                'jumlah_dum_uraian' => count($dumUraian),
+                'jumlah_duk_uraian' => count($dukUraian),
+                'jumlah_pemetaan' => count($pemetaan),
+                'jumlah_akun' => count($akun),
+                'dum_uraian_sample' => array_slice($dumUraian, 0, 10),
+                'duk_uraian_sample' => array_slice($dukUraian, 0, 10),
+                'pemetaan_sample' => array_slice($pemetaan, 0, 10),
+                'akun_sample' => array_slice($akun, 0, 10)
+            ];
+
+            return $this->response->setJSON($data);
+        } catch (\Exception $e) {
+            return $this->response->setJSON([
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
+    }
+
 }

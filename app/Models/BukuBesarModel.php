@@ -294,96 +294,194 @@ class BukuBesarModel extends Model
             return $saldoAwal;
         }
     }
-
     public function buatPemetaanOtomatis()
     {
-        $jurnalModel = new \App\Models\JurnalKasModel();
-        $pemetaanModel = new \App\Models\PemetaanAkunModel();
+        try {
+            $jurnalModel = new \App\Models\JurnalKasModel();
+            $pemetaanModel = new \App\Models\PemetaanAkunModel();
+            $akunModel = new \App\Models\AkunModel();
 
-        // Ambil semua uraian unik dari jurnal
-        $dumUraian = $jurnalModel->select('uraian')->where('kategori', 'DUM')->groupBy('uraian')->findAll();
-        $dukUraian = $jurnalModel->select('uraian')->where('kategori', 'DUK')->groupBy('uraian')->findAll();
+            // Cek apakah akun-akun yang diperlukan sudah ada
+            $akun = $akunModel->findAll();
+            if (empty($akun)) {
+                log_message('error', 'Tidak ada akun yang tersedia untuk pemetaan otomatis');
+                return false;
+            }
 
-        $db = \Config\Database::connect();
-        $db->transStart();
+            // Ambil semua uraian unik dari jurnal
+            $dumUraian = $jurnalModel->select('uraian')->where('kategori', 'DUM')->groupBy('uraian')->findAll();
+            $dukUraian = $jurnalModel->select('uraian')->where('kategori', 'DUK')->groupBy('uraian')->findAll();
 
-        // Buat pemetaan default untuk DUM
-        $pemetaanModel->insert([
-            'kategori_jurnal' => 'DUM',
-            'uraian_jurnal' => 'default',
-            'id_akun_debit' => 1, // Kas
-            'id_akun_kredit' => 30 // Pendapatan Lain-lain
-        ]);
+            $db = \Config\Database::connect();
+            $db->transStart();
 
-        // Buat pemetaan default untuk DUK
-        $pemetaanModel->insert([
-            'kategori_jurnal' => 'DUK',
-            'uraian_jurnal' => 'default',
-            'id_akun_debit' => 40, // Beban Operasional Lainnya
-            'id_akun_kredit' => 1 // Kas
-        ]);
-
-        // Buat pemetaan spesifik untuk DUM
-        foreach ($dumUraian as $uraian) {
-            $existing = $pemetaanModel->where('kategori_jurnal', 'DUM')
-                ->where('uraian_jurnal', $uraian['uraian'])
+            // Buat pemetaan default untuk DUM jika belum ada
+            $existingDUMDefault = $pemetaanModel->where('kategori_jurnal', 'DUM')
+                ->where('uraian_jurnal', 'default')
                 ->first();
 
-            if (!$existing) {
-                // Tentukan akun berdasarkan uraian
-                $idAkunDebit = 1; // Default: Kas
-                $idAkunKredit = 30; // Default: Pendapatan Lain-lain
-
-                // Logika untuk menentukan akun berdasarkan uraian
-                if (strpos($uraian['uraian'], 'pinjaman') !== false) {
-                    $idAkunDebit = 1; // Kas
-                    $idAkunKredit = 3; // Piutang Anggota
-                } elseif (strpos($uraian['uraian'], 'bank') !== false) {
-                    $idAkunDebit = 1; // Kas
-                    $idAkunKredit = 2; // Bank
-                }
-
+            if (!$existingDUMDefault) {
                 $pemetaanModel->insert([
                     'kategori_jurnal' => 'DUM',
-                    'uraian_jurnal' => $uraian['uraian'],
-                    'id_akun_debit' => $idAkunDebit,
-                    'id_akun_kredit' => $idAkunKredit
+                    'uraian_jurnal' => 'default',
+                    'id_akun_debit' => 1, // Kas
+                    'id_akun_kredit' => 30 // Pendapatan Lain-lain
                 ]);
+                log_message('info', 'Pemetaan default untuk DUM berhasil dibuat');
             }
-        }
 
-        // Buat pemetaan spesifik untuk DUK
-        foreach ($dukUraian as $uraian) {
-            $existing = $pemetaanModel->where('kategori_jurnal', 'DUK')
-                ->where('uraian_jurnal', $uraian['uraian'])
+            // Buat pemetaan default untuk DUK jika belum ada
+            $existingDUKDefault = $pemetaanModel->where('kategori_jurnal', 'DUK')
+                ->where('uraian_jurnal', 'default')
                 ->first();
 
-            if (!$existing) {
-                // Tentukan akun berdasarkan uraian
-                $idAkunDebit = 40; // Default: Beban Operasional Lainnya
-                $idAkunKredit = 1; // Default: Kas
-
-                // Logika untuk menentukan akun berdasarkan uraian
-                if (strpos($uraian['uraian'], 'bank') !== false) {
-                    $idAkunDebit = 2; // Bank
-                    $idAkunKredit = 1; // Kas
-                } elseif (strpos($uraian['uraian'], 'pinjaman') !== false) {
-                    $idAkunDebit = 3; // Piutang Anggota
-                    $idAkunKredit = 1; // Kas
-                }
-
+            if (!$existingDUKDefault) {
                 $pemetaanModel->insert([
                     'kategori_jurnal' => 'DUK',
-                    'uraian_jurnal' => $uraian['uraian'],
-                    'id_akun_debit' => $idAkunDebit,
-                    'id_akun_kredit' => $idAkunKredit
+                    'uraian_jurnal' => 'default',
+                    'id_akun_debit' => 40, // Beban Operasional Lainnya
+                    'id_akun_kredit' => 1 // Kas
                 ]);
+                log_message('info', 'Pemetaan default untuk DUK berhasil dibuat');
             }
+
+            // Definisikan pemetaan kata kunci ke akun
+            $akunKeywords = [
+                // Akun untuk DUM (Kredit)
+                'pinjaman' => ['debit' => 1, 'kredit' => 3], // Kas -> Piutang Anggota
+                'angsuran' => ['debit' => 1, 'kredit' => 3], // Kas -> Piutang Anggota
+                'bank' => ['debit' => 1, 'kredit' => 2], // Kas -> Bank
+                'tarik dari bank' => ['debit' => 1, 'kredit' => 2], // Kas -> Bank
+                'simpanan' => ['debit' => 1, 'kredit' => 14], // Kas -> Simpanan Sukarela
+                'sp' => ['debit' => 1, 'kredit' => 13], // Kas -> Simpanan Pokok
+                'sw' => ['debit' => 1, 'kredit' => 14], // Kas -> Simpanan Wajib
+                'ss' => ['debit' => 1, 'kredit' => 14], // Kas -> Simpanan Sukarela
+                'jasa' => ['debit' => 1, 'kredit' => 27], // Kas -> Pendapatan Jasa Pinjaman
+                'denda' => ['debit' => 1, 'kredit' => 29], // Kas -> Pendapatan Denda
+                'fee' => ['debit' => 1, 'kredit' => 28], // Kas -> Pendapatan Provisi
+                'administrasi' => ['debit' => 1, 'kredit' => 28], // Kas -> Pendapatan Administrasi
+                'uang pangkal' => ['debit' => 1, 'kredit' => 13], // Kas -> Simpanan Pokok
+                'penyusutan' => ['debit' => 1, 'kredit' => 9], // Kas -> Akumulasi Penyusutan
+                'penyisihan' => ['debit' => 1, 'kredit' => 15], // Kas -> Dana Cadangan
+                'titip' => ['debit' => 1, 'kredit' => 19], // Kas -> Dana Kesejahteraan
+
+                // Akun untuk DUK (Debit)
+                'pinjaman anggota' => ['debit' => 3, 'kredit' => 1], // Piutang Anggota -> Kas
+                'simpanan di bank' => ['debit' => 2, 'kredit' => 1], // Bank -> Kas
+                'tarik dana' => ['debit' => 19, 'kredit' => 1], // Dana Kesejahteraan -> Kas
+                'tarik sp' => ['debit' => 13, 'kredit' => 1], // Simpanan Pokok -> Kas
+                'tarik sw' => ['debit' => 14, 'kredit' => 1], // Simpanan Wajib -> Kas
+                'tarik ss' => ['debit' => 14, 'kredit' => 1], // Simpanan Sukarela -> Kas
+                'gaji' => ['debit' => 31, 'kredit' => 1], // Beban Gaji -> Kas
+                'listrik' => ['debit' => 33, 'kredit' => 1], // Beban Listrik -> Kas
+                'wifi' => ['debit' => 33, 'kredit' => 1], // Beban Internet -> Kas
+                'insentip' => ['debit' => 32, 'kredit' => 1], // Beban Insentif -> Kas
+                'penyusutan' => ['debit' => 36, 'kredit' => 1], // Beban Penyusutan -> Kas
+                'bunga' => ['debit' => 38, 'kredit' => 1], // Beban Bunga -> Kas
+                'administrasi' => ['debit' => 34, 'kredit' => 1], // Beban Administrasi -> Kas
+                'by' => ['debit' => 40, 'kredit' => 1], // Beban Operasional -> Kas
+            ];
+
+            // Buat pemetaan spesifik untuk DUM
+            $countDUM = 0;
+            foreach ($dumUraian as $item) {
+                $uraian = $item['uraian'];
+                $existing = $pemetaanModel->where('kategori_jurnal', 'DUM')
+                    ->where('uraian_jurnal', $uraian)
+                    ->first();
+
+                if (!$existing) {
+                    // Tentukan akun berdasarkan uraian
+                    $idAkunDebit = 1; // Default: Kas
+                    $idAkunKredit = 30; // Default: Pendapatan Lain-lain
+
+                    // Cari kata kunci yang cocok dengan uraian
+                    foreach ($akunKeywords as $keyword => $akuns) {
+                        if (stripos($uraian, $keyword) !== false) {
+                            $idAkunDebit = $akuns['debit'];
+                            $idAkunKredit = $akuns['kredit'];
+                            break;
+                        }
+                    }
+
+                    // Cek apakah akun debit dan kredit ada
+                    $akunDebit = $akunModel->find($idAkunDebit);
+                    $akunKredit = $akunModel->find($idAkunKredit);
+
+                    if ($akunDebit && $akunKredit) {
+                        $pemetaanModel->insert([
+                            'kategori_jurnal' => 'DUM',
+                            'uraian_jurnal' => $uraian,
+                            'id_akun_debit' => $idAkunDebit,
+                            'id_akun_kredit' => $idAkunKredit
+                        ]);
+                        $countDUM++;
+                    } else {
+                        log_message('warning', "Akun tidak ditemukan untuk pemetaan DUM: $uraian");
+                    }
+                }
+            }
+
+            // Buat pemetaan spesifik untuk DUK
+            $countDUK = 0;
+            foreach ($dukUraian as $item) {
+                $uraian = $item['uraian'];
+                $existing = $pemetaanModel->where('kategori_jurnal', 'DUK')
+                    ->where('uraian_jurnal', $uraian)
+                    ->first();
+
+                if (!$existing) {
+                    // Tentukan akun berdasarkan uraian
+                    $idAkunDebit = 40; // Default: Beban Operasional Lainnya
+                    $idAkunKredit = 1; // Default: Kas
+
+                    // Cari kata kunci yang cocok dengan uraian
+                    foreach ($akunKeywords as $keyword => $akuns) {
+                        if (stripos($uraian, $keyword) !== false) {
+                            $idAkunDebit = $akuns['debit'];
+                            $idAkunKredit = $akuns['kredit'];
+                            break;
+                        }
+                    }
+
+                    // Cek apakah akun debit dan kredit ada
+                    $akunDebit = $akunModel->find($idAkunDebit);
+                    $akunKredit = $akunModel->find($idAkunKredit);
+
+                    if ($akunDebit && $akunKredit) {
+                        $pemetaanModel->insert([
+                            'kategori_jurnal' => 'DUK',
+                            'uraian_jurnal' => $uraian,
+                            'id_akun_debit' => $idAkunDebit,
+                            'id_akun_kredit' => $idAkunKredit
+                        ]);
+                        $countDUK++;
+                    } else {
+                        log_message('warning', "Akun tidak ditemukan untuk pemetaan DUK: $uraian");
+                    }
+                }
+            }
+
+            $db->transComplete();
+            $success = $db->transStatus();
+
+            if ($success) {
+                log_message('info', "Pemetaan otomatis berhasil: $countDUM DUM, $countDUK DUK");
+            } else {
+                log_message('error', "Pemetaan otomatis gagal");
+            }
+
+            return [
+                'success' => $success,
+                'count_dum' => $countDUM,
+                'count_duk' => $countDUK
+            ];
+        } catch (\Exception $e) {
+            log_message('error', "Error pada buatPemetaanOtomatis: " . $e->getMessage());
+            log_message('error', $e->getTraceAsString());
+            return false;
         }
-
-        $db->transComplete();
-
-        return $db->transStatus();
     }
+
 
 }

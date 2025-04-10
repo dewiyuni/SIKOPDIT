@@ -166,4 +166,6 @@ $routes->group('admin/buku_besar', function ($routes) {
 // Tambahkan route ini di routes.php
 $routes->get('admin/buku_besar/pemetaan/otomatis', 'BukuBesarController::pemetaanOtomatis');
 $routes->get('admin/buku_besar/debug', 'BukuBesarController::debug');
+$routes->get('admin/buku_besar/pemetaan/debug', 'BukuBesarController::debugPemetaan');
+
 
