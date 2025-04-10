@@ -43,8 +43,7 @@
                 </a>
                 <ul class="dropdown-menu" aria-labelledby="jurnalKasDropdown">
                     <li><a class="dropdown-item" href="/admin/jurnal/jurnal_kas">📋 Semua Jurnal Kas</a></li>
-                    <li><a class="dropdown-item" href="/admin/jurnal/jurnal_kas?sort=month">📅 Sort by
-                            Bulan</a></li>
+                    <li><a class="dropdown-item" href="/admin/jurnal/monthly">📅 Jurnal Bulan</a></li>
                 </ul>
             </li>
             <!-- Nav Item - Buku Besar -->

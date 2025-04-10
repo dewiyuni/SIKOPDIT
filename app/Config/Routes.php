@@ -103,6 +103,12 @@ $routes->delete('admin/jurnal_kas/delete/(:num)', 'JurnalKasController::delete/$
 $routes->get('export-excel', 'JurnalKasController::exportExcel');
 $routes->post('admin/jurnal/import_excel', 'JurnalKasController::importExcel');
 $routes->get('admin/jurnal/prosesJurnalKeBukuBesar', 'JurnalKasController::prosesJurnalKeBukuBesar');
+$routes->get('admin/jurnal/monthly/export/(:segment)/(:segment)', 'JurnalKasController::exportMonthlyExcel/$1/$2');
+
+
+// View by month/year
+$routes->get('admin/jurnal/monthly', 'JurnalKasController::monthlyView');
+$routes->get('admin/jurnal/monthly/details/(:segment)/(:segment)', 'JurnalKasController::monthlyDetails/$1/$2');
 
 
 $routes->group('admin', function ($routes) {

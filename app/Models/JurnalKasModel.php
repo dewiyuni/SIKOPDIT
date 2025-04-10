@@ -23,27 +23,39 @@ class JurnalKasModel extends Model
     {
         $db = \Config\Database::connect();
 
+        // Debug: Check if there's any data in the table
+        $countQuery = $db->query("SELECT COUNT(*) as count FROM jurnal_kas");
+        $count = $countQuery->getRow()->count;
+        log_message('debug', "Total records in jurnal_kas: $count");
+
         $query = $db->query(
-            "SELECT kategori, uraian,
-                SUM(CASE WHEN MONTH(tanggal) = 1 THEN jumlah ELSE 0 END) AS Januari,
-                SUM(CASE WHEN MONTH(tanggal) = 2 THEN jumlah ELSE 0 END) AS Februari,
-                SUM(CASE WHEN MONTH(tanggal) = 3 THEN jumlah ELSE 0 END) AS Maret,
-                SUM(CASE WHEN MONTH(tanggal) = 4 THEN jumlah ELSE 0 END) AS April,
-                SUM(CASE WHEN MONTH(tanggal) = 5 THEN jumlah ELSE 0 END) AS Mei,
-                SUM(CASE WHEN MONTH(tanggal) = 6 THEN jumlah ELSE 0 END) AS Juni,
-                SUM(CASE WHEN MONTH(tanggal) = 7 THEN jumlah ELSE 0 END) AS Juli,
-                SUM(CASE WHEN MONTH(tanggal) = 8 THEN jumlah ELSE 0 END) AS Agustus,
-                SUM(CASE WHEN MONTH(tanggal) = 9 THEN jumlah ELSE 0 END) AS September,
-                SUM(CASE WHEN MONTH(tanggal) = 10 THEN jumlah ELSE 0 END) AS Oktober,
-                SUM(CASE WHEN MONTH(tanggal) = 11 THEN jumlah ELSE 0 END) AS November,
-                SUM(CASE WHEN MONTH(tanggal) = 12 THEN jumlah ELSE 0 END) AS Desember
-            FROM jurnal_kas
-            GROUP BY kategori, uraian
-            ORDER BY kategori, uraian"
+            "SELECT 
+            kategori, 
+            uraian,
+            SUM(CASE WHEN MONTH(tanggal) = 1 THEN jumlah ELSE 0 END) as januari,
+            SUM(CASE WHEN MONTH(tanggal) = 2 THEN jumlah ELSE 0 END) as februari,
+            SUM(CASE WHEN MONTH(tanggal) = 3 THEN jumlah ELSE 0 END) as maret,
+            SUM(CASE WHEN MONTH(tanggal) = 4 THEN jumlah ELSE 0 END) as april,
+            SUM(CASE WHEN MONTH(tanggal) = 5 THEN jumlah ELSE 0 END) as mei,
+            SUM(CASE WHEN MONTH(tanggal) = 6 THEN jumlah ELSE 0 END) as juni,
+            SUM(CASE WHEN MONTH(tanggal) = 7 THEN jumlah ELSE 0 END) as juli,
+            SUM(CASE WHEN MONTH(tanggal) = 8 THEN jumlah ELSE 0 END) as agustus,
+            SUM(CASE WHEN MONTH(tanggal) = 9 THEN jumlah ELSE 0 END) as september,
+            SUM(CASE WHEN MONTH(tanggal) = 10 THEN jumlah ELSE 0 END) as oktober,
+            SUM(CASE WHEN MONTH(tanggal) = 11 THEN jumlah ELSE 0 END) as november,
+            SUM(CASE WHEN MONTH(tanggal) = 12 THEN jumlah ELSE 0 END) as desember,
+            SUM(jumlah) as total
+        FROM jurnal_kas
+        GROUP BY kategori, uraian
+        ORDER BY kategori, uraian"
         );
 
-        return $query->getResultArray();
+        $results = $query->getResultArray();
+        log_message('debug', "Query results: " . json_encode($results));
+
+        return $results;
     }
+
     public function updateTotalHarian()
     {
         // Query untuk menghitung total DUM dan DUK per tanggal
