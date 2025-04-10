@@ -54,7 +54,7 @@
                 </a>
                 <ul class="dropdown-menu" aria-labelledby="bukuBesarDropdown">
                     <li><a class="dropdown-item" href="/admin/buku_besar">📖 Lihat Buku Besar</a></li>
-                    <li><a class="dropdown-item" href="/admin/akun">📖 Akun</a></li>
+                    <li><a class="dropdown-item" href="/admin/buku_besar/akun">📖 Akun</a></li>
                 </ul>
             </li>
             <li class="nav-item dropdown">
