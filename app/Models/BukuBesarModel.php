@@ -33,117 +33,134 @@ class BukuBesarModel extends Model
 
     public function getSaldoAwalAkun($idAkun, $bulan, $tahun)
     {
-        $db = \Config\Database::connect();
+        try {
+            $db = \Config\Database::connect();
 
-        // Jika bulan Januari, ambil saldo awal dari tabel akun
-        if ($bulan == 1) {
-            $query = $db->query("
-                SELECT saldo_awal FROM akun WHERE id = ?
-            ", [$idAkun]);
-
-            $result = $query->getRow();
-            return $result ? $result->saldo_awal : 0;
-        }
-
-        // Jika bukan Januari, ambil saldo akhir bulan sebelumnya
-        $prevMonth = $bulan - 1;
-        $prevYear = $tahun;
-
-        $query = $db->query("
-            SELECT saldo_akhir 
-            FROM saldo_akun 
-            WHERE id_akun = ? AND bulan = ? AND tahun = ?
-        ", [$idAkun, $prevMonth, $prevYear]);
-
-        $result = $query->getRow();
-
-        if ($result) {
-            return $result->saldo_akhir;
-        } else {
-            // Jika tidak ada saldo bulan sebelumnya, cari saldo terakhir yang ada
-            $query = $db->query("
-                SELECT saldo_akhir 
-                FROM saldo_akun 
-                WHERE id_akun = ? AND (tahun < ? OR (tahun = ? AND bulan < ?))
-                ORDER BY tahun DESC, bulan DESC
-                LIMIT 1
-            ", [$idAkun, $tahun, $tahun, $bulan]);
-
-            $result = $query->getRow();
-
-            if ($result) {
-                return $result->saldo_akhir;
-            } else {
-                // Jika tidak ada sama sekali, ambil saldo awal dari tabel akun
+            // Jika bulan Januari, ambil saldo awal dari tabel akun
+            if ($bulan == 1) {
                 $query = $db->query("
                     SELECT saldo_awal FROM akun WHERE id = ?
                 ", [$idAkun]);
 
                 $result = $query->getRow();
-                return $result ? $result->saldo_awal : 0;
+                return $result ? floatval($result->saldo_awal) : 0;
             }
+
+            // Jika bukan Januari, ambil saldo akhir bulan sebelumnya
+            $prevMonth = $bulan - 1;
+            $prevYear = $tahun;
+
+            $query = $db->query("
+                SELECT saldo_akhir 
+                FROM saldo_akun 
+                WHERE id_akun = ? AND bulan = ? AND tahun = ?
+            ", [$idAkun, $prevMonth, $prevYear]);
+
+            $result = $query->getRow();
+
+            if ($result) {
+                return floatval($result->saldo_akhir);
+            } else {
+                // Jika tidak ada saldo bulan sebelumnya, cari saldo terakhir yang ada
+                $query = $db->query("
+                    SELECT saldo_akhir 
+                    FROM saldo_akun 
+                    WHERE id_akun = ? AND (tahun < ? OR (tahun = ? AND bulan < ?))
+                    ORDER BY tahun DESC, bulan DESC
+                    LIMIT 1
+                ", [$idAkun, $tahun, $tahun, $bulan]);
+
+                $result = $query->getRow();
+
+                if ($result) {
+                    return floatval($result->saldo_akhir);
+                } else {
+                    // Jika tidak ada sama sekali, ambil saldo awal dari tabel akun
+                    $query = $db->query("
+                        SELECT saldo_awal FROM akun WHERE id = ?
+                    ", [$idAkun]);
+
+                    $result = $query->getRow();
+                    return $result ? floatval($result->saldo_awal) : 0;
+                }
+            }
+        } catch (\Exception $e) {
+            log_message('error', "Error pada getSaldoAwalAkun: " . $e->getMessage());
+            return 0;
         }
     }
+
 
     public function updateSaldoAkun($idAkun, $bulan, $tahun)
     {
-        $db = \Config\Database::connect();
+        try {
+            $db = \Config\Database::connect();
 
-        // Ambil saldo awal
-        $saldoAwal = $this->getSaldoAwalAkun($idAkun, $bulan, $tahun);
+            // Ambil saldo awal
+            $saldoAwal = $this->getSaldoAwalAkun($idAkun, $bulan, $tahun);
 
-        // Hitung total debit dan kredit untuk bulan ini
-        $query = $db->query("
-            SELECT 
-                SUM(debit) as total_debit, 
-                SUM(kredit) as total_kredit 
-            FROM buku_besar 
-            WHERE id_akun = ? AND MONTH(tanggal) = ? AND YEAR(tanggal) = ?
-        ", [$idAkun, $bulan, $tahun]);
+            // Hitung total debit dan kredit untuk bulan ini
+            $query = $db->query("
+                SELECT 
+                    SUM(debit) as total_debit, 
+                    SUM(kredit) as total_kredit 
+                FROM buku_besar 
+                WHERE id_akun = ? AND MONTH(tanggal) = ? AND YEAR(tanggal) = ?
+            ", [$idAkun, $bulan, $tahun]);
 
-        $result = $query->getRow();
-        $totalDebit = $result ? $result->total_debit : 0;
-        $totalKredit = $result ? $result->total_kredit : 0;
+            $result = $query->getRow();
+            $totalDebit = $result ? floatval($result->total_debit) : 0;
+            $totalKredit = $result ? floatval($result->total_kredit) : 0;
 
-        // Ambil informasi jenis akun
-        $queryAkun = $db->query("
-            SELECT jenis FROM akun WHERE id = ?
-        ", [$idAkun]);
+            // Ambil informasi jenis akun
+            $akunModel = new \App\Models\AkunModel();
+            $akun = $akunModel->find($idAkun);
 
-        $resultAkun = $queryAkun->getRow();
-        $jenisAkun = $resultAkun ? $resultAkun->jenis : 'Debit';
+            if (!$akun) {
+                log_message('error', "Akun dengan ID $idAkun tidak ditemukan");
+                return false;
+            }
 
-        // Hitung saldo akhir berdasarkan jenis akun
-        if ($jenisAkun == 'Debit') {
-            $saldoAkhir = $saldoAwal + $totalDebit - $totalKredit;
-        } else {
-            $saldoAkhir = $saldoAwal - $totalDebit + $totalKredit;
+            $jenisAkun = $akun['jenis'];
+
+            // Hitung saldo akhir berdasarkan jenis akun
+            if ($jenisAkun == 'Debit') {
+                $saldoAkhir = $saldoAwal + $totalDebit - $totalKredit;
+            } else {
+                $saldoAkhir = $saldoAwal - $totalDebit + $totalKredit;
+            }
+
+            log_message('debug', "Akun $idAkun: Saldo Awal=$saldoAwal, Debit=$totalDebit, Kredit=$totalKredit, Saldo Akhir=$saldoAkhir");
+
+            // Update atau insert ke tabel saldo_akun
+            $checkQuery = $db->query("
+                SELECT id FROM saldo_akun WHERE id_akun = ? AND bulan = ? AND tahun = ?
+            ", [$idAkun, $bulan, $tahun]);
+
+            $checkResult = $checkQuery->getRow();
+
+            if ($checkResult) {
+                // Update
+                $db->query("
+                    UPDATE saldo_akun 
+                    SET saldo_awal = ?, total_debit = ?, total_kredit = ?, saldo_akhir = ?, updated_at = NOW()
+                    WHERE id = ?
+                ", [$saldoAwal, $totalDebit, $totalKredit, $saldoAkhir, $checkResult->id]);
+            } else {
+                // Insert
+                $db->query("
+                    INSERT INTO saldo_akun (id_akun, bulan, tahun, saldo_awal, total_debit, total_kredit, saldo_akhir)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ", [$idAkun, $bulan, $tahun, $saldoAwal, $totalDebit, $totalKredit, $saldoAkhir]);
+            }
+
+            return true;
+        } catch (\Exception $e) {
+            log_message('error', "Error pada updateSaldoAkun: " . $e->getMessage());
+            return false;
         }
-
-        // Update atau insert ke tabel saldo_akun
-        $checkQuery = $db->query("
-            SELECT id FROM saldo_akun WHERE id_akun = ? AND bulan = ? AND tahun = ?
-        ", [$idAkun, $bulan, $tahun]);
-
-        $checkResult = $checkQuery->getRow();
-
-        if ($checkResult) {
-            // Update
-            $db->query("
-                UPDATE saldo_akun 
-                SET saldo_awal = ?, total_debit = ?, total_kredit = ?, saldo_akhir = ?, updated_at = NOW()
-                WHERE id = ?
-            ", [$saldoAwal, $totalDebit, $totalKredit, $saldoAkhir, $checkResult->id]);
-        } else {
-            // Insert
-            $db->query("
-                INSERT INTO saldo_akun (id_akun, bulan, tahun, saldo_awal, total_debit, total_kredit, saldo_akhir)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ", [$idAkun, $bulan, $tahun, $saldoAwal, $totalDebit, $totalKredit, $saldoAkhir]);
-        }
-
-        return $saldoAkhir;
     }
+
 
     public function prosesJurnalKeBukuBesar($bulan, $tahun)
     {
