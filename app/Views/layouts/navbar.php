@@ -63,9 +63,9 @@
                     📋 <span>Neraca</span>
                 </a>
                 <ul class="dropdown-menu" aria-labelledby="neracaDropdown">
-                    <li><a class="dropdown-item" href="/admin/neraca">📊 Neraca Awal</a></li>
-                    <li><a class="dropdown-item" href="/admin/neraca_tahunan">📆 Neraca Tahunan</a></li>
-                    <li><a class="dropdown-item" href="/admin/neraca/kategori_neraca">📂 Kategori Neraca</a></li>
+                    <li><a class="dropdown-item" href="/admin/buku_besar/neraca-saldo">📊 Neraca Saldo</a></li>
+                    <li><a class="dropdown-item" href="/admin/buku_besar/laba-rugi">📆 Laba Rugi</a></li>
+                    <li><a class="dropdown-item" href="/admin/buku_besar/neraca">📂 Neraca</a></li>
                 </ul>
             </li>
         <?php endif; ?>

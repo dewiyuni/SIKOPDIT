@@ -135,13 +135,33 @@ $routes->group('admin', function ($routes) {
 });
 
 
-// ============== Buku Besar ====================
+// Routes untuk Buku Besar
 $routes->group('admin/buku_besar', function ($routes) {
-    $routes->get('/', 'BukuBesarController::index'); // Menampilkan daftar buku besar
-    $routes->get('create', 'BukuBesarController::create'); // Form tambah data
-    $routes->post('store', 'BukuBesarController::store'); // Proses simpan data baru
-    $routes->get('edit/(:num)', 'BukuBesarController::edit/$1'); // Form edit berdasarkan ID
-    $routes->post('update/(:num)', 'BukuBesarController::update/$1'); // Proses update
-    $routes->get('delete/(:num)', 'BukuBesarController::delete/$1'); // Hapus data berdasarkan ID
-    $routes->get('proses', 'BukuBesarController::proses'); // Pastikan ada metode ini di controller!
+    $routes->get('/', 'BukuBesarController::index');
+    $routes->get('detail/(:num)', 'BukuBesarController::detail/$1');
+    $routes->get('proses', 'BukuBesarController::proses');
+
+    $routes->get('akun', 'BukuBesarController::akun');
+    $routes->get('akun/create', 'BukuBesarController::createAkun');
+    $routes->post('akun/store', 'BukuBesarController::storeAkun');
+    $routes->get('akun/edit/(:num)', 'BukuBesarController::editAkun/$1');
+    $routes->post('akun/update/(:num)', 'BukuBesarController::updateAkun/$1');
+    $routes->get('akun/delete/(:num)', 'BukuBesarController::deleteAkun/$1');
+
+    $routes->get('pemetaan', 'BukuBesarController::pemetaan');
+    $routes->post('pemetaan/store', 'BukuBesarController::storePemetaan');
+    $routes->get('pemetaan/delete/(:num)', 'BukuBesarController::deletePemetaan/$1');
+
+    $routes->get('neraca-saldo', 'BukuBesarController::neracaSaldo');
+    $routes->get('laba-rugi', 'BukuBesarController::labaRugi');
+    $routes->get('neraca', 'BukuBesarController::neraca');
+
+    $routes->get('export/buku-besar/(:num)', 'BukuBesarController::exportBukuBesar/$1');
+    $routes->get('export/neraca-saldo', 'BukuBesarController::exportNeracaSaldo');
+    $routes->get('export/laba-rugi', 'BukuBesarController::exportLabaRugi');
+    $routes->get('export/neraca', 'BukuBesarController::exportNeraca');
+
+
 });
+// Tambahkan route ini di routes.php
+$routes->get('admin/buku_besar/pemetaan/otomatis', 'BukuBesarController::pemetaanOtomatis');
