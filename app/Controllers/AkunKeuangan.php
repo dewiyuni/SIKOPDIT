@@ -27,7 +27,7 @@ class AkunKeuangan extends BaseController
         $model->insert([
             'kode_akun' => $this->request->getPost('kode_akun'),
             'nama_akun' => $this->request->getPost('nama_akun'),
-            'jenis' => $this->request->getPost('jenis')
+            'jenis' => $this->request->getPost('jenis'),
         ]);
 
         return redirect()->to('/akun_keuangan');

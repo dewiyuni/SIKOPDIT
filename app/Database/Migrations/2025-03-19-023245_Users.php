@@ -43,12 +43,12 @@ class Users extends Migration
             ],
             'created_at' => [
                 'type' => 'DATETIME',
-                'null' => true
+                'null' => true,
             ],
             'updated_at' => [
                 'type' => 'DATETIME',
-                'null' => true
-            ]
+                'null' => true,
+            ],
         ]);
 
         $this->forge->addPrimaryKey('id_user');

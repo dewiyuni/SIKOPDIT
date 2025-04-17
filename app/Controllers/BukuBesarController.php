@@ -158,7 +158,7 @@ class BukuBesarController extends BaseController
                 $jumlah = $j['jumlah'];
 
                 // Insert entri debit
-                $this->insert([
+                $this->bukuBesarModel->insert([
                     'tanggal' => $tanggal,
                     'id_akun' => $idAkunDebit,
                     'id_jurnal' => $j['id'],
@@ -169,7 +169,7 @@ class BukuBesarController extends BaseController
                 ]);
 
                 // Insert entri kredit
-                $this->insert([
+                $this->bukuBesarModel->insert([
                     'tanggal' => $tanggal,
                     'id_akun' => $idAkunKredit,
                     'id_jurnal' => $j['id'],
@@ -264,7 +264,7 @@ class BukuBesarController extends BaseController
 
         foreach ($akuns as $akun) {
             // Ambil saldo awal bulan
-            $saldoAwal = $this->getSaldoAwalAkun($akun['id'], $bulan, $tahun);
+            $saldoAwal = $this->bukuBesarModel->getSaldoAwalAkun($akun['id'], $bulan, $tahun);
 
             // Ambil semua transaksi untuk akun ini pada bulan yang dipilih
             $query = $db->query("
@@ -292,7 +292,7 @@ class BukuBesarController extends BaseController
                     $currentSaldo = $currentSaldo - $transaksi['debit'] + $transaksi['kredit'];
                 }
 
-                // Update saldo transaksi
+                // Update saldo transaksi 
                 $db->query("
                     UPDATE buku_besar
                     SET saldo = ?
@@ -301,7 +301,7 @@ class BukuBesarController extends BaseController
             }
 
             // Update saldo akhir di tabel saldo_akun
-            $this->updateSaldoAkun($akun['id'], $bulan, $tahun);
+            $this->bukuBesarModel->updateSaldoAkun($akun['id'], $bulan, $tahun);
         }
     }
 
