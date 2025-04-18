@@ -197,7 +197,7 @@ class BukuBesarController extends BaseController
     private function getKreditAkunForDUM($uraian)
     {
         // Default akun kredit untuk DUM adalah Pendapatan Lain-lain
-        $defaultAkunId = 30; // Pendapatan Lain-lain
+        $defaultAkunId = 78; // Pendapatan Lain-lain
 
         // Pemetaan uraian ke akun
         $mapping = [
@@ -227,7 +227,7 @@ class BukuBesarController extends BaseController
     private function getDebitAkunForDUK($uraian)
     {
         // Default akun debit untuk DUK adalah Beban Operasional Lainnya
-        $defaultAkunId = 40; // Beban Operasional Lainnya
+        $defaultAkunId = 82; // Beban lain Lain
 
         // Pemetaan uraian ke akun
         $mapping = [
