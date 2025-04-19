@@ -13,7 +13,7 @@ class Akun extends Migration
             'id' => ['type' => 'INT', 'unsigned' => true, 'auto_increment' => true],
             'kode_akun' => ['type' => 'VARCHAR', 'constraint' => 20],
             'nama_akun' => ['type' => 'VARCHAR', 'constraint' => 100],
-            'kategori' => ['type' => 'ENUM', 'constraint' => ['Aktiva', 'Pasiva', 'Modal', 'Pendapatan', 'Beban']],
+            'kategori' => ['type' => 'VARCHAR', 'constraint' => 100],
             'jenis' => ['type' => 'ENUM', 'constraint' => ['Debit', 'Kredit']],
             'saldo_awal' => ['type' => 'DECIMAL', 'constraint' => '15,2', 'default' => 0.00],
             'created_at' => [

@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use CodeIgniter\Model;
+use App\Models\AkunModel;       // Pastikan use statement ini ada
+use App\Models\JurnalKasModel;  // Pastikan use statement ini ada
+use App\Models\SaldoAkunModel;  // Pastikan use statement ini ada
 
 class BukuBesarModel extends Model
 {
@@ -16,95 +19,125 @@ class BukuBesarModel extends Model
     protected $createdField = 'created_at';
     protected $updatedField = 'updated_at';
 
+    // Konstanta untuk threshold kemiripan (misal: 75%) - Sesuaikan sesuai kebutuhan
+    // Naikkan jika terlalu banyak salah cocok, turunkan jika terlalu banyak yg tidak cocok
+    const SIMILARITY_THRESHOLD = 70;
+
+    /**
+     * Membersihkan string untuk perbandingan fuzzy.
+     * Mengubah ke lowercase, menghapus tanda baca umum, merapikan spasi.
+     *
+     * @param string $str String input
+     * @return string String yang sudah dibersihkan
+     */
+    private function _cleanString(string $str): string
+    {
+        $str = strtolower($str); // Konversi ke huruf kecil
+        // Hapus tanda baca umum (titik, koma, kurung, persen, garis miring, hubung) dan ganti dengan spasi
+        $str = str_replace(['.', ',', '(', ')', '%', '/', '-'], ' ', $str);
+        // Ganti multiple spasi jadi satu, lalu trim
+        $str = trim(preg_replace('/\s+/', ' ', $str));
+        return $str;
+    }
+
+    /**
+     * Mengambil detail transaksi buku besar untuk satu akun pada periode tertentu.
+     * Digunakan untuk halaman detail buku besar.
+     *
+     * @param int $idAkun ID Akun
+     * @param int|null $bulan Bulan (1-12)
+     * @param int|null $tahun Tahun (YYYY)
+     * @return array Daftar transaksi
+     */
     public function getBukuBesarByAkun($idAkun, $bulan = null, $tahun = null)
     {
         $builder = $this->select('buku_besar.*, akun.kode_akun, akun.nama_akun')
             ->join('akun', 'akun.id = buku_besar.id_akun')
-            ->where('buku_besar.id_akun', $idAkun)
-            ->orderBy('buku_besar.tanggal', 'ASC');
+            ->where('buku_besar.id_akun', $idAkun);
 
         if ($bulan !== null && $tahun !== null) {
-            $builder->where('MONTH(buku_besar.tanggal)', $bulan)
-                ->where('YEAR(buku_besar.tanggal)', $tahun);
+            // Untuk detail, tampilkan transaksi dari awal tahun hingga akhir bulan yang dipilih
+            // agar saldo berjalan terlihat benar
+            $tanggalAwal = $tahun . '-01-01';
+            $tanggalAkhir = date('Y-m-t', strtotime("$tahun-$bulan-01")); // Tanggal terakhir di bulan tsb
+
+            $builder->where('buku_besar.tanggal >=', $tanggalAwal)
+                ->where('buku_besar.tanggal <=', $tanggalAkhir);
         }
+        $builder->orderBy('buku_besar.tanggal ASC, buku_besar.id ASC'); // Urutkan berdasarkan tanggal dan ID
 
         return $builder->findAll();
     }
 
+    /**
+     * Mendapatkan saldo awal suatu akun pada awal bulan tertentu.
+     * Mengambil dari saldo akhir bulan sebelumnya di tabel saldo_akun,
+     * atau dari saldo awal master jika tidak ada riwayat.
+     *
+     * @param int $idAkun ID Akun
+     * @param int $bulan Bulan (1-12)
+     * @param int $tahun Tahun (YYYY)
+     * @return float Saldo awal
+     */
     public function getSaldoAwalAkun($idAkun, $bulan, $tahun)
     {
         try {
-            $db = \Config\Database::connect();
+            $saldoAkunModel = new SaldoAkunModel(); // Gunakan model SaldoAkun
 
-            // Jika bulan Januari, ambil saldo awal dari tabel akun
-            if ($bulan == 1) {
-                $query = $db->query("
-                    SELECT saldo_awal FROM akun WHERE id = ?
-                ", [$idAkun]);
+            // Tentukan tanggal awal periode yang diminta
+            $tanggalAwalPeriode = "$tahun-" . str_pad($bulan, 2, '0', STR_PAD_LEFT) . "-01";
 
-                $result = $query->getRow();
-                return $result ? floatval($result->saldo_awal) : 0;
-            }
+            // Cari saldo akhir terakhir SEBELUM tanggal awal periode ini
+            $saldoAkhirSebelumnya = $saldoAkunModel
+                ->where('id_akun', $idAkun)
+                // Filter berdasarkan kombinasi tahun dan bulan
+                ->where("STR_TO_DATE(CONCAT(tahun, '-', LPAD(bulan, 2, '0'), '-01'), '%Y-%m-%d') <", $tanggalAwalPeriode)
+                ->orderBy('tahun', 'DESC')
+                ->orderBy('bulan', 'DESC')
+                ->first();
 
-            // Jika bukan Januari, ambil saldo akhir bulan sebelumnya
-            $prevMonth = $bulan - 1;
-            $prevYear = $tahun;
-
-            $query = $db->query("
-                SELECT saldo_akhir 
-                FROM saldo_akun 
-                WHERE id_akun = ? AND bulan = ? AND tahun = ?
-            ", [$idAkun, $prevMonth, $prevYear]);
-
-            $result = $query->getRow();
-
-            if ($result) {
-                return floatval($result->saldo_akhir);
+            if ($saldoAkhirSebelumnya) {
+                log_message('debug', "[getSaldoAwalAkun] Saldo awal (akhir bln lalu) Akun $idAkun ($bulan/$tahun): " . $saldoAkhirSebelumnya['saldo_akhir']);
+                return floatval($saldoAkhirSebelumnya['saldo_akhir']);
             } else {
-                // Jika tidak ada saldo bulan sebelumnya, cari saldo terakhir yang ada
-                $query = $db->query("
-                    SELECT saldo_akhir 
-                    FROM saldo_akun 
-                    WHERE id_akun = ? AND (tahun < ? OR (tahun = ? AND bulan < ?))
-                    ORDER BY tahun DESC, bulan DESC
-                    LIMIT 1
-                ", [$idAkun, $tahun, $tahun, $bulan]);
-
-                $result = $query->getRow();
-
-                if ($result) {
-                    return floatval($result->saldo_akhir);
-                } else {
-                    // Jika tidak ada sama sekali, ambil saldo awal dari tabel akun
-                    $query = $db->query("
-                        SELECT saldo_awal FROM akun WHERE id = ?
-                    ", [$idAkun]);
-
-                    $result = $query->getRow();
-                    return $result ? floatval($result->saldo_awal) : 0;
-                }
+                // Jika tidak ada saldo bulan sebelumnya, ambil saldo awal dari tabel akun (master)
+                $akunModel = new AkunModel();
+                $akun = $akunModel->find($idAkun);
+                $saldoAwalMaster = $akun ? floatval($akun['saldo_awal']) : 0;
+                log_message('debug', "[getSaldoAwalAkun] Saldo awal (master) Akun $idAkun ($bulan/$tahun): " . $saldoAwalMaster);
+                return $saldoAwalMaster;
             }
         } catch (\Exception $e) {
-            log_message('error', "Error pada getSaldoAwalAkun: " . $e->getMessage());
-            return 0;
+            log_message('error', "[BukuBesarModel::getSaldoAwalAkun] Error for Akun $idAkun ($bulan/$tahun): " . $e->getMessage());
+            return 0; // Kembalikan 0 jika terjadi error
         }
     }
 
-
+    /**
+     * Mengupdate ringkasan saldo (awal, D/K, akhir) untuk suatu akun
+     * pada bulan dan tahun tertentu di tabel saldo_akun.
+     *
+     * @param int $idAkun ID Akun
+     * @param int $bulan Bulan (1-12)
+     * @param int $tahun Tahun (YYYY)
+     * @return bool True jika berhasil, False jika gagal
+     */
     public function updateSaldoAkun($idAkun, $bulan, $tahun)
     {
         try {
             $db = \Config\Database::connect();
+            $saldoAkunModel = new SaldoAkunModel(); // Model untuk tabel saldo_akun
+            $akunModel = new AkunModel();
 
-            // Ambil saldo awal
+            // 1. Dapatkan Saldo Awal untuk bulan ini
             $saldoAwal = $this->getSaldoAwalAkun($idAkun, $bulan, $tahun);
 
-            // Hitung total debit dan kredit untuk bulan ini
+            // 2. Hitung Total Debit dan Kredit dari buku_besar untuk bulan ini
             $query = $db->query("
-                SELECT 
-                    SUM(debit) as total_debit, 
-                    SUM(kredit) as total_kredit 
-                FROM buku_besar 
+                SELECT
+                    COALESCE(SUM(debit), 0) as total_debit,
+                    COALESCE(SUM(kredit), 0) as total_kredit
+                FROM buku_besar
                 WHERE id_akun = ? AND MONTH(tanggal) = ? AND YEAR(tanggal) = ?
             ", [$idAkun, $bulan, $tahun]);
 
@@ -112,61 +145,77 @@ class BukuBesarModel extends Model
             $totalDebit = $result ? floatval($result->total_debit) : 0;
             $totalKredit = $result ? floatval($result->total_kredit) : 0;
 
-            // Ambil informasi jenis akun
-            $akunModel = new \App\Models\AkunModel();
+            // 3. Ambil informasi jenis akun
             $akun = $akunModel->find($idAkun);
-
             if (!$akun) {
-                log_message('error', "Akun dengan ID $idAkun tidak ditemukan");
+                log_message('error', "[BukuBesarModel::updateSaldoAkun] Akun dengan ID $idAkun tidak ditemukan.");
+                return false;
+            }
+            $jenisAkun = $akun['jenis'];
+
+            // 4. Hitung Saldo Akhir
+            if ($jenisAkun == 'Debit') {
+                $saldoAkhir = $saldoAwal + $totalDebit - $totalKredit;
+            } elseif ($jenisAkun == 'Kredit') {
+                $saldoAkhir = $saldoAwal - $totalDebit + $totalKredit;
+            } else {
+                log_message('error', "[BukuBesarModel::updateSaldoAkun] Jenis akun tidak valid ('$jenisAkun') untuk Akun ID $idAkun.");
                 return false;
             }
 
-            $jenisAkun = $akun['jenis'];
+            log_message('debug', "[updateSaldoAkun] Update Saldo Akun $idAkun ($bulan/$tahun): Awal=$saldoAwal, D=$totalDebit, K=$totalKredit, Akhir=$saldoAkhir, Jenis=$jenisAkun");
 
-            // Hitung saldo akhir berdasarkan jenis akun
-            if ($jenisAkun == 'Debit') {
-                $saldoAkhir = $saldoAwal + $totalDebit - $totalKredit;
+            // 5. Update atau Insert ke tabel saldo_akun
+            $existingSaldo = $saldoAkunModel->where('id_akun', $idAkun)
+                ->where('bulan', $bulan)
+                ->where('tahun', $tahun)
+                ->first();
+
+            $dataSaldo = [
+                'id_akun' => $idAkun,
+                'bulan' => $bulan,
+                'tahun' => $tahun,
+                'saldo_awal' => $saldoAwal,
+                'total_debit' => $totalDebit,
+                'total_kredit' => $totalKredit,
+                'saldo_akhir' => $saldoAkhir,
+            ];
+
+            if ($existingSaldo) {
+                // Update jika sudah ada
+                $saldoAkunModel->update($existingSaldo['id'], $dataSaldo);
+                log_message('debug', "[updateSaldoAkun] Saldo Akun $idAkun ($bulan/$tahun) Updated.");
             } else {
-                $saldoAkhir = $saldoAwal - $totalDebit + $totalKredit;
-            }
-
-            log_message('debug', "Akun $idAkun: Saldo Awal=$saldoAwal, Debit=$totalDebit, Kredit=$totalKredit, Saldo Akhir=$saldoAkhir");
-
-            // Update atau insert ke tabel saldo_akun
-            $checkQuery = $db->query("
-                SELECT id FROM saldo_akun WHERE id_akun = ? AND bulan = ? AND tahun = ?
-            ", [$idAkun, $bulan, $tahun]);
-
-            $checkResult = $checkQuery->getRow();
-
-            if ($checkResult) {
-                // Update
-                $db->query("
-                    UPDATE saldo_akun 
-                    SET saldo_awal = ?, total_debit = ?, total_kredit = ?, saldo_akhir = ?, updated_at = NOW()
-                    WHERE id = ?
-                ", [$saldoAwal, $totalDebit, $totalKredit, $saldoAkhir, $checkResult->id]);
-            } else {
-                // Insert
-                $db->query("
-                    INSERT INTO saldo_akun (id_akun, bulan, tahun, saldo_awal, total_debit, total_kredit, saldo_akhir)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                ", [$idAkun, $bulan, $tahun, $saldoAwal, $totalDebit, $totalKredit, $saldoAkhir]);
+                // Insert jika belum ada
+                $saldoAkunModel->insert($dataSaldo);
+                log_message('debug', "[updateSaldoAkun] Saldo Akun $idAkun ($bulan/$tahun) Inserted.");
             }
 
             return true;
         } catch (\Exception $e) {
-            log_message('error', "Error pada updateSaldoAkun: " . $e->getMessage());
+            log_message('error', "[BukuBesarModel::updateSaldoAkun] Error for Akun $idAkun ($bulan/$tahun): " . $e->getMessage() . "\n" . $e->getTraceAsString());
             return false;
         }
     }
 
-
-    public function prosesJurnalKeBukuBesar($bulan, $tahun)
+    /**
+     * Memproses Jurnal Kas ke Buku Besar menggunakan Fuzzy Matching.
+     * Mencoba menemukan akun yang paling mirip berdasarkan uraian.
+     *
+     * @param int $bulan Bulan (1-12)
+     * @param int $tahun Tahun (YYYY)
+     * @param int $idAkunKas ID Akun untuk Kas/Bank
+     * @param array &$logErrors Array untuk menampung pesan error (by reference)
+     * @return bool True jika berhasil, False jika gagal karena ada error pencocokan
+     */
+    public function prosesJurnalKeBukuBesar_tanpaPemetaan($bulan, $tahun, $idAkunKas, &$logErrors)
     {
         $db = \Config\Database::connect();
-        $jurnalModel = new \App\Models\JurnalKasModel();
-        $pemetaanModel = new \App\Models\PemetaanAkunModel();
+        $jurnalModel = new JurnalKasModel();
+        $akunModel = new AkunModel();
+
+        // Kosongkan array error log setiap kali proses dimulai
+        $logErrors = [];
 
         // Format bulan untuk query
         $bulanFormat = str_pad($bulan, 2, '0', STR_PAD_LEFT);
@@ -174,314 +223,282 @@ class BukuBesarModel extends Model
         // Ambil semua jurnal untuk bulan dan tahun yang dipilih
         $jurnal = $jurnalModel->where("DATE_FORMAT(tanggal, '%Y-%m') = '$tahun-$bulanFormat'")
             ->orderBy('tanggal', 'ASC')
+            ->orderBy('id', 'ASC')
             ->findAll();
 
-        // Mulai transaksi database
+        if (empty($jurnal)) {
+            log_message('info', "[prosesJurnal] Tidak ada jurnal kas ditemukan untuk $bulan/$tahun.");
+            return true; // Tidak ada yang diproses, dianggap berhasil
+        }
+
+        // Ambil semua akun dan siapkan data untuk matching
+        $semuaAkun = $akunModel->findAll();
+        $akunDataForMatching = [];
+        foreach ($semuaAkun as $ak) {
+            // Jangan ikutkan akun kas/bank dalam target matching uraian
+            if ($ak['id'] != $idAkunKas) {
+                $akunDataForMatching[] = [
+                    'id' => $ak['id'],
+                    'nama_akun' => $ak['nama_akun'],
+                    'nama_akun_cleaned' => $this->_cleanString($ak['nama_akun']) // Bersihkan nama akun sekali saja
+                ];
+            }
+        }
+        if (empty($akunDataForMatching)) {
+            log_message('error', "[prosesJurnal] Tidak ada akun (selain kas) ditemukan untuk matching.");
+            $logErrors[] = "Tidak ada akun (selain kas) ditemukan untuk pencocokan.";
+            return false; // Tidak bisa matching jika tidak ada target
+        }
+
+
         $db->transStart();
 
-        // Hapus entri buku besar yang sudah ada untuk bulan ini (opsional)
-        $db->query("
-            DELETE FROM buku_besar 
-            WHERE MONTH(tanggal) = ? AND YEAR(tanggal) = ?
-        ", [$bulan, $tahun]);
+        // Hapus entri buku besar yang sudah ada untuk bulan ini
+        $this->where('MONTH(tanggal)', $bulan)
+            ->where('YEAR(tanggal)', $tahun)
+            ->delete();
+        log_message('info', "[prosesJurnal] Buku besar existing untuk $bulan/$tahun dihapus.");
+
+        $bukuBesarBatch = []; // Untuk batch insert
 
         foreach ($jurnal as $j) {
-            // Cari pemetaan akun berdasarkan kategori dan uraian
-            $pemetaan = $pemetaanModel->where('kategori_jurnal', $j['kategori'])
-                ->where('uraian_jurnal', $j['uraian'])
-                ->first();
-
-            if (!$pemetaan) {
-                // Jika tidak ada pemetaan spesifik, cari pemetaan default untuk kategori
-                $pemetaan = $pemetaanModel->where('kategori_jurnal', $j['kategori'])
-                    ->where('uraian_jurnal', 'default')
-                    ->first();
-
-                if (!$pemetaan) {
-                    // Jika masih tidak ada, gunakan akun default
-                    if ($j['kategori'] == 'DUM') {
-                        $idAkunDebit = 1; // Kas
-                        $idAkunKredit = 30; // Pendapatan Lain-lain
-                    } else {
-                        $idAkunDebit = 40; // Beban Operasional Lainnya
-                        $idAkunKredit = 1; // Kas
-                    }
-                } else {
-                    $idAkunDebit = $pemetaan['id_akun_debit'];
-                    $idAkunKredit = $pemetaan['id_akun_kredit'];
-                }
-            } else {
-                $idAkunDebit = $pemetaan['id_akun_debit'];
-                $idAkunKredit = $pemetaan['id_akun_kredit'];
-            }
-
             $tanggal = $j['tanggal'];
-            $keterangan = $j['uraian'];
-            $jumlah = $j['jumlah'];
+            $uraian = trim($j['uraian']);
+            $kategori = $j['kategori'];
+            $jumlah = floatval($j['jumlah'] ?? 0);
+            $idJurnal = $j['id'];
 
-            // Buat entri untuk akun debit
-            if ($idAkunDebit) {
-                // Ambil saldo terakhir
-                $lastSaldo = $this->getLastSaldo($idAkunDebit, $tanggal);
-                $saldoBaru = $lastSaldo + $jumlah;
-
-                $this->insert([
-                    'tanggal' => $tanggal,
-                    'id_akun' => $idAkunDebit,
-                    'id_jurnal' => $j['id'],
-                    'keterangan' => $keterangan,
-                    'debit' => $jumlah,
-                    'kredit' => 0,
-                    'saldo' => $saldoBaru
-                ]);
+            if ($jumlah <= 0) {
+                log_message('warning', "[prosesJurnal] Jurnal ID {$idJurnal} dilewati karena jumlah 0 atau negatif.");
+                continue; // Lewati jika jumlah tidak valid
             }
 
-            // Buat entri untuk akun kredit
-            if ($idAkunKredit) {
-                // Ambil saldo terakhir
-                $lastSaldo = $this->getLastSaldo($idAkunKredit, $tanggal);
-                $saldoBaru = $lastSaldo - $jumlah;
+            // --- Fuzzy Matching Logic ---
+            $uraianCleaned = $this->_cleanString($uraian);
+            $bestMatchAkun = null;
+            $maxSimilarity = -1; // Inisialisasi dengan -1
 
-                $this->insert([
-                    'tanggal' => $tanggal,
-                    'id_akun' => $idAkunKredit,
-                    'id_jurnal' => $j['id'],
-                    'keterangan' => $keterangan,
-                    'debit' => 0,
-                    'kredit' => $jumlah,
-                    'saldo' => $saldoBaru
-                ]);
+            foreach ($akunDataForMatching as $akunTarget) {
+                // Hitung persentase kemiripan
+                similar_text($uraianCleaned, $akunTarget['nama_akun_cleaned'], $percent);
+
+                // Jika kemiripan saat ini lebih tinggi dari maksimum sebelumnya
+                if ($percent > $maxSimilarity) {
+                    $maxSimilarity = $percent;
+                    $bestMatchAkun = $akunTarget; // Simpan data akun yang paling mirip sejauh ini
+                }
+            }
+            // --- End Fuzzy Matching Logic ---
+
+            // Cek apakah ditemukan akun yang cukup mirip (di atas threshold)
+            if ($bestMatchAkun && $maxSimilarity >= self::SIMILARITY_THRESHOLD) {
+                $idAkunNonKas = $bestMatchAkun['id'];
+                $namaAkunCocok = $bestMatchAkun['nama_akun']; // Nama akun asli yg cocok
+                log_message('debug', "[prosesJurnal] Jurnal '{$uraian}' (ID: {$idJurnal}) cocok (Similarity: " . round($maxSimilarity, 2) . "%) dengan Akun '{$namaAkunCocok}' (ID: {$idAkunNonKas})");
+
+                // Tentukan ID Akun Debit dan Kredit
+                $idAkunDebit = null;
+                $idAkunKredit = null;
+
+                if ($kategori == 'DUM') { // Debet Uang Masuk (Kas Bertambah +)
+                    $idAkunDebit = $idAkunKas;       // Kas di Debit
+                    $idAkunKredit = $idAkunNonKas;  // Akun Non-Kas (Pendapatan/Setoran/dll) di Kredit
+                } elseif ($kategori == 'DUK') { // Debet Uang Keluar (Kas Berkurang -)
+                    $idAkunDebit = $idAkunNonKas;  // Akun Non-Kas (Biaya/Penarikan/dll) di Debit
+                    $idAkunKredit = $idAkunKas;       // Kas di Kredit
+                } else {
+                    log_message('warning', "[prosesJurnal] Kategori jurnal tidak valid ('{$kategori}') untuk Jurnal ID {$idJurnal}.");
+                    continue; // Lewati jika kategori tidak dikenal
+                }
+
+                // Tambahkan data Debit ke batch
+                if ($idAkunDebit) {
+                    $bukuBesarBatch[] = [
+                        'tanggal' => $tanggal,
+                        'id_akun' => $idAkunDebit,
+                        'id_jurnal' => $idJurnal,
+                        'keterangan' => $uraian, // Tetap pakai uraian asli
+                        'debit' => $jumlah,
+                        'kredit' => 0,
+                        'saldo' => 0 // Akan diupdate nanti
+                    ];
+                }
+                // Tambahkan data Kredit ke batch
+                if ($idAkunKredit) {
+                    $bukuBesarBatch[] = [
+                        'tanggal' => $tanggal,
+                        'id_akun' => $idAkunKredit,
+                        'id_jurnal' => $idJurnal,
+                        'keterangan' => $uraian, // Tetap pakai uraian asli
+                        'debit' => 0,
+                        'kredit' => $jumlah,
+                        'saldo' => 0 // Akan diupdate nanti
+                    ];
+                }
+
+            } else {
+                // Jika tidak ada akun yang cukup mirip ditemukan
+                $similarityInfo = ($maxSimilarity >= 0) ? "Max Similarity: " . round($maxSimilarity, 2) . "%" : "Tidak ada kemiripan";
+                $errorMsg = "Uraian '{$uraian}' (Jurnal ID: {$idJurnal}, Tgl: {$tanggal}) tidak ditemukan Akun yang cukup mirip ($similarityInfo).";
+                log_message('error', "[prosesJurnal] " . $errorMsg);
+                $logErrors[] = $errorMsg; // Tambahkan ke log error
+                continue; // Lanjutkan ke jurnal berikutnya (agar semua error bisa dilaporkan)
+            }
+        } // End foreach jurnal
+
+        // --- Selesai Loop Jurnal ---
+
+        // Lakukan batch insert jika ada data
+        if (!empty($bukuBesarBatch)) {
+            // Gunakan insertBatch dari Query Builder untuk performa
+            $this->insertBatch($bukuBesarBatch);
+            log_message('info', "[prosesJurnal] " . count($bukuBesarBatch) . " entri buku besar ditambahkan untuk $bulan/$tahun.");
+        } else {
+            // Cek apakah ada error, jika tidak ada error berarti memang tidak ada jurnal valid
+            if (empty($logErrors)) {
+                log_message('info', "[prosesJurnal] Tidak ada entri buku besar yang valid untuk ditambahkan pada $bulan/$tahun.");
             }
         }
 
-        // Update saldo semua akun
-        $akunModel = new \App\Models\AkunModel();
-        $allAkun = $akunModel->findAll();
-
-        foreach ($allAkun as $akun) {
-            $this->updateSaldoAkun($akun['id'], $bulan, $tahun);
+        // Jika ada error pencocokan uraian selama loop, hentikan proses dan rollback
+        if (!empty($logErrors)) {
+            log_message('error', "[prosesJurnal] Proses dihentikan karena ada " . count($logErrors) . " uraian yang tidak cocok.");
+            $db->transRollback();
+            return false; // Kembalikan false karena proses tidak lengkap
         }
 
+        // Setelah semua entri dimasukkan (dan tidak ada error), update saldo
+        log_message('info', "[prosesJurnal] Memulai update saldo akhir untuk $bulan/$tahun...");
+        $updateSaldoSuccess = $this->updateAllSaldos($bulan, $tahun);
+        if (!$updateSaldoSuccess) {
+            log_message('error', "[prosesJurnal] Gagal mengupdate saldo setelah proses jurnal.");
+            $db->transRollback(); // Rollback jika update saldo gagal
+            $logErrors[] = "Gagal mengupdate saldo akun setelah memproses jurnal.";
+            return false;
+        }
+        log_message('info', "[prosesJurnal] Update saldo akhir selesai untuk $bulan/$tahun.");
+
+
+        // Jika semua langkah berhasil dan tidak ada error
         $db->transComplete();
 
-        return $db->transStatus();
+        if ($db->transStatus() === false) {
+            // Jika transaksi gagal karena alasan lain (misal: constraint, disk space)
+            log_message('error', '[prosesJurnal] Transaksi database gagal saat memproses jurnal ke buku besar.');
+            $logErrors[] = "Transaksi database gagal.";
+            return false;
+        }
+
+        log_message('info', "[prosesJurnal] Proses jurnal ke buku besar untuk $bulan/$tahun selesai BERHASIL.");
+        return true; // Berhasil
     }
 
-    private function getLastSaldo($idAkun, $tanggal)
+    /**
+     * Mengupdate saldo berjalan di tabel buku_besar dan saldo akhir di saldo_akun
+     * untuk SEMUA akun pada bulan dan tahun tertentu.
+     * Penting untuk dipanggil SETELAH semua entri buku besar untuk bulan itu dimasukkan.
+     *
+     * @param int $bulan Bulan (1-12)
+     * @param int $tahun Tahun (YYYY)
+     * @return bool True jika berhasil, False jika gagal
+     */
+    private function updateAllSaldos($bulan, $tahun)
     {
         $db = \Config\Database::connect();
+        $akunModel = new AkunModel();
 
-        // Cari saldo terakhir sebelum tanggal ini
-        $query = $db->query("
-            SELECT saldo 
-            FROM buku_besar 
-            WHERE id_akun = ? AND tanggal <= ? 
-            ORDER BY tanggal DESC, id DESC 
-            LIMIT 1
-        ", [$idAkun, $tanggal]);
-
-        $result = $query->getRow();
-
-        if ($result) {
-            log_message('debug', "Saldo terakhir ditemukan untuk akun {$idAkun}: {$result->saldo}");
-            return $result->saldo;
-        } else {
-            // Jika tidak ada, ambil saldo awal
-            $akunModel = new \App\Models\AkunModel();
-            $akun = $akunModel->find($idAkun);
-            $saldoAwal = $akun ? $akun['saldo_awal'] : 0;
-            log_message('debug', "Menggunakan saldo awal untuk akun {$idAkun}: {$saldoAwal}");
-            return $saldoAwal;
-        }
-    }
-    public function buatPemetaanOtomatis()
-    {
         try {
-            $jurnalModel = new \App\Models\JurnalKasModel();
-            $pemetaanModel = new \App\Models\PemetaanAkunModel();
-            $akunModel = new \App\Models\AkunModel();
+            log_message('debug', "[updateAllSaldos] Memulai update saldo untuk $bulan/$tahun...");
+            // Ambil semua akun yang ada
+            $akuns = $akunModel->findAll();
 
-            // Cek apakah akun-akun yang diperlukan sudah ada
-            $akun = $akunModel->findAll();
-            if (empty($akun)) {
-                log_message('error', 'Tidak ada akun yang tersedia untuk pemetaan otomatis');
-                return false;
+            if (empty($akuns)) {
+                log_message('warning', "[updateAllSaldos] Tidak ada akun ditemukan untuk update saldo.");
+                return true; // Tidak ada yang diupdate
             }
 
-            // Ambil semua uraian unik dari jurnal
-            $dumUraian = $jurnalModel->select('uraian')->where('kategori', 'DUM')->groupBy('uraian')->findAll();
-            $dukUraian = $jurnalModel->select('uraian')->where('kategori', 'DUK')->groupBy('uraian')->findAll();
+            // Mulai transaksi (opsional, tapi lebih aman jika banyak update)
+            // $db->transStart();
 
-            $db = \Config\Database::connect();
-            $db->transStart();
+            foreach ($akuns as $akun) {
+                $idAkun = $akun['id'];
+                $jenisAkun = $akun['jenis'];
 
-            // Buat pemetaan default untuk DUM jika belum ada
-            $existingDUMDefault = $pemetaanModel->where('kategori_jurnal', 'DUM')
-                ->where('uraian_jurnal', 'default')
-                ->first();
+                // 1. Dapatkan Saldo Awal untuk bulan ini
+                $saldoAwalBulan = $this->getSaldoAwalAkun($idAkun, $bulan, $tahun);
+                log_message('debug', "[updateAllSaldos] Akun $idAkun ('{$akun['nama_akun']}', $jenisAkun): Saldo Awal = $saldoAwalBulan");
 
-            if (!$existingDUMDefault) {
-                $pemetaanModel->insert([
-                    'kategori_jurnal' => 'DUM',
-                    'uraian_jurnal' => 'default',
-                    'id_akun_debit' => 1, // Kas
-                    'id_akun_kredit' => 30 // Pendapatan Lain-lain
-                ]);
-                log_message('info', 'Pemetaan default untuk DUM berhasil dibuat');
-            }
+                // 2. Ambil semua transaksi buku besar untuk akun ini pada bulan yang dipilih
+                // Urutkan berdasarkan tanggal dan ID untuk memastikan urutan perhitungan saldo benar
+                $query = $db->query("
+                    SELECT id, tanggal, debit, kredit
+                    FROM buku_besar
+                    WHERE id_akun = ? AND MONTH(tanggal) = ? AND YEAR(tanggal) = ?
+                    ORDER BY tanggal ASC, id ASC
+                ", [$idAkun, $bulan, $tahun]);
 
-            // Buat pemetaan default untuk DUK jika belum ada
-            $existingDUKDefault = $pemetaanModel->where('kategori_jurnal', 'DUK')
-                ->where('uraian_jurnal', 'default')
-                ->first();
+                $transaksis = $query->getResultArray();
 
-            if (!$existingDUKDefault) {
-                $pemetaanModel->insert([
-                    'kategori_jurnal' => 'DUK',
-                    'uraian_jurnal' => 'default',
-                    'id_akun_debit' => 40, // Beban Operasional Lainnya
-                    'id_akun_kredit' => 1 // Kas
-                ]);
-                log_message('info', 'Pemetaan default untuk DUK berhasil dibuat');
-            }
+                $currentSaldo = $saldoAwalBulan;
+                $updates = []; // Untuk menampung data update saldo berjalan
 
-            // Definisikan pemetaan kata kunci ke akun
-            $akunKeywords = [
-                // Akun untuk DUM (Kredit)
-                'pinjaman' => ['debit' => 1, 'kredit' => 3], // Kas -> Piutang Anggota
-                'angsuran' => ['debit' => 1, 'kredit' => 3], // Kas -> Piutang Anggota
-                'bank' => ['debit' => 1, 'kredit' => 2], // Kas -> Bank
-                'tarik dari bank' => ['debit' => 1, 'kredit' => 2], // Kas -> Bank
-                'simpanan' => ['debit' => 1, 'kredit' => 14], // Kas -> Simpanan Sukarela
-                'sp' => ['debit' => 1, 'kredit' => 13], // Kas -> Simpanan Pokok
-                'sw' => ['debit' => 1, 'kredit' => 14], // Kas -> Simpanan Wajib
-                'ss' => ['debit' => 1, 'kredit' => 14], // Kas -> Simpanan Sukarela
-                'jasa' => ['debit' => 1, 'kredit' => 27], // Kas -> Pendapatan Jasa Pinjaman
-                'denda' => ['debit' => 1, 'kredit' => 29], // Kas -> Pendapatan Denda
-                'fee' => ['debit' => 1, 'kredit' => 28], // Kas -> Pendapatan Provisi
-                'administrasi' => ['debit' => 1, 'kredit' => 28], // Kas -> Pendapatan Administrasi
-                'uang pangkal' => ['debit' => 1, 'kredit' => 13], // Kas -> Simpanan Pokok
-                'penyusutan' => ['debit' => 1, 'kredit' => 9], // Kas -> Akumulasi Penyusutan
-                'penyisihan' => ['debit' => 1, 'kredit' => 15], // Kas -> Dana Cadangan
-                'titip' => ['debit' => 1, 'kredit' => 19], // Kas -> Dana Kesejahteraan
-
-                // Akun untuk DUK (Debit)
-                'pinjaman anggota' => ['debit' => 3, 'kredit' => 1], // Piutang Anggota -> Kas
-                'simpanan di bank' => ['debit' => 2, 'kredit' => 1], // Bank -> Kas
-                'tarik dana' => ['debit' => 19, 'kredit' => 1], // Dana Kesejahteraan -> Kas
-                'tarik sp' => ['debit' => 13, 'kredit' => 1], // Simpanan Pokok -> Kas
-                'tarik sw' => ['debit' => 14, 'kredit' => 1], // Simpanan Wajib -> Kas
-                'tarik ss' => ['debit' => 14, 'kredit' => 1], // Simpanan Sukarela -> Kas
-                'gaji' => ['debit' => 31, 'kredit' => 1], // Beban Gaji -> Kas
-                'listrik' => ['debit' => 33, 'kredit' => 1], // Beban Listrik -> Kas
-                'wifi' => ['debit' => 33, 'kredit' => 1], // Beban Internet -> Kas
-                'insentip' => ['debit' => 32, 'kredit' => 1], // Beban Insentif -> Kas
-                'penyusutan' => ['debit' => 36, 'kredit' => 1], // Beban Penyusutan -> Kas
-                'bunga' => ['debit' => 38, 'kredit' => 1], // Beban Bunga -> Kas
-                'administrasi' => ['debit' => 34, 'kredit' => 1], // Beban Administrasi -> Kas
-                'by' => ['debit' => 40, 'kredit' => 1], // Beban Operasional -> Kas
-            ];
-
-            // Buat pemetaan spesifik untuk DUM
-            $countDUM = 0;
-            foreach ($dumUraian as $item) {
-                $uraian = $item['uraian'];
-                $existing = $pemetaanModel->where('kategori_jurnal', 'DUM')
-                    ->where('uraian_jurnal', $uraian)
-                    ->first();
-
-                if (!$existing) {
-                    // Tentukan akun berdasarkan uraian
-                    $idAkunDebit = 1; // Default: Kas
-                    $idAkunKredit = 30; // Default: Pendapatan Lain-lain
-
-                    // Cari kata kunci yang cocok dengan uraian
-                    foreach ($akunKeywords as $keyword => $akuns) {
-                        if (stripos($uraian, $keyword) !== false) {
-                            $idAkunDebit = $akuns['debit'];
-                            $idAkunKredit = $akuns['kredit'];
-                            break;
+                // 3. Hitung saldo berjalan untuk setiap transaksi
+                if (!empty($transaksis)) {
+                    foreach ($transaksis as $transaksi) {
+                        if ($jenisAkun == 'Debit') {
+                            $currentSaldo = $currentSaldo + floatval($transaksi['debit']) - floatval($transaksi['kredit']);
+                        } elseif ($jenisAkun == 'Kredit') {
+                            $currentSaldo = $currentSaldo - floatval($transaksi['debit']) + floatval($transaksi['kredit']);
+                        } else {
+                            // Seharusnya tidak terjadi jika validasi data akun bagus
+                            log_message('warning', "[updateAllSaldos] Jenis akun tidak dikenal '$jenisAkun' untuk akun ID $idAkun");
+                            continue; // Lewati transaksi ini jika jenis akun aneh
                         }
+
+                        // Siapkan data untuk update batch (lebih efisien)
+                        $updates[] = [
+                            'id' => $transaksi['id'],
+                            'saldo' => $currentSaldo
+                        ];
                     }
 
-                    // Cek apakah akun debit dan kredit ada
-                    $akunDebit = $akunModel->find($idAkunDebit);
-                    $akunKredit = $akunModel->find($idAkunKredit);
-
-                    if ($akunDebit && $akunKredit) {
-                        $pemetaanModel->insert([
-                            'kategori_jurnal' => 'DUM',
-                            'uraian_jurnal' => $uraian,
-                            'id_akun_debit' => $idAkunDebit,
-                            'id_akun_kredit' => $idAkunKredit
-                        ]);
-                        $countDUM++;
-                    } else {
-                        log_message('warning', "Akun tidak ditemukan untuk pemetaan DUM: $uraian");
+                    // Lakukan batch update saldo berjalan jika ada data
+                    if (!empty($updates)) {
+                        $this->updateBatch($updates, 'id');
+                        log_message('debug', "[updateAllSaldos] Akun $idAkun: " . count($transaksis) . " transaksi saldo berjalan diupdate.");
                     }
+                } else {
+                    log_message('debug', "[updateAllSaldos] Akun $idAkun: Tidak ada transaksi di bulan $bulan/$tahun.");
                 }
-            }
 
-            // Buat pemetaan spesifik untuk DUK
-            $countDUK = 0;
-            foreach ($dukUraian as $item) {
-                $uraian = $item['uraian'];
-                $existing = $pemetaanModel->where('kategori_jurnal', 'DUK')
-                    ->where('uraian_jurnal', $uraian)
-                    ->first();
-
-                if (!$existing) {
-                    // Tentukan akun berdasarkan uraian
-                    $idAkunDebit = 40; // Default: Beban Operasional Lainnya
-                    $idAkunKredit = 1; // Default: Kas
-
-                    // Cari kata kunci yang cocok dengan uraian
-                    foreach ($akunKeywords as $keyword => $akuns) {
-                        if (stripos($uraian, $keyword) !== false) {
-                            $idAkunDebit = $akuns['debit'];
-                            $idAkunKredit = $akuns['kredit'];
-                            break;
-                        }
-                    }
-
-                    // Cek apakah akun debit dan kredit ada
-                    $akunDebit = $akunModel->find($idAkunDebit);
-                    $akunKredit = $akunModel->find($idAkunKredit);
-
-                    if ($akunDebit && $akunKredit) {
-                        $pemetaanModel->insert([
-                            'kategori_jurnal' => 'DUK',
-                            'uraian_jurnal' => $uraian,
-                            'id_akun_debit' => $idAkunDebit,
-                            'id_akun_kredit' => $idAkunKredit
-                        ]);
-                        $countDUK++;
-                    } else {
-                        log_message('warning', "Akun tidak ditemukan untuk pemetaan DUK: $uraian");
-                    }
+                // 4. Update ringkasan saldo akhir di tabel saldo_akun
+                // Method ini sudah menghitung ulang total D/K dan saldo akhir berdasarkan $saldoAwalBulan
+                $updateRingkasanOk = $this->updateSaldoAkun($idAkun, $bulan, $tahun);
+                if (!$updateRingkasanOk) {
+                    log_message('error', "[updateAllSaldos] Gagal mengupdate ringkasan saldo_akun untuk akun $idAkun.");
+                    // Jika ingin menghentikan semua proses jika satu update gagal:
+                    // $db->transRollback();
+                    // return false;
                 }
-            }
 
-            $db->transComplete();
-            $success = $db->transStatus();
+            } // End foreach akun
 
-            if ($success) {
-                log_message('info', "Pemetaan otomatis berhasil: $countDUM DUM, $countDUK DUK");
-            } else {
-                log_message('error', "Pemetaan otomatis gagal");
-            }
+            // $db->transComplete();
+            // if ($db->transStatus() === false) {
+            //     log_message('error', "[updateAllSaldos] Transaksi gagal saat update saldo.");
+            //     return false;
+            // }
 
-            return [
-                'success' => $success,
-                'count_dum' => $countDUM,
-                'count_duk' => $countDUK
-            ];
+            log_message('debug', "[updateAllSaldos] Selesai update saldo untuk $bulan/$tahun.");
+            return true;
+
         } catch (\Exception $e) {
-            log_message('error', "Error pada buatPemetaanOtomatis: " . $e->getMessage());
-            log_message('error', $e->getTraceAsString());
+            log_message('error', "[BukuBesarModel::updateAllSaldos] Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            // if ($db->transStatus() !== false) { // Rollback jika transaksi masih aktif
+            //     $db->transRollback();
+            // }
             return false;
         }
     }
 
-
-}
+} // End Class

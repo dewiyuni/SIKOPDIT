@@ -9,33 +9,36 @@
             <h5 class="mb-0">
                 Laporan Laba Rugi Periode
                 <?php
-                $bulanNames = [
-                    1 => 'Januari',
-                    2 => 'Februari',
-                    3 => 'Maret',
-                    4 => 'April',
-                    5 => 'Mei',
-                    6 => 'Juni',
-                    7 => 'Juli',
-                    8 => 'Agustus',
-                    9 => 'September',
-                    10 => 'Oktober',
-                    11 => 'November',
-                    12 => 'Desember'
-                ];
-                echo $bulanNames[$bulan] . ' ' . $tahun;
+                // Ambil $bulanNames dari controller jika ada, atau definisikan di sini
+                if (!isset($bulanNames)) {
+                    $bulanNames = [
+                        1 => 'Januari',
+                        2 => 'Februari',
+                        3 => 'Maret',
+                        4 => 'April',
+                        5 => 'Mei',
+                        6 => 'Juni',
+                        7 => 'Juli',
+                        8 => 'Agustus',
+                        9 => 'September',
+                        10 => 'Oktober',
+                        11 => 'November',
+                        12 => 'Desember'
+                    ];
+                }
+                echo esc($bulanNames[$bulan] ?? $bulan) . ' ' . esc($tahun);
                 ?>
             </h5>
-            <div class="d-flex gap-2">
+            <div class="d-flex gap-2 flex-wrap"> <!-- Tambah flex-wrap untuk responsif -->
                 <form action="<?= base_url('admin/buku_besar/laba-rugi') ?>" method="get" class="d-flex gap-2">
                     <select name="bulan" class="form-select form-select-sm">
                         <?php foreach ($bulanNames as $key => $value): ?>
-                            <option value="<?= $key ?>" <?= $bulan == $key ? 'selected' : '' ?>><?= $value ?></option>
+                            <option value="<?= $key ?>" <?= $bulan == $key ? 'selected' : '' ?>><?= esc($value) ?></option>
                         <?php endforeach; ?>
                     </select>
                     <select name="tahun" class="form-select form-select-sm">
                         <?php for ($year = date('Y'); $year >= 2020; $year--): ?>
-                            <option value="<?= $year ?>" <?= $tahun == $year ? 'selected' : '' ?>><?= $year ?></option>
+                            <option value="<?= $year ?>" <?= $tahun == $year ? 'selected' : '' ?>><?= esc($year) ?></option>
                         <?php endfor; ?>
                     </select>
                     <button type="submit" class="btn btn-primary btn-sm">Filter</button>
@@ -66,10 +69,10 @@
                     </thead>
                     <tbody>
                         <?php
-                        $pendapatan_items = array_filter($laba_rugi, function ($item) {
-                            return $item['kategori'] == 'Pendapatan';
-                        });
-
+                        // HAPUS BLOK ARRAY_FILTER DI SINI
+                        // Langsung gunakan $pendapatan_items yang dikirim controller
+                        
+                        // Pengecekan apakah variabel $pendapatan_items ada dan tidak kosong
                         if (empty($pendapatan_items)):
                             ?>
                             <tr>
@@ -78,9 +81,9 @@
                         <?php else: ?>
                             <?php foreach ($pendapatan_items as $item): ?>
                                 <tr>
-                                    <td><?= $item['kode_akun'] ?></td>
-                                    <td><?= $item['nama_akun'] ?></td>
-                                    <td class="text-end"><?= number_format($item['saldo'], 2, ',', '.') ?></td>
+                                    <td><?= esc($item['kode_akun'] ?? '-') ?></td>
+                                    <td><?= esc($item['nama_akun'] ?? 'N/A') ?></td>
+                                    <td class="text-end"><?= number_format(floatval($item['saldo'] ?? 0), 2, ',', '.') ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
@@ -88,7 +91,8 @@
                     <tfoot>
                         <tr class="table-success">
                             <th colspan="2" class="text-end">Total Pendapatan</th>
-                            <th class="text-end"><?= number_format($total_pendapatan, 2, ',', '.') ?></th>
+                            <th class="text-end"><?= number_format(floatval($total_pendapatan ?? 0), 2, ',', '.') ?>
+                            </th>
                         </tr>
                     </tfoot>
                 </table>
@@ -106,10 +110,10 @@
                     </thead>
                     <tbody>
                         <?php
-                        $beban_items = array_filter($laba_rugi, function ($item) {
-                            return $item['kategori'] == 'Beban';
-                        });
-
+                        // HAPUS BLOK ARRAY_FILTER DI SINI
+                        // Langsung gunakan $beban_items yang dikirim controller
+                        
+                        // Pengecekan apakah variabel $beban_items ada dan tidak kosong
                         if (empty($beban_items)):
                             ?>
                             <tr>
@@ -118,9 +122,9 @@
                         <?php else: ?>
                             <?php foreach ($beban_items as $item): ?>
                                 <tr>
-                                    <td><?= $item['kode_akun'] ?></td>
-                                    <td><?= $item['nama_akun'] ?></td>
-                                    <td class="text-end"><?= number_format($item['saldo'], 2, ',', '.') ?></td>
+                                    <td><?= esc($item['kode_akun'] ?? '-') ?></td>
+                                    <td><?= esc($item['nama_akun'] ?? 'N/A') ?></td>
+                                    <td class="text-end"><?= number_format(floatval($item['saldo'] ?? 0), 2, ',', '.') ?></td>
                                 </tr>
                             <?php endforeach; ?>
                         <?php endif; ?>
@@ -128,16 +132,20 @@
                     <tfoot>
                         <tr class="table-warning">
                             <th colspan="2" class="text-end">Total Beban</th>
-                            <th class="text-end"><?= number_format($total_beban, 2, ',', '.') ?></th>
+                            <th class="text-end"><?= number_format(floatval($total_beban ?? 0), 2, ',', '.') ?></th>
                         </tr>
                     </tfoot>
                 </table>
 
-                <table class="table table-bordered mt-4">
-                    <tr class="table-info">
-                        <th>LABA (RUGI) BERSIH</th>
-                        <th class="text-end"><?= number_format($laba_rugi_bersih, 2, ',', '.') ?></th>
-                    </tr>
+                <table class="table table-bordered mt-4" style="width: 50%; margin-left:auto; margin-right:0;">
+                    <!-- Styling agar lebih mirip laporan -->
+                    <tbody>
+                        <tr class="table-info">
+                            <th>LABA (RUGI) BERSIH</th>
+                            <th class="text-end"><?= number_format(floatval($laba_rugi_bersih ?? 0), 2, ',', '.') ?>
+                            </th>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
         </div>
