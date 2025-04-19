@@ -8,6 +8,7 @@ use App\Models\PemetaanAkunModel;
 use App\Models\SaldoAkunModel;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use PhpOffice\PhpSpreadsheet\Style\Alignment;
 use App\Models\JurnalKasModel;
 
 class BukuBesarController extends BaseController
@@ -1064,181 +1065,177 @@ class BukuBesarController extends BaseController
         return $this->response->download($filePath, null)->setFileName($filename);
     }
 
+    /**
+     * Export Laporan Laba Rugi ke Excel
+     */
     public function exportLabaRugi()
     {
         $bulan = $this->request->getGet('bulan') ?? date('n');
         $tahun = $this->request->getGet('tahun') ?? date('Y');
+        // Gunakan nama bulan dari property class
+        $namaBulan = $this->bulanNames[$bulan] ?? $bulan;
 
-        $bulanNames = [
-            1 => 'Januari',
-            2 => 'Februari',
-            3 => 'Maret',
-            4 => 'April',
-            5 => 'Mei',
-            6 => 'Juni',
-            7 => 'Juli',
-            8 => 'Agustus',
-            9 => 'September',
-            10 => 'Oktober',
-            11 => 'November',
-            12 => 'Desember'
-        ];
-        $namaBulan = $bulanNames[$bulan];
+        // 1. Ambil data dari Model (sudah menggunakan kategori aktual)
+        $laporanData = $this->saldoAkunModel->getLaporanLabaRugi($bulan, $tahun);
 
-        $labaRugi = $this->saldoAkunModel->getLaporanLabaRugi($bulan, $tahun);
-
+        // 2. Proses data menggunakan KATEGORI AKTUAL (sama seperti di fungsi labaRugi view)
+        $pendapatanItems = [];
+        $bebanItems = [];
         $totalPendapatan = 0;
         $totalBeban = 0;
+        $kategoriPendapatanActual = ['PEMASUKAN']; // Sesuaikan jika perlu
+        $kategoriBebanActual = [
+            'BIAYA BIAYA',
+            'BIAYA PAJAK',
+            'PENYISIHAN BEBAN DANA',
+            'PENYUSUTAN PENYUSUTAN'
+        ]; // Sesuaikan jika perlu
 
-        foreach ($labaRugi as $item) {
-            if ($item['kategori'] == 'Pendapatan') {
-                $totalPendapatan += $item['saldo'];
-            } else if ($item['kategori'] == 'Beban') {
-                $totalBeban += $item['saldo'];
+        if (!empty($laporanData)) {
+            foreach ($laporanData as $item) {
+                $saldo = floatval($item['saldo'] ?? 0);
+                if (isset($item['kategori'])) {
+                    if (in_array($item['kategori'], $kategoriPendapatanActual)) {
+                        $totalPendapatan += $saldo;
+                        $pendapatanItems[] = $item;
+                    } elseif (in_array($item['kategori'], $kategoriBebanActual)) {
+                        $totalBeban += $saldo;
+                        $bebanItems[] = $item;
+                    }
+                }
             }
         }
-
         $labaRugiBersih = $totalPendapatan - $totalBeban;
 
-        // Create new Spreadsheet
+        // --- Pembuatan Excel ---
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
-        $sheet->setTitle('Laporan Laba Rugi');
+        $sheet->setTitle('Laba Rugi');
 
         // Set document properties
-        $spreadsheet->getProperties()
-            ->setCreator('Sistem Buku Besar Koperasi')
-            ->setLastModifiedBy('Sistem Buku Besar Koperasi')
-            ->setTitle("Laporan Laba Rugi")
-            ->setSubject("Laporan Laba Rugi - " . $namaBulan . " " . $tahun)
-            ->setDescription("Laporan Laba Rugi periode " . $namaBulan . " " . $tahun);
+        $spreadsheet->getProperties()->setCreator('Sistem Akuntansi')->setTitle("Laporan Laba Rugi");
 
-        // Add title
-        $sheet->setCellValue('A1', "LAPORAN LABA RUGI");
-        $sheet->setCellValue('A2', "Periode: " . $namaBulan . " " . $tahun);
+        // Judul
+        $sheet->mergeCells('A1:C1')->setCellValue('A1', "LAPORAN LABA RUGI");
+        $sheet->mergeCells('A2:C2')->setCellValue('A2', "Periode: " . $namaBulan . " " . $tahun);
+        $sheet->getStyle('A1:C1')->applyFromArray(['font' => ['bold' => true, 'size' => 14], 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]]);
+        $sheet->getStyle('A2:C2')->applyFromArray(['font' => ['bold' => true, 'size' => 11], 'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER]]);
 
-        // Merge cells for title
-        $sheet->mergeCells('A1:C1');
-        $sheet->mergeCells('A2:C2');
+        // Style umum
+        $numberFormat = '#,##0_);(#,##0)'; // Format akuntansi
+        $boldFont = ['font' => ['bold' => true]];
+        $totalFill = ['fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'E2EFDA']]]; // Hijau muda untuk total
+        $grandTotalFill = ['fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'FFEB9C']]]; // Kuning untuk grand total
+        $thinBorderOutline = ['borders' => ['outline' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]]];
 
-        // Style the title
-        $titleStyle = [
-            'font' => [
-                'bold' => true,
-                'size' => 16,
-            ],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-            ],
-        ];
-        $sheet->getStyle('A1:C1')->applyFromArray($titleStyle);
-
-        $subtitleStyle = [
-            'font' => [
-                'bold' => true,
-                'size' => 12,
-            ],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-            ],
-        ];
-        $sheet->getStyle('A2:C2')->applyFromArray($subtitleStyle);
-
-        // Add Pendapatan section
+        // Mulai tulis data
         $row = 4;
-        $sheet->setCellValue('A' . $row, 'PENDAPATAN');
-        $sheet->mergeCells('A' . $row . ':C' . $row);
-        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
 
+        // --- PENDAPATAN ---
+        $sheet->mergeCells('A' . $row . ':C' . $row)->setCellValue('A' . $row, 'PENDAPATAN');
+        $sheet->getStyle('A' . $row)->applyFromArray($boldFont);
         $row++;
-        foreach ($labaRugi as $item) {
-            if ($item['kategori'] == 'Pendapatan') {
-                $sheet->setCellValue('A' . $row, $item['kode_akun']);
-                $sheet->setCellValue('B' . $row, $item['nama_akun']);
-                $sheet->setCellValue('C' . $row, $item['saldo']);
+        $startRowPendapatan = $row; // Tandai awal data pendapatan
+        // Tulis header kolom pendapatan
+        $sheet->fromArray(['Kode', 'Nama Akun', 'Jumlah'], NULL, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray($boldFont);
+        $row++;
+        if (!empty($pendapatanItems)) {
+            // Tulis item pendapatan
+            foreach ($pendapatanItems as $item) {
+                $sheet->fromArray([
+                    $item['kode_akun'] ?? '-',
+                    $item['nama_akun'] ?? 'N/A',
+                    floatval($item['saldo'] ?? 0)
+                ], NULL, 'A' . $row);
                 $row++;
             }
+        } else {
+            $sheet->mergeCells('A' . $row . ':C' . $row)->setCellValue('A' . $row, 'Tidak ada data pendapatan');
+            $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $row++;
         }
-
-        // Add Total Pendapatan
-        $sheet->setCellValue('A' . $row, '');
+        // Total Pendapatan
         $sheet->setCellValue('B' . $row, 'Total Pendapatan');
         $sheet->setCellValue('C' . $row, $totalPendapatan);
-        $sheet->getStyle('A' . $row . ':C' . $row)->getFont()->setBold(true);
-        $sheet->getStyle('A' . $row . ':C' . $row)->getFill()
-            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-            ->getStartColor()->setRGB('E2EFDA');
+        $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray($boldFont);
+        $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray($totalFill);
+        $endRowPendapatan = $row; // Tandai akhir data pendapatan
+        $row++; // Spacer
 
-        // Add Beban section
-        $row += 2;
-        $sheet->setCellValue('A' . $row, 'BEBAN');
-        $sheet->mergeCells('A' . $row . ':C' . $row);
-        $sheet->getStyle('A' . $row)->getFont()->setBold(true);
-
+        // --- BEBAN ---
         $row++;
-        foreach ($labaRugi as $item) {
-            if ($item['kategori'] == 'Beban') {
-                $sheet->setCellValue('A' . $row, $item['kode_akun']);
-                $sheet->setCellValue('B' . $row, $item['nama_akun']);
-                $sheet->setCellValue('C' . $row, $item['saldo']);
+        $sheet->mergeCells('A' . $row . ':C' . $row)->setCellValue('A' . $row, 'BEBAN');
+        $sheet->getStyle('A' . $row)->applyFromArray($boldFont);
+        $row++;
+        $startRowBeban = $row; // Tandai awal data beban
+        // Tulis header kolom beban
+        $sheet->fromArray(['Kode', 'Nama Akun', 'Jumlah'], NULL, 'A' . $row);
+        $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray($boldFont);
+        $row++;
+        if (!empty($bebanItems)) {
+            // Tulis item beban
+            foreach ($bebanItems as $item) {
+                $sheet->fromArray([
+                    $item['kode_akun'] ?? '-',
+                    $item['nama_akun'] ?? 'N/A',
+                    floatval($item['saldo'] ?? 0)
+                ], NULL, 'A' . $row);
                 $row++;
             }
+        } else {
+            $sheet->mergeCells('A' . $row . ':C' . $row)->setCellValue('A' . $row, 'Tidak ada data beban');
+            $sheet->getStyle('A' . $row)->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+            $row++;
         }
-
-        // Add Total Beban
-        $sheet->setCellValue('A' . $row, '');
+        // Total Beban
         $sheet->setCellValue('B' . $row, 'Total Beban');
         $sheet->setCellValue('C' . $row, $totalBeban);
-        $sheet->getStyle('A' . $row . ':C' . $row)->getFont()->setBold(true);
-        $sheet->getStyle('A' . $row . ':C' . $row)->getFill()
-            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-            ->getStartColor()->setRGB('E2EFDA');
+        $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray($boldFont);
+        $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray($totalFill);
+        $endRowBeban = $row; // Tandai akhir data beban
+        $row++; // Spacer
 
-        // Add Laba Rugi Bersih
-        $row += 2;
-        $sheet->setCellValue('A' . $row, '');
+        // --- LABA RUGI BERSIH ---
+        $row++;
         $sheet->setCellValue('B' . $row, 'LABA (RUGI) BERSIH');
         $sheet->setCellValue('C' . $row, $labaRugiBersih);
-        $sheet->getStyle('A' . $row . ':C' . $row)->getFont()->setBold(true);
-        $sheet->getStyle('A' . $row . ':C' . $row)->getFill()
-            ->setFillType(\PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID)
-            ->getStartColor()->setRGB('FFEB9C');
+        $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray($boldFont);
+        $sheet->getStyle('A' . $row . ':C' . $row)->applyFromArray($grandTotalFill);
+        $endRowLabaRugi = $row;
 
-        // Apply number format to amount columns
-        $sheet->getStyle('C5:C' . $row)->getNumberFormat()->setFormatCode('#,##0.00');
+        // --- FORMATTING AKHIR ---
+        // Format Angka untuk semua kolom Jumlah
+        $sheet->getStyle('C' . $startRowPendapatan . ':C' . $endRowLabaRugi)->getNumberFormat()->setFormatCode($numberFormat);
+
+        // Apply Borders
+        $sheet->getStyle('A4:C' . $endRowPendapatan)->applyFromArray($thinBorderOutline); // Border Pendapatan
+        $sheet->getStyle('A' . ($endRowPendapatan + 2) . ':C' . $endRowBeban)->applyFromArray($thinBorderOutline); // Border Beban
+        $sheet->getStyle('A' . ($endRowLabaRugi) . ':C' . $endRowLabaRugi)->applyFromArray($thinBorderOutline); // Border L/R Bersih
 
         // Auto-size columns
         foreach (range('A', 'C') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
+        $sheet->getColumnDimension('B')->setWidth(45); // Beri lebar lebih untuk nama akun
 
-        // Apply borders to all data
-        $borderStyle = [
-            'borders' => [
-                'outline' => [
-                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                ],
-            ],
-        ];
-        $sheet->getStyle('A4:C' . $row)->applyFromArray($borderStyle);
-
-        // Add footer with date
+        // Footer
         $row += 2;
-        $sheet->setCellValue('A' . $row, 'Dicetak pada: ' . date('d-m-Y H:i:s'));
-        $sheet->mergeCells('A' . $row . ':C' . $row);
+        $sheet->mergeCells('A' . $row . ':C' . $row)->setCellValue('A' . $row, 'Dicetak pada: ' . date('d-m-Y H:i:s'));
 
-        // Create writer
+        // --- SAVE & DOWNLOAD ---
         $writer = new Xlsx($spreadsheet);
         $filename = "Laporan_Laba_Rugi_" . $namaBulan . "_" . $tahun . ".xlsx";
         $filePath = WRITEPATH . 'uploads/' . $filename;
-
-        // Ensure the directory exists
         if (!is_dir(dirname($filePath))) {
             mkdir(dirname($filePath), 0777, true);
         }
-
-        $writer->save($filePath);
-
+        try {
+            $writer->save($filePath);
+        } catch (\PhpOffice\PhpSpreadsheet\Writer\Exception $e) {
+            log_message('error', 'Error saving Excel file: ' . $e->getMessage());
+            return redirect()->back()->with('error', 'Gagal menyimpan file Excel.');
+        }
         return $this->response->download($filePath, null)->setFileName($filename);
     }
 
