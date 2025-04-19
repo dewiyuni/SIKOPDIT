@@ -95,7 +95,7 @@ $routes->get('jurnal', 'JurnalKasController::getData'); // Menampilkan semua dat
 $routes->post('jurnal/create', 'JurnalKasController::createKas'); // Menambah data
 $routes->put('jurnal/update', 'JurnalKasController::updateKas'); // Mengupdate data
 $routes->post('/jurnal/saveDUK', 'JurnalKasController::saveDUK');
-$routes->post('/jurnal/simpan', 'JurnalKasController::simpan');
+$routes->post('admin/jurnal/simpan', 'JurnalKasController::simpan');
 $routes->post('/jurnal/createKas', 'JurnalKasController::createKas');
 $routes->put('jurnal/update/(:num)', 'JurnalKasController::update/$1');
 $routes->delete('admin/jurnal_kas/delete/(:num)', 'JurnalKasController::delete/$1'); //hapus
