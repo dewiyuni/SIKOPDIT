@@ -21,7 +21,7 @@ class BukuBesarModel extends Model
 
     // Konstanta untuk threshold kemiripan (misal: 75%) - Sesuaikan sesuai kebutuhan
     // Naikkan jika terlalu banyak salah cocok, turunkan jika terlalu banyak yg tidak cocok
-    const SIMILARITY_THRESHOLD = 70;
+    const SIMILARITY_THRESHOLD = 40;
 
     /**
      * Membersihkan string untuk perbandingan fuzzy.

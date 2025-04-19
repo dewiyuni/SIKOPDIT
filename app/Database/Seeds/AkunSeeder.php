@@ -8,7 +8,11 @@ class AkunSeeder extends Seeder
 {
     public function run()
     {
-        // Hapus data lama jika seeder dijalankan ulang (opsional tapi disarankan)
+        // 1. Nonaktifkan Foreign Key Checks
+        $this->db->query('SET FOREIGN_KEY_CHECKS=0;');
+
+        // 2. Hapus data lama menggunakan truncate
+        //    (Sekarang bisa karena checks dinonaktifkan)
         $this->db->table('akun')->truncate();
 
         $now = date('Y-m-d H:i:s');
@@ -160,6 +164,8 @@ class AkunSeeder extends Seeder
 
         // Menggunakan Query Builder untuk insert batch
         $this->db->table('akun')->insertBatch($data);
+        // 3. Aktifkan kembali Foreign Key Checks
+        $this->db->query('SET FOREIGN_KEY_CHECKS=1;');
 
         // Optional: Tampilkan pesan di CLI saat seeder berjalan
         // echo "AkunSeeder executed successfully.\n";
