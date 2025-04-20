@@ -82,7 +82,6 @@
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
                         <li><a class="dropdown-item" href="<?= base_url('admin/akun') ?>">Kelola Akun</a></li>
-                        <li><a class="dropdown-item" href="<?= base_url('admin/pemetaan_akun') ?>">Pemetaan Akun</a>
                         </li>
                     </ul>
                 </div>
