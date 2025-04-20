@@ -66,10 +66,10 @@
                                 href="<?= base_url('admin/buku_besar/neraca-saldo?bulan=' . $bulan . '&tahun=' . $tahun) ?>">Neraca
                                 Saldo</a></li>
                         <li><a class="dropdown-item"
-                                href="<?= base_url('admin/laporan/laba_rugi?bulan=' . $bulan . '&tahun=' . $tahun) ?>">Laba
+                                href="<?= base_url('admin/buku_besar/laba-rugi?bulan=' . $bulan . '&tahun=' . $tahun) ?>">Laba
                                 Rugi</a></li>
                         <li><a class="dropdown-item"
-                                href="<?= base_url('admin/laporan/neraca?bulan=' . $bulan . '&tahun=' . $tahun) ?>">Neraca</a>
+                                href="<?= base_url('admin/buku_besar/neraca?bulan=' . $bulan . '&tahun=' . $tahun) ?>">Neraca</a>
                         </li>
                     </ul>
                 </div>
