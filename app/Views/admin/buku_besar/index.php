@@ -51,8 +51,9 @@
 
                 <!-- Tombol Proses Jurnal -->
                 <a href="<?= base_url('admin/buku_besar/proses?bulan=' . $bulan . '&tahun=' . $tahun) ?>"
-                    class="btn btn-success btn-sm">
-                    <i class="fas fa-sync"></i> Proses Jurnal
+                    class="btn btn-success btn-sm"
+                    onclick="return confirm('Apakah Anda yakin ingin memproses jurnal ke buku besar menggunakan pemetaan? Data buku besar bulan ini akan dihapus dan dibuat ulang.');">
+                    <i class="fas fa-sync"></i> Proses Jurnal (Mapping)
                 </a>
 
                 <!-- Dropdown Laporan -->
@@ -82,7 +83,8 @@
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
                         <li><a class="dropdown-item" href="<?= base_url('admin/akun') ?>">Kelola Akun</a></li>
-                        </li>
+                        <li><a class="dropdown-item" href="<?= base_url('admin/buku_besar/pemetaan') ?>">Kelola Pemetaan
+                                Jurnal</a></li>
                     </ul>
                 </div>
             </div>

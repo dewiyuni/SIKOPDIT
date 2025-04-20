@@ -106,69 +106,39 @@ class BukuBesarController extends BaseController
     {
         $bulan = $this->request->getGet('bulan') ?? date('n');
         $tahun = $this->request->getGet('tahun') ?? date('Y');
-        $logErrors = []; // Untuk menampung error pencocokan uraian
+        $logErrors = []; // Untuk menampung error pemetaan
 
         try {
-            // Nama bulan untuk digunakan dalam pesan error
-            $bulanNames = [
-                1 => 'Januari',
-                2 => 'Februari',
-                3 => 'Maret',
-                4 => 'April',
-                5 => 'Mei',
-                6 => 'Juni',
-                7 => 'Juli',
-                8 => 'Agustus',
-                9 => 'September',
-                10 => 'Oktober',
-                11 => 'November',
-                12 => 'Desember'
-            ];
+            $bulanNames = $this->bulanNames;
 
-            // Cek apakah ada jurnal untuk bulan dan tahun yang dipilih
+            // Cek apakah ada jurnal
             $bulanFormat = str_pad($bulan, 2, '0', STR_PAD_LEFT);
-            $jurnal = $this->jurnalKasModel->where("DATE_FORMAT(tanggal, '%Y-%m') = '$tahun-$bulanFormat'")
-                ->findAll();
-
+            $jurnal = $this->jurnalKasModel->where("DATE_FORMAT(tanggal, '%Y-%m') = '$tahun-$bulanFormat'")->findAll();
             if (empty($jurnal)) {
                 return redirect()->to(base_url('admin/buku_besar?bulan=' . $bulan . '&tahun=' . $tahun))
-                    ->with('error', 'Tidak ada data Jurnal Kas untuk diproses pada periode ' . $bulanNames[$bulan] . ' ' . $tahun . '.');
+                    ->with('error', 'Tidak ada data Jurnal Kas untuk diproses pada periode ' . ($bulanNames[$bulan] ?? $bulan) . ' ' . $tahun . '.');
             }
 
-            // Cek apakah akun kas ada (asumsi nama akun adalah 'Kas')
-            $akunKas = $this->akunModel->where('nama_akun', 'Kas')->first();
-            if (!$akunKas) {
-                // Coba cari 'Simpanan di Bank' jika 'Kas' tidak ada
-                $akunKas = $this->akunModel->where('nama_akun', 'Simpanan di Bank')->first();
-                if (!$akunKas) {
-                    return redirect()->to(base_url('admin/buku_besar?bulan=' . $bulan . '&tahun=' . $tahun))
-                        ->with('error', 'Akun Kas atau Simpanan di Bank tidak ditemukan di daftar akun. Proses tidak dapat dilanjutkan.');
-                }
-            }
-            $idAkunKas = $akunKas['id'];
-
-
-            // Proses jurnal ke buku besar TANPA pemetaan
-            // Ganti pemanggilan ke method baru
-            $result = $this->bukuBesarModel->prosesJurnalKeBukuBesar_tanpaPemetaan($bulan, $tahun, $idAkunKas, $logErrors);
+            // --- PANGGIL FUNGSI PROSES DENGAN PEMETAAN ---
+            $result = $this->bukuBesarModel->prosesJurnalKeBukuBesar_dengan_pemetaan($bulan, $tahun, $logErrors);
 
             $session = session();
             if (!empty($logErrors)) {
-                $errorMessage = 'Terjadi kesalahan saat memproses jurnal ke Buku Besar. Uraian berikut tidak ditemukan di daftar Akun: <ul>';
+                $errorMessage = 'Gagal memproses jurnal ke Buku Besar. Jurnal berikut tidak memiliki aturan pemetaan di tabel `pemetaan_akun`: <ul>';
                 foreach ($logErrors as $err) {
                     $errorMessage .= "<li>" . esc($err) . "</li>";
                 }
-                $errorMessage .= "</ul> Silakan perbaiki Uraian di Jurnal Kas atau tambahkan Akun yang sesuai.";
-                $session->setFlashdata('error', $errorMessage); // Tampilkan error spesifik
+                $errorMessage .= "</ul> Silakan tambahkan aturan pemetaan yang sesuai melalui menu Pengaturan > Kelola Pemetaan Jurnal.";
+                $session->setFlashdata('error', $errorMessage);
             }
 
             if ($result) {
-                $session->setFlashdata('success', 'Jurnal berhasil diproses ke Buku Besar.');
+                $session->setFlashdata('success', 'Jurnal berhasil diproses ke Buku Besar menggunakan pemetaan.');
                 return redirect()->to(base_url('admin/buku_besar?bulan=' . $bulan . '&tahun=' . $tahun));
             } else {
-                // Pesan error spesifik sudah di set di atas jika ada logErrors
+                // Error spesifik sudah di set di atas jika ada logErrors
                 if (empty($logErrors)) {
-                    $session->setFlashdata('error', 'Terjadi kesalahan umum saat memproses jurnal ke Buku Besar. Silakan periksa log sistem.');
+                    $session->setFlashdata('error', 'Terjadi kesalahan umum saat memproses jurnal ke Buku Besar dengan pemetaan. Silakan periksa log sistem.');
                 }
                 return redirect()->to(base_url('admin/buku_besar?bulan=' . $bulan . '&tahun=' . $tahun));
             }
@@ -178,6 +148,204 @@ class BukuBesarController extends BaseController
             return redirect()->to(base_url('admin/buku_besar?bulan=' . $bulan . '&tahun=' . $tahun))
                 ->with('error', 'Terjadi kesalahan sistem: ' . $e->getMessage());
         }
+    }
+
+    // === FUNGSI CRUD PEMETAAN AKUN (BARU) ===
+
+    public function pemetaan()
+    {
+        // Ambil data pemetaan join dengan nama akun untuk tampilan
+        $pemetaanData = $this->pemetaanModel
+            ->select('pemetaan_akun.*, ad.nama_akun as nama_akun_debit, ak.nama_akun as nama_akun_kredit, ad.kode_akun as kode_akun_debit, ak.kode_akun as kode_akun_kredit')
+            ->join('akun ad', 'ad.id = pemetaan_akun.id_akun_debit', 'left')
+            ->join('akun ak', 'ak.id = pemetaan_akun.id_akun_kredit', 'left')
+            ->orderBy('pemetaan_akun.prioritas', 'DESC')
+            ->orderBy('pemetaan_akun.kategori_jurnal', 'ASC')
+            ->orderBy('pemetaan_akun.pola_uraian', 'ASC')
+            ->findAll();
+
+        $data = [
+            'title' => 'Pemetaan Jurnal ke Akun',
+            'pemetaan' => $pemetaanData
+        ];
+        // Buat view ini: app/Views/admin/buku_besar/pemetaan_index.php
+        return view('admin/buku_besar/pemetaan_index', $data);
+    }
+
+    public function createPemetaan()
+    {
+        $data = [
+            'title' => 'Tambah Aturan Pemetaan',
+            // Ambil daftar akun untuk dropdown
+            'akun_list' => $this->akunModel->orderBy('kode_akun', 'ASC')->findAll() // Urutkan berdasarkan kode
+        ];
+        // Buat view ini: app/Views/admin/buku_besar/pemetaan_create.php
+        return view('admin/buku_besar/pemetaan_create', $data);
+    }
+
+    public function storePemetaan()
+    {
+        $rules = [
+            'pola_uraian' => 'required|max_length[255]',
+            'kategori_jurnal' => 'required|in_list[DUM,DUK]',
+            'id_akun_debit' => 'required|integer|is_not_unique[akun.id]', // Pastikan ID akun valid
+            'id_akun_kredit' => 'required|integer|is_not_unique[akun.id]',
+            'prioritas' => 'permit_empty|integer',
+            'deskripsi' => 'permit_empty|string',
+        ];
+
+        $messages = [
+            'id_akun_debit' => ['is_not_unique' => 'Akun Debit yang dipilih tidak valid.'],
+            'id_akun_kredit' => ['is_not_unique' => 'Akun Kredit yang dipilih tidak valid.'],
+        ];
+
+        if (!$this->validate($rules, $messages)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        $data = $this->validator->getValidated();
+
+        // Periksa debit != kredit
+        if ($data['id_akun_debit'] == $data['id_akun_kredit']) {
+            return redirect()->back()->withInput()->with('error', 'Akun Debit dan Kredit tidak boleh sama.');
+        }
+
+        $data['prioritas'] = empty($data['prioritas']) ? 0 : $data['prioritas']; // Default prioritas 0 jika kosong
+
+
+        if ($this->pemetaanModel->insert($data)) {
+            return redirect()->to(base_url('admin/buku_besar/pemetaan'))
+                ->with('success', 'Aturan pemetaan berhasil ditambahkan.');
+        } else {
+            log_message('error', 'Gagal insert pemetaan: ' . json_encode($this->pemetaanModel->errors()));
+            return redirect()->back()->withInput()
+                ->with('error', 'Gagal menyimpan aturan pemetaan. Periksa log.');
+        }
+    }
+
+    public function editPemetaan($id)
+    {
+        $pemetaan = $this->pemetaanModel->find($id);
+        if (!$pemetaan) {
+            return redirect()->to(base_url('admin/buku_besar/pemetaan'))->with('error', 'Aturan pemetaan tidak ditemukan.');
+        }
+        $data = [
+            'title' => 'Edit Aturan Pemetaan',
+            'pemetaan' => $pemetaan,
+            'akun_list' => $this->akunModel->orderBy('kode_akun', 'ASC')->findAll()
+        ];
+        // Buat view ini: app/Views/admin/buku_besar/pemetaan_edit.php
+        return view('admin/buku_besar/pemetaan_edit', $data);
+    }
+
+    public function updatePemetaan($id)
+    {
+        $pemetaan = $this->pemetaanModel->find($id);
+        if (!$pemetaan) {
+            return redirect()->to(base_url('admin/buku_besar/pemetaan'))->with('error', 'Aturan pemetaan tidak ditemukan.');
+        }
+
+        // Rules sama seperti create
+        $rules = [
+            'pola_uraian' => 'required|max_length[255]',
+            'kategori_jurnal' => 'required|in_list[DUM,DUK]',
+            'id_akun_debit' => 'required|integer|is_not_unique[akun.id]',
+            'id_akun_kredit' => 'required|integer|is_not_unique[akun.id]',
+            'prioritas' => 'permit_empty|integer',
+            'deskripsi' => 'permit_empty|string',
+        ];
+        $messages = [
+            'id_akun_debit' => ['is_not_unique' => 'Akun Debit yang dipilih tidak valid.'],
+            'id_akun_kredit' => ['is_not_unique' => 'Akun Kredit yang dipilih tidak valid.'],
+        ];
+
+
+        if (!$this->validate($rules, $messages)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        $data = $this->validator->getValidated();
+
+        if ($data['id_akun_debit'] == $data['id_akun_kredit']) {
+            return redirect()->back()->withInput()->with('error', 'Akun Debit dan Kredit tidak boleh sama.');
+        }
+        $data['prioritas'] = empty($data['prioritas']) ? 0 : $data['prioritas'];
+
+        if ($this->pemetaanModel->update($id, $data)) {
+            return redirect()->to(base_url('admin/buku_besar/pemetaan'))
+                ->with('success', 'Aturan pemetaan berhasil diperbarui.');
+        } else {
+            log_message('error', 'Gagal update pemetaan ID ' . $id . ': ' . json_encode($this->pemetaanModel->errors()));
+            return redirect()->back()->withInput()
+                ->with('error', 'Gagal memperbarui aturan pemetaan. Periksa log.');
+        }
+    }
+
+    public function deletePemetaan($id)
+    {
+        // Optional: Tambahkan konfirmasi form method POST untuk keamanan
+        $pemetaan = $this->pemetaanModel->find($id);
+        if (!$pemetaan) {
+            return redirect()->to(base_url('admin/buku_besar/pemetaan'))
+                ->with('error', 'Aturan pemetaan tidak ditemukan.');
+        }
+
+        if ($this->pemetaanModel->delete($id)) {
+            return redirect()->to(base_url('admin/buku_besar/pemetaan'))
+                ->with('success', 'Aturan pemetaan berhasil dihapus.');
+        } else {
+            log_message('error', 'Gagal delete pemetaan ID ' . $id . ': ' . json_encode($this->pemetaanModel->errors()));
+            return redirect()->to(base_url('admin/buku_besar/pemetaan'))
+                ->with('error', 'Gagal menghapus aturan pemetaan. Periksa log.');
+        }
+    }
+    /**
+     * Menjalankan proses pembuatan pemetaan otomatis.
+     */
+    public function generateAutoMapping()
+    {
+        try {
+            // Identifikasi Akun Kas Utama (WAJIB SAMA dengan yang dipakai di proses())
+            $akunKasUtama = $this->akunModel->where('nama_akun', 'Simpanan di Bank')->first();
+            if (!$akunKasUtama) {
+                $akunKasUtama = $this->akunModel->where('nama_akun', 'Kas')->first();
+                if (!$akunKasUtama) {
+                    return redirect()->to(base_url('admin/buku_besar/pemetaan'))
+                        ->with('error', 'Akun Kas/Bank Utama ("Simpanan di Bank" atau "Kas") tidak ditemukan untuk proses otomatis.');
+                }
+            }
+            $idAkunKasUtama = $akunKasUtama['id'];
+            log_message('info', "[generateAutoMapping] Starting automatic mapping process using Main Cash Account ID: {$idAkunKasUtama} ('{$akunKasUtama['nama_akun']}')");
+
+
+            // Panggil method di model
+            $stats = $this->pemetaanModel->generateOtomatisFromJournal($idAkunKasUtama);
+
+            // Siapkan pesan feedback
+            $message = "Proses pemetaan otomatis selesai. <br>";
+            $message .= "Aturan baru dibuat: " . $stats['created'] . "<br>";
+            if ($stats['skipped_exist'] > 0)
+                $message .= "Dilewati (sudah ada): " . $stats['skipped_exist'] . "<br>";
+            if ($stats['skipped_special'] > 0)
+                $message .= "Dilewati (kasus khusus: penyusutan/transfer): " . $stats['skipped_special'] . "<br>";
+            if ($stats['failed_match'] > 0)
+                $message .= "Gagal Cocok (uraian != nama akun): " . $stats['failed_match'] . " (Perlu pemetaan manual)<br>";
+            if ($stats['skipped_same_dk'] > 0)
+                $message .= "Dilewati (akun D/K sama): " . $stats['skipped_same_dk'] . "<br>";
+
+
+            if ($stats['created'] > 0) {
+                session()->setFlashdata('success', $message);
+            } else {
+                session()->setFlashdata('info', $message); // Gunakan info jika tidak ada yg baru
+            }
+
+        } catch (\Exception $e) {
+            log_message('error', "[generateAutoMapping] Error: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            session()->setFlashdata('error', 'Terjadi kesalahan sistem saat membuat pemetaan otomatis: ' . $e->getMessage());
+        }
+
+        return redirect()->to(base_url('admin/buku_besar/pemetaan'));
     }
 
     public function akun()

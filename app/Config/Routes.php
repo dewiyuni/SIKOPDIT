@@ -148,9 +148,20 @@ $routes->group('admin/buku_besar', function ($routes) {
     $routes->post('akun/update/(:num)', 'BukuBesarController::updateAkun/$1');
     $routes->get('akun/delete/(:num)', 'BukuBesarController::deleteAkun/$1');
 
-    $routes->get('pemetaan', 'BukuBesarController::pemetaan');
-    $routes->post('pemetaan/store', 'BukuBesarController::storePemetaan');
-    $routes->get('pemetaan/delete/(:num)', 'BukuBesarController::deletePemetaan/$1');
+    // Pemetaan Akun CRUD (LENGKAP)
+    $routes->get('pemetaan', 'BukuBesarController::pemetaan'); // index
+    $routes->get('pemetaan/create', 'BukuBesarController::createPemetaan'); // form tambah
+    $routes->post('pemetaan/store', 'BukuBesarController::storePemetaan'); // simpan tambah
+    $routes->get('pemetaan/edit/(:num)', 'BukuBesarController::editPemetaan/$1'); // form edit
+// Gunakan PUT atau POST untuk update
+    $routes->put('pemetaan/update/(:num)', 'BukuBesarController::updatePemetaan/$1'); // Jika pakai form method PUT
+    $routes->post('pemetaan/update/(:num)', 'BukuBesarController::updatePemetaan/$1'); // Jika pakai form biasa dgn _method=PUT
+// Gunakan DELETE atau POST untuk delete
+    $routes->delete('pemetaan/delete/(:num)', 'BukuBesarController::deletePemetaan/$1'); // Jika pakai AJAX/form method DELETE
+    $routes->post('pemetaan/delete/(:num)', 'BukuBesarController::deletePemetaan/$1'); // Jika pakai form biasa dgn _method=DELETE
+    $routes->get('pemetaan/delete/(:num)', 'BukuBesarController::deletePemetaan/$1'); // Fallback GET (kurang aman, seperti yg Anda punya)
+    $routes->get('pemetaan/generate-otomatis', 'BukuBesarController::generateAutoMapping');
+
 
     $routes->get('neraca-saldo', 'BukuBesarController::neracaSaldo');
     $routes->get('laba-rugi', 'BukuBesarController::labaRugi');
