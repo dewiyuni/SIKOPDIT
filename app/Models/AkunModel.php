@@ -17,10 +17,7 @@ class AkunModel extends Model
     protected $createdField = 'created_at';
     protected $updatedField = 'updated_at';
 
-    public function getAkunByKode($kode)
-    {
-        return $this->where('kode_akun', $kode)->first();
-    }
+    // Removed duplicate method declaration to avoid redeclaration error.
 
     // Method ini mungkin tidak diperlukan lagi jika Anda selalu filter by kategori di view utama
     // public function getAkunByKategori($kategori)
@@ -33,13 +30,30 @@ class AkunModel extends Model
      *
      * @return array Daftar kategori unik.
      */
+    // public function getDistinctKategori()
+    // {
+    //     return $this->distinct()->select('kategori')->orderBy('kategori', 'ASC')->findAll();
+    // }
+
+    public function getAkunByKode($kode)
+    {
+        return $this->where('kode_akun', $kode)->first();
+    }
+
     public function getDistinctKategori()
     {
-        return $this->distinct()->select('kategori')->orderBy('kategori', 'ASC')->findAll();
+        // Pastikan kolom 'kategori' tidak null atau kosong jika memungkinkan
+        return $this->distinct()
+            ->select('kategori')
+            ->where('kategori IS NOT NULL')
+            ->where('kategori !=', '')
+            ->orderBy('kategori', 'ASC')
+            ->findAll();
     }
 
     /**
      * Mengambil akun beserta saldo untuk kategori, bulan, dan tahun tertentu.
+     * Saldo akhir dihitung ulang berdasarkan jenis akun.
      *
      * @param string $kategori Nama kategori akun.
      * @param int    $bulan    Bulan (1-12).
@@ -49,48 +63,89 @@ class AkunModel extends Model
     public function getAkunWithSaldoByKategori($kategori, $bulan, $tahun)
     {
         $db = \Config\Database::connect();
-        $query = $db->query("
+
+        // Bangun query SQL dengan perhitungan saldo akhir dinamis
+        $sql = "
             SELECT
                 a.id, a.kode_akun, a.nama_akun, a.kategori, a.jenis, a.saldo_awal,
                 COALESCE(sa.saldo_awal, a.saldo_awal) as saldo_bulan_ini,
                 COALESCE(sa.total_debit, 0) as total_debit,
                 COALESCE(sa.total_kredit, 0) as total_kredit,
-                COALESCE(sa.saldo_akhir, a.saldo_awal) as saldo_akhir
+                -- Hitung ulang saldo akhir berdasarkan jenis akun
+                CASE
+                    WHEN LOWER(a.jenis) = 'debit' THEN
+                        (COALESCE(sa.saldo_awal, a.saldo_awal) + COALESCE(sa.total_debit, 0) - COALESCE(sa.total_kredit, 0))
+                    WHEN LOWER(a.jenis) = 'kredit' THEN
+                        (COALESCE(sa.saldo_awal, a.saldo_awal) - COALESCE(sa.total_debit, 0) + COALESCE(sa.total_kredit, 0))
+                    ELSE -- Default jika jenis tidak 'Debit' atau 'Kredit' (sebaiknya dihindari)
+                        (COALESCE(sa.saldo_awal, a.saldo_awal) + COALESCE(sa.total_debit, 0) - COALESCE(sa.total_kredit, 0))
+                END AS saldo_akhir
             FROM
                 akun a
             LEFT JOIN
                 saldo_akun sa ON a.id = sa.id_akun AND sa.bulan = ? AND sa.tahun = ?
             WHERE
-                a.kategori = ?  -- Tambahkan filter kategori di sini
+                a.kategori = ?
             ORDER BY
                 a.kode_akun ASC
-        ", [$bulan, $tahun, $kategori]); // Tambahkan $kategori ke binding
+        ";
+
+        $query = $db->query($sql, [$bulan, $tahun, $kategori]);
 
         return $query->getResultArray();
     }
 
-    // Fungsi getAkunWithSaldo yang lama mungkin tidak terpakai di view index utama,
-    // tapi bisa berguna untuk laporan lain. Saya biarkan saja.
+    // Fungsi getAkunWithSaldo bisa diupdate serupa jika digunakan di tempat lain
     public function getAkunWithSaldo($bulan, $tahun)
     {
         $db = \Config\Database::connect();
-        $query = $db->query("
+        $sql = "
             SELECT
-                a.*,
+                a.id, a.kode_akun, a.nama_akun, a.kategori, a.jenis, a.saldo_awal,
                 COALESCE(sa.saldo_awal, a.saldo_awal) as saldo_bulan_ini,
                 COALESCE(sa.total_debit, 0) as total_debit,
                 COALESCE(sa.total_kredit, 0) as total_kredit,
-                COALESCE(sa.saldo_akhir, a.saldo_awal) as saldo_akhir
+                 -- Hitung ulang saldo akhir berdasarkan jenis akun
+                CASE
+                    WHEN LOWER(a.jenis) = 'debit' THEN
+                        (COALESCE(sa.saldo_awal, a.saldo_awal) + COALESCE(sa.total_debit, 0) - COALESCE(sa.total_kredit, 0))
+                    WHEN LOWER(a.jenis) = 'kredit' THEN
+                        (COALESCE(sa.saldo_awal, a.saldo_awal) - COALESCE(sa.total_debit, 0) + COALESCE(sa.total_kredit, 0))
+                    ELSE
+                        (COALESCE(sa.saldo_awal, a.saldo_awal) + COALESCE(sa.total_debit, 0) - COALESCE(sa.total_kredit, 0))
+                END AS saldo_akhir
             FROM
                 akun a
             LEFT JOIN
                 saldo_akun sa ON a.id = sa.id_akun AND sa.bulan = ? AND sa.tahun = ?
             ORDER BY
                 a.kode_akun ASC
-        ", [$bulan, $tahun]);
-
+        ";
+        $query = $db->query($sql, [$bulan, $tahun]);
         return $query->getResultArray();
     }
+    // Fungsi getAkunWithSaldo yang lama mungkin tidak terpakai di view index utama,
+    // tapi bisa berguna untuk laporan lain. Saya biarkan saja.
+    // public function getAkunWithSaldo($bulan, $tahun)
+    // {
+    //     $db = \Config\Database::connect();
+    //     $query = $db->query("
+    //         SELECT
+    //             a.*,
+    //             COALESCE(sa.saldo_awal, a.saldo_awal) as saldo_bulan_ini,
+    //             COALESCE(sa.total_debit, 0) as total_debit,
+    //             COALESCE(sa.total_kredit, 0) as total_kredit,
+    //             COALESCE(sa.saldo_akhir, a.saldo_awal) as saldo_akhir
+    //         FROM
+    //             akun a
+    //         LEFT JOIN
+    //             saldo_akun sa ON a.id = sa.id_akun AND sa.bulan = ? AND sa.tahun = ?
+    //         ORDER BY
+    //             a.kode_akun ASC
+    //     ", [$bulan, $tahun]);
+
+    //     return $query->getResultArray();
+    // }
 
     // Fungsi getLastSaldo tetap sama
     private function getLastSaldo($idAkun, $tanggal)

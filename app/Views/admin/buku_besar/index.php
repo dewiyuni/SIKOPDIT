@@ -128,16 +128,16 @@
                                                         <td><?= esc($a['nama_akun']) ?></td>
                                                         <td><?= esc($a['jenis']) ?></td>
                                                         <td class="text-end">
-                                                            <?= rtrim(rtrim(number_format($a['saldo_bulan_ini'], 2, ',', '.'), '0'), ',') ?>
+                                                            <?= number_to_currency($a['saldo_bulan_ini'], 'IDR', 'id', 2) ?>
                                                         </td>
                                                         <td class="text-end">
-                                                            <?= rtrim(rtrim(number_format($a['total_debit'], 2, ',', '.'), '0'), ',') ?>
+                                                            <?= number_to_currency($a['total_debit'], 'IDR', 'id', 2) ?>
                                                         </td>
                                                         <td class="text-end">
-                                                            <?= rtrim(rtrim(number_format($a['total_kredit'], 2, ',', '.'), '0'), ',') ?>
+                                                            <?= number_to_currency($a['total_kredit'], 'IDR', 'id', 2) ?>
                                                         </td>
                                                         <td class="text-end">
-                                                            <?= rtrim(rtrim(number_format($a['saldo_akhir'], 2, ',', '.'), '0'), ',') ?>
+                                                            <?= number_to_currency($a['saldo_akhir'], 'IDR', 'id', 2) ?>
                                                         </td>
                                                         <td>
                                                             <a href="<?= base_url('admin/buku_besar/detail/' . $a['id'] . '?bulan=' . $bulan . '&tahun=' . $tahun) ?>"
