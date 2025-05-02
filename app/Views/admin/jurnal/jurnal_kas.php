@@ -90,6 +90,7 @@
                                         <td>
                                             <input type="text" class="form-control dum"
                                                 value="<?= number_format($k['jumlah'], 0, ',', '.') ?>" data-id="<?= $k['id'] ?>"
+                                                disabled
                                                 oninput="formatRibuan(this)">
                                         </td>
                                         <td style="text-align: center;">
@@ -142,6 +143,7 @@
                                         <td>
                                             <input type="text" class="form-control duk"
                                                 value="<?= number_format($k['jumlah'], 0, ',', '.') ?>" data-id="<?= $k['id'] ?>"
+                                                disabled
                                                 oninput="formatRibuan(this)">
                                         </td>
                                         <td style="text-align: center;">

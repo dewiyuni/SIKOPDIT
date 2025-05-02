@@ -109,7 +109,7 @@
                             <div class="accordion-body">
                                 <?php if (!empty($akunDalamKategori)): ?>
                                     <div class="table-responsive">
-                                        <table class="table table-bordered table-striped table-sm">
+                                        <table class="table table-bordered table-striped table-sm" id="akunTable">
                                             <thead>
                                                 <tr>
                                                     <th>Kode</th>
@@ -119,46 +119,60 @@
                                                     <th>Debit</th>
                                                     <th>Kredit</th>
                                                     <th>Saldo Akhir</th>
-                                                    <th>Aksi</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <?php foreach ($akunDalamKategori as $a): ?>
+                                                <?php
+                                                $totalSaldoAwal = 0;
+                                                $totalDebit = 0;
+                                                $totalKredit = 0;
+                                                $totalSaldoAkhir = 0;
+                                                foreach ($akunDalamKategori as $a):
+                                                    $totalSaldoAwal += $a['saldo_bulan_ini'];
+                                                    $totalDebit += $a['total_debit'];
+                                                    $totalKredit += $a['total_kredit'];
+                                                    $totalSaldoAkhir += $a['saldo_akhir'];
+                                                    ?>
                                                     <tr>
                                                         <td><?= esc($a['kode_akun']) ?></td>
                                                         <td><?= esc($a['nama_akun']) ?></td>
                                                         <td><?= esc($a['jenis']) ?></td>
-                                                        <td class="text-end">
-                                                            <?= number_to_currency($a['saldo_bulan_ini'], 'IDR', 'id', 2) ?>
+                                                        <td class="saldo-awal text-end">
+                                                            <?= number_to_currency($a['saldo_bulan_ini'], 'IDR', 'id', 0) ?>
                                                         </td>
-                                                        <td class="text-end">
-                                                            <?= number_to_currency($a['total_debit'], 'IDR', 'id', 2) ?>
+                                                        <td class="total-debit text-end">
+                                                            <?= number_to_currency($a['total_debit'], 'IDR', 'id', 0) ?>
                                                         </td>
-                                                        <td class="text-end">
-                                                            <?= number_to_currency($a['total_kredit'], 'IDR', 'id', 2) ?>
+                                                        <td class="total-kredit text-end">
+                                                            <?= number_to_currency($a['total_kredit'], 'IDR', 'id', 0) ?>
                                                         </td>
-                                                        <td class="text-end">
-                                                            <?= number_to_currency($a['saldo_akhir'], 'IDR', 'id', 2) ?>
-                                                        </td>
-                                                        <td>
-                                                            <a href="<?= base_url('admin/buku_besar/detail/' . $a['id'] . '?bulan=' . $bulan . '&tahun=' . $tahun) ?>"
-                                                                class="btn btn-info btn-sm" title="Lihat Detail Transaksi">
-                                                                <i class="fas fa-eye"></i>
-                                                            </a>
-                                                            <!-- Tombol Export per akun jika masih relevan -->
-                                                            <!-- <a href="<?= base_url('admin/buku_besar/export/buku-besar/' . $a['id'] . '?bulan=' . $bulan . '&tahun=' . $tahun) ?>" class="btn btn-success btn-sm" title="Export Excel">
-                                                                <i class="fas fa-file-excel"></i>
-                                                            </a> -->
+                                                        <td class="saldo-akhir text-end">
+                                                            <?= number_to_currency($a['saldo_akhir'], 'IDR', 'id', 0) ?>
                                                         </td>
                                                     </tr>
                                                 <?php endforeach; ?>
                                             </tbody>
+                                            <tfoot>
+                                                <!-- Baris total per kategori -->
+                                                <tr>
+                                                    <td colspan="3" class="text-end"><strong>Total</strong></td>
+                                                    <td class="text-end">
+                                                        <?= number_to_currency($totalSaldoAwal, 'IDR', 'id', 0) ?></td>
+                                                    <td class="text-end"><?= number_to_currency($totalDebit, 'IDR', 'id', 0) ?>
+                                                    </td>
+                                                    <td class="text-end"><?= number_to_currency($totalKredit, 'IDR', 'id', 0) ?>
+                                                    </td>
+                                                    <td class="text-end">
+                                                        <?= number_to_currency($totalSaldoAkhir, 'IDR', 'id', 0) ?></td>
+                                                </tr>
+                                            </tfoot>
                                         </table>
                                     </div>
                                 <?php else: ?>
                                     <p>Tidak ada akun dalam kategori ini.</p>
                                 <?php endif; ?>
                             </div>
+
                         </div>
                     </div>
                     <?php $index++; ?>
@@ -171,4 +185,66 @@
     </div>
 </div>
 
+<script>
+    // Fungsi untuk menghitung total kolom
+    function hitungTotal() {
+        let totalSaldoAwal = 0;
+        let totalDebit = 0;
+        let totalKredit = 0;
+        let totalSaldoAkhir = 0;
+
+        // Ambil semua baris data
+        const rows = document.querySelectorAll('#akunTable tbody tr');
+        rows.forEach(row => {
+            const saldoAwal = parseFloat(row.querySelector('.saldo-awal').textContent.replace(/[^\d.-]/g, '')) || 0;
+            const debit = parseFloat(row.querySelector('.total-debit').textContent.replace(/[^\d.-]/g, '')) || 0;
+            const kredit = parseFloat(row.querySelector('.total-kredit').textContent.replace(/[^\d.-]/g, '')) || 0;
+            const saldoAkhir = parseFloat(row.querySelector('.saldo-akhir').textContent.replace(/[^\d.-]/g, '')) || 0;
+
+            // Jumlahkan nilai-nilai
+            totalSaldoAwal += saldoAwal;
+            totalDebit += debit;
+            totalKredit += kredit;
+            totalSaldoAkhir += saldoAkhir;
+        });
+
+        // Update total di footer
+        document.getElementById('total-saldo-awal').textContent = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalSaldoAwal);
+        document.getElementById('total-debit').textContent = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalDebit);
+        document.getElementById('total-kredit').textContent = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalKredit);
+        document.getElementById('total-saldo-akhir').textContent = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(totalSaldoAkhir);
+    }
+
+    // Panggil fungsi untuk menghitung total saat dokumen dimuat
+    document.addEventListener('DOMContentLoaded', function () {
+        hitungTotal();
+    });
+
+
+    // Panggil fungsi untuk menghitung total saat dokumen dimuat
+    document.addEventListener('DOMContentLoaded', function () {
+        hitungTotal();
+    });
+    // Fungsi untuk membersihkan nilai (menghapus format ribuan) dan mengonversi ke angka
+    function cleanNumber(value) {
+        return parseFloat(value.replace(/\./g, '').replace(',', '.')) || 0;
+    }
+
+    // Panggil fungsi ini setelah data tabel dimuat
+    window.addEventListener('DOMContentLoaded', function () {
+        hitungTotalAkun();
+    });
+
+
+    // Fungsi untuk membersihkan nilai (menghapus format ribuan) dan mengonversi ke angka
+    function cleanNumber(value) {
+        return parseFloat(value.replace(/\./g, '').replace(',', '.')) || 0;
+    }
+
+    // Panggil fungsi ini setelah data tabel dimuat
+    window.addEventListener('DOMContentLoaded', function () {
+        hitungTotalAkun();
+    });
+
+</script>
 <?= $this->endSection(); ?>
