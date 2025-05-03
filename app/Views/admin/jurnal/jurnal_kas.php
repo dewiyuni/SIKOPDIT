@@ -79,7 +79,8 @@
                             </tr>
                         </thead>
                         <tbody id="dumBody">
-                            <?php $no = 1; foreach ($jurnal_kas as $k): ?>
+                            <?php $no = 1;
+                            foreach ($jurnal_kas as $k): ?>
                                 <?php if ($k['kategori'] == 'DUM'): ?>
                                     <tr data-id="<?= $k['id'] ?>" class="data-row" style="display: none;">
                                         <td><?= $no++ ?></td>
@@ -88,14 +89,16 @@
                                                 value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" required
                                                 oninput="hitungTotal()">
                                         </td>
-                                        <td><input type="text" class="form-control form-control-sm" value="<?= $k['uraian'] ?>"></td>
+                                        <td><input type="text" class="form-control form-control-sm" value="<?= $k['uraian'] ?>">
+                                        </td>
                                         <td>
                                             <input type="text" class="form-control form-control-sm dum"
                                                 value="<?= number_format($k['jumlah'], 0, ',', '.') ?>"
                                                 oninput="formatRibuan(this)">
                                         </td>
                                         <td style="text-align: center;">
-                                            <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'dum')">Hapus</button>
+                                            <button class="btn btn-danger btn-sm"
+                                                onclick="hapusBaris(this, 'dum')">Hapus</button>
                                         </td>
                                     </tr>
                                 <?php endif; ?>
@@ -110,7 +113,8 @@
                         </tfoot>
                     </table>
                 </div>
-                <button class="btn btn-info btn-sm" style="width: 100%; display: block;" onclick="tambahDUM()">Tambah DUM</button>
+                <button class="btn btn-info btn-sm" style="width: 100%; display: block;" onclick="tambahDUM()">Tambah
+                    DUM</button>
 
                 <div class="d-flex justify-content-between align-items-center">
                     <h4 class="mt-4 mb-2">Data DUK</h4>
@@ -127,7 +131,8 @@
                             </tr>
                         </thead>
                         <tbody id="dukBody">
-                            <?php $no = 1; foreach ($jurnal_kas as $k): ?>
+                            <?php $no = 1;
+                            foreach ($jurnal_kas as $k): ?>
                                 <?php if ($k['kategori'] == 'DUK'): ?>
                                     <tr data-id="<?= $k['id'] ?>" class="data-row" style="display: none;">
                                         <td><?= $no++ ?></td>
@@ -136,14 +141,16 @@
                                                 value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" required
                                                 oninput="hitungTotal()">
                                         </td>
-                                        <td><input type="text" class="form-control form-control-sm" value="<?= $k['uraian'] ?>"></td>
+                                        <td><input type="text" class="form-control form-control-sm" value="<?= $k['uraian'] ?>">
+                                        </td>
                                         <td>
                                             <input type="text" class="form-control form-control-sm duk"
                                                 value="<?= number_format($k['jumlah'], 0, ',', '.') ?>"
                                                 oninput="formatRibuan(this)">
                                         </td>
                                         <td style="text-align: center;">
-                                            <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'duk')">Hapus</button>
+                                            <button class="btn btn-danger btn-sm"
+                                                onclick="hapusBaris(this, 'duk')">Hapus</button>
                                         </td>
                                     </tr>
                                 <?php endif; ?>
@@ -158,7 +165,8 @@
                         </tfoot>
                     </table>
                 </div>
-                <button class="btn btn-info btn-sm" style="width: 100%; display: block;" onclick="tambahDUK()">Tambah DUK</button>
+                <button class="btn btn-info btn-sm" style="width: 100%; display: block;" onclick="tambahDUK()">Tambah
+                    DUK</button>
 
 
                 <h4 class="mt-4 mb-2">Total Per Bulan</h4>
@@ -193,23 +201,23 @@
     // Fungsi untuk memformat angka ke format ribuan (IDR)
     function formatRibuan(input) {
         let number = input.value.replace(/\D/g, "");
-         if (number === "") {
-             input.value = "";
+        if (number === "") {
+            input.value = "";
         } else {
-             input.value = new Intl.NumberFormat("id-ID").format(number);
+            input.value = new Intl.NumberFormat("id-ID").format(number);
         }
         hitungTotal(); // Perbarui total setelah format
     }
 
-     // Fungsi untuk memformat angka numerik ke string format ribuan
+    // Fungsi untuk memformat angka numerik ke string format ribuan
     function formatNumberString(number) {
         if (typeof number !== 'number' || isNaN(number)) {
             return "0";
         }
-         return new Intl.NumberFormat("id-ID").format(number);
+        return new Intl.NumberFormat("id-ID").format(number);
     }
 
-     // Fungsi untuk menambah baris DUM
+    // Fungsi untuk menambah baris DUM
     function tambahDUM() {
         let tbody = document.getElementById("dumBody");
         let row = tbody.insertRow();
@@ -229,30 +237,30 @@
         let selectedMonth = document.getElementById("bulanSelect").value;
         if (selectedYear && selectedMonth) {
             let defaultDate = `${selectedYear}-${selectedMonth}-01`;
-             try {
-                 const checkDate = new Date(defaultDate);
-                 if (!isNaN(checkDate.getTime())) {
-                      row.querySelector(".date-dum").value = defaultDate;
-                 } else {
-                      row.querySelector(".date-dum").value = `${selectedYear}-${selectedMonth}-01`;
-                 }
-             } catch (e) {
-                  row.querySelector(".date-dum").value = `${selectedYear}-${selectedMonth}-01`;
-             }
+            try {
+                const checkDate = new Date(defaultDate);
+                if (!isNaN(checkDate.getTime())) {
+                    row.querySelector(".date-dum").value = defaultDate;
+                } else {
+                    row.querySelector(".date-dum").value = `${selectedYear}-${selectedMonth}-01`;
+                }
+            } catch (e) {
+                row.querySelector(".date-dum").value = `${selectedYear}-${selectedMonth}-01`;
+            }
         } else {
-             let today = new Date().toISOString().split('T')[0];
-             row.querySelector(".date-dum").value = today;
+            let today = new Date().toISOString().split('T')[0];
+            row.querySelector(".date-dum").value = today;
         }
 
-         const rowDate = new Date(row.querySelector(".date-dum").value);
-         const rowYear = rowDate.getFullYear();
-         const rowMonth = (rowDate.getMonth() + 1).toString().padStart(2, '0');
+        const rowDate = new Date(row.querySelector(".date-dum").value);
+        const rowYear = rowDate.getFullYear();
+        const rowMonth = (rowDate.getMonth() + 1).toString().padStart(2, '0');
 
-         if (selectedYear == rowYear && selectedMonth == rowMonth) {
-             row.style.display = "";
-         } else {
-              row.style.display = "none";
-         }
+        if (selectedYear == rowYear && selectedMonth == rowMonth) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
 
         hitungTotal();
         renumberRows("#dumBody");
@@ -278,30 +286,30 @@
         let selectedMonth = document.getElementById("bulanSelect").value;
         if (selectedYear && selectedMonth) {
             let defaultDate = `${selectedYear}-${selectedMonth}-01`;
-             try {
-                 const checkDate = new Date(defaultDate);
-                 if (!isNaN(checkDate.getTime())) {
-                      row.querySelector(".date-duk").value = defaultDate;
-                 } else {
-                     row.querySelector(".date-duk").value = `${selectedYear}-${selectedMonth}-01`;
-                 }
-             } catch (e) {
-                  row.querySelector(".date-duk").value = `${selectedYear}-${selectedMonth}-01`;
-             }
+            try {
+                const checkDate = new Date(defaultDate);
+                if (!isNaN(checkDate.getTime())) {
+                    row.querySelector(".date-duk").value = defaultDate;
+                } else {
+                    row.querySelector(".date-duk").value = `${selectedYear}-${selectedMonth}-01`;
+                }
+            } catch (e) {
+                row.querySelector(".date-duk").value = `${selectedYear}-${selectedMonth}-01`;
+            }
         } else {
-             let today = new Date().toISOString().split('T')[0];
-             row.querySelector(".date-duk").value = today;
+            let today = new Date().toISOString().split('T')[0];
+            row.querySelector(".date-duk").value = today;
         }
 
-         const rowDate = new Date(row.querySelector(".date-duk").value);
-         const rowYear = rowDate.getFullYear();
-         const rowMonth = (rowDate.getMonth() + 1).toString().padStart(2, '0');
+        const rowDate = new Date(row.querySelector(".date-duk").value);
+        const rowYear = rowDate.getFullYear();
+        const rowMonth = (rowDate.getMonth() + 1).toString().padStart(2, '0');
 
-         if (selectedYear == rowYear && selectedMonth == rowMonth) {
-             row.style.display = "";
-         } else {
-              row.style.display = "none";
-         }
+        if (selectedYear == rowYear && selectedMonth == rowMonth) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
 
         hitungTotal();
         renumberRows("#dukBody");
@@ -314,10 +322,10 @@
 
         document.querySelectorAll("#dumBody tr.data-row").forEach(row => {
             if (row.style.display !== 'none') {
-                 let input = row.querySelector(".dum");
-                 if (input) {
+                let input = row.querySelector(".dum");
+                if (input) {
                     totalDUM += cleanNumber(input.value);
-                 }
+                }
             }
         });
 
@@ -343,7 +351,7 @@
         tbody.innerHTML = "";
 
         document.querySelectorAll("#dumBody tr.data-row, #dukBody tr.data-row").forEach(row => {
-             if (row.style.display !== 'none') {
+            if (row.style.display !== 'none') {
                 let tanggalInput = row.querySelector("input[type='date']");
                 let dumInput = row.querySelector(".dum");
                 let dukInput = row.querySelector(".duk");
@@ -365,13 +373,13 @@
         });
 
         if (Object.keys(totals).length === 0) {
-             let selectedYear = document.getElementById("tahunSelect").value;
-             let selectedMonth = document.getElementById("bulanSelect").value;
-             if (selectedYear && selectedMonth) {
-                  tbody.innerHTML = `<tr><td colspan="4" class="text-center">Tidak ada data untuk periode ini</td></tr>`;
-             } else {
-                 tbody.innerHTML = `<tr><td colspan="4" class="text-center">Pilih periode untuk melihat total</td></tr>`;
-             }
+            let selectedYear = document.getElementById("tahunSelect").value;
+            let selectedMonth = document.getElementById("bulanSelect").value;
+            if (selectedYear && selectedMonth) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center">Tidak ada data untuk periode ini</td></tr>`;
+            } else {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center">Pilih periode untuk melihat total</td></tr>`;
+            }
             return;
         }
 
@@ -404,28 +412,28 @@
             if (id) {
                 fetch(`<?= base_url('admin/jurnal/delete/') ?>${id}`, {
                     method: "DELETE",
-                     headers: {
-                         // Tambahkan header jika CI4 CSRF diaktifkan
-                         // 'X-CSRF-Token': '<?php // echo csrf_hash(); ?>'
-                         'X-Requested-With': 'XMLHttpRequest'
+                    headers: {
+                        // Tambahkan header jika CI4 CSRF diaktifkan
+                        // 'X-CSRF-Token': '<?php // echo csrf_hash(); ?>'
+                        'X-Requested-With': 'XMLHttpRequest'
                     }
                 })
-                .then(response => {
-                    const contentType = response.headers.get("content-type");
-                     if (contentType && contentType.indexOf("application/json") !== -1) {
-                        return response.json();
-                     } else {
-                        console.error("Server response was not JSON during delete:", response);
-                        return response.text().then(text => { throw new Error("Unexpected server response during delete: " + text) });
-                     }
-                })
-                .then(result => {
-                    console.log("Delete result:", result);
-                })
-                .catch(error => {
-                    console.error("Error deleting row:", error);
-                    alert("Terjadi kesalahan saat menghapus data. Detail di console log.");
-                });
+                    .then(response => {
+                        const contentType = response.headers.get("content-type");
+                        if (contentType && contentType.indexOf("application/json") !== -1) {
+                            return response.json();
+                        } else {
+                            console.error("Server response was not JSON during delete:", response);
+                            return response.text().then(text => { throw new Error("Unexpected server response during delete: " + text) });
+                        }
+                    })
+                    .then(result => {
+                        console.log("Delete result:", result);
+                    })
+                    .catch(error => {
+                        console.error("Error deleting row:", error);
+                        alert("Terjadi kesalahan saat menghapus data. Detail di console log.");
+                    });
             }
 
             hitungTotal();
@@ -455,23 +463,23 @@
                     jumlah: cleanNumber(jumlahInput.value || "0"),
                     kategori: kategori
                 });
-             } else {
-                 incompleteRows++;
-                 console.warn("Skipping incomplete row during save:", row);
-             }
+            } else {
+                incompleteRows++;
+                console.warn("Skipping incomplete row during save:", row);
+            }
         });
 
         if (dataToSave.length === 0) {
-             if (incompleteRows > 0) {
-                  alert(`Tidak ada data lengkap untuk disimpan. Ditemukan ${incompleteRows} baris tidak lengkap yang dilewati.`);
-             } else {
-                  alert("Tidak ada data baru atau perubahan yang terdeteksi.");
-             }
+            if (incompleteRows > 0) {
+                alert(`Tidak ada data lengkap untuk disimpan. Ditemukan ${incompleteRows} baris tidak lengkap yang dilewati.`);
+            } else {
+                alert("Tidak ada data baru atau perubahan yang terdeteksi.");
+            }
             return;
         }
 
         if (!confirm(`Anda akan menyimpan ${dataToSave.length} data (termasuk update dan data baru). Lanjutkan?`)) {
-             return;
+            return;
         }
 
         const saveButton = document.querySelector("button.btn-success.mb-3");
@@ -482,44 +490,44 @@
             method: "POST",
             headers: {
                 "Content-Type": "application/json",
-                 // Tambahkan header jika CI4 CSRF diaktifkan
-                 // 'X-CSRF-Token': '<?php // echo csrf_hash(); ?>'
-                 'X-Requested-With': 'XMLHttpRequest'
+                // Tambahkan header jika CI4 CSRF diaktifkan
+                // 'X-CSRF-Token': '<?php // echo csrf_hash(); ?>'
+                'X-Requested-With': 'XMLHttpRequest'
             },
             body: JSON.stringify(dataToSave),
         })
-        .then(response => {
-             if (!response.ok) {
-                 return response.text().then(text => { throw new Error(`HTTP error! status: ${response.status}, body: ${text}`) });
-             }
-             const contentType = response.headers.get("content-type");
-             if (contentType && contentType.indexOf("application/json") !== -1) {
-                return response.json();
-             } else {
-                return response.text().then(text => { throw new Error("Unexpected server response (not JSON): " + text) });
-             }
-        })
-        .then(result => {
-            console.log("Simpan result:", result);
-            alert(result.message);
-            if (result.status === 'success' || result.status === 'partial') {
-                // === START CACHE FILTER ===
-                // Simpan filter saat ini ke sessionStorage SEBELUM reload
-                sessionStorage.setItem('lastYearFilter', document.getElementById("tahunSelect").value);
-                sessionStorage.setItem('lastMonthFilter', document.getElementById("bulanSelect").value);
-                // === END CACHE FILTER ===
-                location.reload(); // Reload halaman
-            }
-        })
-        .catch(error => {
-            console.error("Error saving data:", error);
-             const errorMessage = error.message || "Terjadi kesalahan yang tidak diketahui saat menyimpan data.";
-            alert(`Terjadi kesalahan saat menyimpan data: ${errorMessage}. Detail lebih lanjut di console log.`);
-        })
-         .finally(() => {
-             saveButton.disabled = false;
-             saveButton.textContent = "Simpan Semua Perubahan";
-         });
+            .then(response => {
+                if (!response.ok) {
+                    return response.text().then(text => { throw new Error(`HTTP error! status: ${response.status}, body: ${text}`) });
+                }
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    return response.json();
+                } else {
+                    return response.text().then(text => { throw new Error("Unexpected server response (not JSON): " + text) });
+                }
+            })
+            .then(result => {
+                console.log("Simpan result:", result);
+                alert(result.message);
+                if (result.status === 'success' || result.status === 'partial') {
+                    // === START CACHE FILTER ===
+                    // Simpan filter saat ini ke sessionStorage SEBELUM reload
+                    sessionStorage.setItem('lastYearFilter', document.getElementById("tahunSelect").value);
+                    sessionStorage.setItem('lastMonthFilter', document.getElementById("bulanSelect").value);
+                    // === END CACHE FILTER ===
+                    location.reload(); // Reload halaman
+                }
+            })
+            .catch(error => {
+                console.error("Error saving data:", error);
+                const errorMessage = error.message || "Terjadi kesalahan yang tidak diketahui saat menyimpan data.";
+                alert(`Terjadi kesalahan saat menyimpan data: ${errorMessage}. Detail lebih lanjut di console log.`);
+            })
+            .finally(() => {
+                saveButton.disabled = false;
+                saveButton.textContent = "Simpan Semua Perubahan";
+            });
     }
 
     // Fungsi untuk memfilter data
@@ -557,7 +565,7 @@
                     row.style.display = "none";
                 }
             } else {
-                 row.style.display = "none";
+                row.style.display = "none";
             }
         });
 
@@ -606,15 +614,15 @@
         // Setel nilai dropdown berdasarkan yearToFilter dan monthToFilter
         // Pastikan nilainya ada dalam opsi dropdown sebelum disetel
         if (tahunSelect.querySelector(`option[value="${yearToFilter}"]`)) {
-             tahunSelect.value = yearToFilter;
+            tahunSelect.value = yearToFilter;
         } else {
-             tahunSelect.value = ""; // Reset jika nilai tidak valid
+            tahunSelect.value = ""; // Reset jika nilai tidak valid
         }
 
         if (bulanSelect.querySelector(`option[value="${monthToFilter}"]`)) {
             bulanSelect.value = monthToFilter;
         } else {
-             bulanSelect.value = ""; // Reset jika nilai tidak valid
+            bulanSelect.value = ""; // Reset jika nilai tidak valid
         }
 
 
@@ -627,10 +635,10 @@
 
         // Tambahkan event listener untuk input jumlah dan tanggal
         document.querySelectorAll(".dum, .duk").forEach(input => {
-             // formatRibuan sudah memanggil hitungTotal()
+            // formatRibuan sudah memanggil hitungTotal()
         });
         document.querySelectorAll(".date-dum, .date-duk").forEach(input => {
-             input.addEventListener("change", hitungTotal);
+            input.addEventListener("change", hitungTotal);
         });
 
     });
