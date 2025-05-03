@@ -83,10 +83,10 @@
                                         <td>
                                             <input type="date" class="form-control date-dum"
                                                 value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" required
-                                                oninput="hitungTotalPerHari()">
+                                                disabled oninput="hitungTotalPerHari()">
                                         </td>
                                         <td><input type="text" class="form-control" value="<?= $k['uraian'] ?>"
-                                                data-id="<?= $k['id'] ?>"></td>
+                                                data-id="<?= $k['id'] ?>" disabled></td>
                                         <td>
                                             <input type="text" class="form-control dum"
                                                 value="<?= number_format($k['jumlah'], 0, ',', '.') ?>" data-id="<?= $k['id'] ?>"
@@ -136,10 +136,10 @@
                                         <td>
                                             <input type="date" class="form-control date-duk"
                                                 value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" required
-                                                oninput="hitungTotalPerHari()">
+                                                disabled oninput="hitungTotalPerHari()">
                                         </td>
                                         <td><input type="text" class="form-control" value="<?= $k['uraian'] ?>"
-                                                data-id="<?= $k['id'] ?>"></td>
+                                                data-id="<?= $k['id'] ?>" disabled></td>
                                         <td>
                                             <input type="text" class="form-control duk"
                                                 value="<?= number_format($k['jumlah'], 0, ',', '.') ?>" data-id="<?= $k['id'] ?>"
