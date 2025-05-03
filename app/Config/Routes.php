@@ -28,12 +28,13 @@ $routes->get('admin/edit_anggota/(:segment)', 'AnggotaController::editAnggota/$1
 $routes->post('/admin/updateAnggota', 'AnggotaController::updateAnggota');
 $routes->get('admin/detail_anggota/(:num)', 'AnggotaController::detailAnggota/$1');
 $routes->post('/admin/hapus_anggota/(:num)', 'AnggotaController::hapusAnggota/$1');
-$routes->get('admin/kelola_pengguna', 'AuthController::kelolaPengguna');
-$routes->get('admin/tambah_pengguna', 'AuthController::tambahPengguna');
-$routes->post('admin/simpan_pengguna', 'AuthController::simpanPengguna');
-$routes->get('admin/edit_pengguna/(:segment)', 'AuthController::editPengguna/$1');  // Route untuk form edit
-$routes->post('admin/updatePengguna', 'AuthController::updatePengguna');
-$routes->get('admin/hapus_pengguna/(:num)', 'AuthController::hapusPengguna/$1');
+$routes->get('/admin/kelola_pengguna', 'AuthController::kelolaPengguna', ['as' => 'kelola_pengguna']);
+$routes->get('/admin/tambah_pengguna', 'AuthController::tambahPengguna', ['as' => 'tambah_pengguna']);
+$routes->post('/admin/simpan_pengguna', 'AuthController::simpanPengguna'); // POST untuk menyimpan
+$routes->get('/admin/edit_pengguna/(:num)', 'AuthController::editPengguna/$1', ['as' => 'edit_pengguna']); // GET untuk form edit, gunakan :num
+$routes->post('/admin/updatePengguna', 'AuthController::updatePengguna'); // POST untuk update (jika form pakai POST)
+// PERBAIKI METHOD DARI GET MENJADI POST UNTUK HAPUS PENGGUNA (Sesuai form di view)
+$routes->post('/admin/hapus_pengguna/(:num)', 'AuthController::hapusPengguna/$1'); // POST untuk menghapus, gunakan :num
 
 // ====================== Admin routes ================================
 $routes->get('admin/jenis_simpanan', 'TransaksiSimpanan::jenisSimpanan');

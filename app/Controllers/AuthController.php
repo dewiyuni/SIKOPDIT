@@ -66,79 +66,211 @@ class AuthController extends BaseController
         return redirect()->to('auth/login');
     }
 
-    // ================= Pengguna user ============================================
-
+    // PASTIKAN ROUTE INI ADA DALAM GROUP ADMIN DENGAN FILTER roleCheck
     public function kelolaPengguna()
     {
-        $data['users'] = $this->authModel->findAll();
+        // Fallback cek peran jika filter route tidak berfungsi
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to(site_url('karyawan/dashboard'))->with('error', 'Akses ditolak.');
+        }
+
+        $data['users'] = $this->authModel->findAll(); // Ambil semua user
+        // Flash data success/error/errors dari simpan/update/delete akan otomatis tersedia
         return view('admin/kelola_pengguna', $data);
     }
 
+    // PASTIKAN ROUTE INI ADA DALAM GROUP ADMIN DENGAN FILTER roleCheck
     public function tambahPengguna()
     {
+        // Fallback cek peran jika filter route tidak berfungsi
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to(site_url('karyawan/dashboard'))->with('error', 'Akses ditolak.');
+        }
+        // View ini akan menampilkan form tambah pengguna
+        // Flash data error/errors dari simpanPengguna() akan otomatis tersedia
         return view('admin/tambah_pengguna');
     }
 
+    // PASTIKAN ROUTE INI ADA DALAM GROUP ADMIN DENGAN FILTER roleCheck
     public function simpanPengguna()
     {
-        $validation = \Config\Services::validation();
-        $validation->setRules([
-            'nama' => 'required',
-            'email' => 'required|valid_email|is_unique[users.email]',
-            'password' => 'required|min_length[6]',
-            'role' => 'required|in_list[admin,karyawan]',
-        ]);
-
-        // Cek apakah validasi gagal
-        if (!$validation->withRequest($this->request)->run()) {
-            return redirect()->back()->withInput()->with('errors', $validation->getErrors());
+        // Fallback cek peran jika filter route tidak berfungsi
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to(site_url('karyawan/dashboard'))->with('error', 'Akses ditolak.');
         }
 
-        // Jika lolos validasi, baru simpan ke database
+        $rules = [
+            'nama' => 'required',
+            'email' => [
+                'rules' => 'required|valid_email|is_unique[users.email]',
+                'errors' => [
+                    'is_unique' => 'Email {value} sudah digunakan.' // Pesan kustom untuk unique
+                ]
+            ],
+            'password' => 'required|min_length[6]',
+            'role' => 'required|in_list[admin,karyawan]',
+            'status' => 'required|in_list[aktif,nonaktif]',
+        ];
+
+        // Lakukan validasi
+        if (!$this->validate($rules)) {
+            // Jika validasi gagal, kembali ke form dengan input sebelumnya dan error
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        // Data untuk disimpan
         $data = [
             'nama' => $this->request->getPost('nama'),
             'email' => $this->request->getPost('email'),
             'password' => password_hash($this->request->getPost('password'), PASSWORD_DEFAULT),
             'role' => $this->request->getPost('role'),
-            'status' => 'aktif',
+            'status' => $this->request->getPost('status'),
         ];
 
-        $this->authModel->insert($data);
+        // Coba simpan data
+        // Model insert mengembalikan ID jika berhasil, false jika gagal
+        $insertedId = $this->authModel->insert($data);
 
-        return redirect()->to('/admin/kelola_pengguna')->with('success', 'Pengguna berhasil ditambahkan.');
+        if ($insertedId !== false) {
+            // Jika berhasil insert, redirect ke halaman daftar pengguna dengan pesan sukses
+            return redirect()->to(site_url('admin/kelola_pengguna'))->with('success', 'Pengguna baru berhasil ditambahkan.');
+        } else {
+            // Jika gagal insert (meskipun validasi lolos, misalnya masalah DB)
+            // Anda bisa log $this->authModel->errors() untuk debugging
+            return redirect()->back()->withInput()->with('error', 'Gagal menambahkan pengguna. Silakan coba lagi.');
+        }
     }
 
-
+    // PASTIKAN ROUTE INI ADA DALAM GROUP ADMIN DENGAN FILTER roleCheck
+    // Gunakan (:num) di route untuk ID
     public function editPengguna($id_user)
     {
-        $data['pengguna'] = $this->authModel->find($id_user);
-        if (!$data['pengguna']) {
-            return redirect()->to('/admin/kelola_pengguna')->with('error', 'Pengguna tidak ditemukan');
+        // Fallback cek peran jika filter route tidak berfungsi
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to(site_url('karyawan/dashboard'))->with('error', 'Akses ditolak.');
         }
+
+        $pengguna = $this->authModel->find($id_user);
+
+        if (!$pengguna) {
+            // Jika pengguna tidak ditemukan, redirect ke halaman daftar dengan pesan error
+            return redirect()->to(site_url('admin/kelola_pengguna'))->with('error', 'Pengguna tidak ditemukan.');
+        }
+
+        $data['pengguna'] = $pengguna;
+        // Flash data error/errors dari updatePengguna() akan otomatis tersedia
         return view('admin/edit_pengguna', $data);
     }
 
+    // PASTIKAN ROUTE INI ADA DALAM GROUP ADMIN DENGAN FILTER roleCheck
+    // Route ini menerima POST dari form edit
     public function updatePengguna()
     {
+        // Fallback cek peran jika filter route tidak berfungsi
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to(site_url('karyawan/dashboard'))->with('error', 'Akses ditolak.');
+        }
+
         $id_user = $this->request->getPost('id_user');
 
-        $email = $this->request->getPost('email');
-        $existingUser = $this->authModel->where('email', $email)->where('id_user !=', $id_user)->first();
-        if ($existingUser) {
-            return redirect()->back()->withInput()->with('error', 'Email sudah digunakan oleh pengguna lain.');
+        // Pastikan ID pengguna ada dan pengguna tersebut ada di database
+        $existingUser = $this->authModel->find($id_user);
+        if (!$existingUser) {
+            return redirect()->to(site_url('admin/kelola_pengguna'))->with('error', 'Pengguna tidak ditemukan.');
         }
 
-        $this->authModel->update($id_user, $this->request->getPost());
-        return redirect()->to('/admin/kelola_pengguna')->with('success', 'Pengguna berhasil diperbarui.');
+        // Definisikan aturan validasi
+        $rules = [
+            'id_user' => 'required|numeric', // Pastikan ID ada dan numeric
+            'nama' => 'required',
+            // Validasi unique email, kecuali untuk email pengguna saat ini ($id_user)
+            'email' => [
+                'rules' => "required|valid_email|is_unique[users.email,id_user,{$id_user}]",
+                'errors' => [
+                    'is_unique' => 'Email {value} sudah digunakan oleh pengguna lain.'
+                ]
+            ],
+            // Password validation: opsional (permit_empty) jika field tidak diisi,
+            // tapi jika diisi (if_exist), minimal 6 karakter.
+            // Gunakan permit_empty karena field password di form edit bisa kosong
+            'password' => 'permit_empty|min_length[6]',
+            'role' => 'required|in_list[admin,karyawan]',
+            'status' => 'required|in_list[aktif,nonaktif]',
+        ];
+
+        // Lakukan validasi
+        if (!$this->validate($rules)) {
+            // Jika validasi gagal, kembali ke form dengan input sebelumnya dan error
+            // Menggunakan ID pengguna agar redirect back ke halaman edit yang benar
+            return redirect()->to(site_url('admin/edit_pengguna/' . $id_user))->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        // Siapkan data untuk update
+        $data = [
+            'nama' => $this->request->getPost('nama'),
+            'email' => $this->request->getPost('email'),
+            'role' => $this->request->getPost('role'),
+            'status' => $this->request->getPost('status'),
+        ];
+
+        // Cek apakah field password diisi di form (tidak kosong)
+        $password = $this->request->getPost('password');
+        if (!empty($password)) {
+            // Jika diisi, hash password baru dan tambahkan ke data update
+            $data['password'] = password_hash($password, PASSWORD_DEFAULT);
+        }
+
+        // Lakukan update menggunakan ID
+        // Model update mengembalikan true jika ID valid (meskipun tidak ada baris berubah), false jika error DB
+        $updated = $this->authModel->update($id_user, $data);
+
+        if ($updated) {
+            // Jika berhasil update (atau tidak ada perubahan tapi ID valid)
+            return redirect()->to(site_url('admin/kelola_pengguna'))->with('success', 'Pengguna berhasil diperbarui.');
+        } else {
+            // Ini bisa terjadi jika ada error DB saat update
+            return redirect()->back()->withInput()->with('error', 'Gagal memperbarui pengguna. Silakan coba lagi.');
+            // Note: Redirect back() di sini akan kembali ke URL updatePengguna, bukan edit_pengguna.
+            // Lebih baik redirect ke edit_pengguna dengan ID lagi jika ingin user memperbaiki di sana.
+            // Contoh: return redirect()->to(site_url('admin/edit_pengguna/' . $id_user))->withInput()->with('error', '...');
+        }
     }
+
+    // PASTIKAN ROUTE INI ADA DALAM GROUP ADMIN DENGAN FILTER roleCheck
+    // PASTIKAN ROUTE INI MENGGUNAKAN METHOD POST ATAU DELETE
     public function hapusPengguna($id_user)
     {
-        if (!$this->authModel->delete($id_user, true)) {
-            return redirect()->to('/admin/kelola_pengguna')->with('error', 'Gagal menghapus pengguna.');
+        // Fallback cek peran jika filter route tidak berfungsi
+        if (session()->get('role') !== 'admin') {
+            return redirect()->to(site_url('karyawan/dashboard'))->with('error', 'Akses ditolak.');
         }
 
-        return redirect()->to('/admin/kelola_pengguna')->with('success', 'pengguna berhasil dihapus.');
+        // Cek apakah pengguna yang akan dihapus adalah admin atau pengguna yang sedang login
+        if ($id_user == session()->get('user_id')) {
+            return redirect()->to(site_url('admin/kelola_pengguna'))->with('error', 'Anda tidak dapat menghapus akun Anda sendiri.');
+        }
+
+        // Cari pengguna yang akan dihapus
+        $userToDelete = $this->authModel->find($id_user);
+        if (!$userToDelete) {
+            return redirect()->to(site_url('admin/kelola_pengguna'))->with('error', 'Pengguna tidak ditemukan.');
+        }
+
+        // Cek lagi jika pengguna yang dihapus ternyata admin (meskipun tombol di view sudah disabled)
+        if ($userToDelete->role === 'admin') {
+            return redirect()->to(site_url('admin/kelola_pengguna'))->with('error', 'Anda tidak dapat menghapus pengguna dengan peran Admin.');
+        }
+
+        // Lakukan penghapusan (hard delete karena useSoftDeletes=true, jadi delete($id, true) melakukan hard delete)
+        if ($this->authModel->delete($id_user, true)) {
+            return redirect()->to(site_url('admin/kelola_pengguna'))->with('success', 'Pengguna berhasil dihapus.');
+        } else {
+            // Gagal menghapus
+            // Anda bisa log $this->authModel->errors() untuk debugging
+            return redirect()->to(site_url('admin/kelola_pengguna'))->with('error', 'Gagal menghapus pengguna.');
+        }
     }
+
 
     // ================= Dashboard ============================================
     public function adminDashboard()
