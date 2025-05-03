@@ -47,14 +47,14 @@
                     <div class="form-group mb-3">
                         <label for="jangka_waktu" class="form-label">Jangka Waktu (bulan)</label>
                         <input type="number" name="jangka_waktu" id="jangka_waktu" class="form-control" required min="1"
-                            value="<?= old('jangka_waktu') ?>" onchange="hitungAngsuranBulanan()">
+                            value="<?= old('jangka_waktu') ?>" onchange="hitungAngsuranBulanan(); updateSimulasi();">
                         <?php if (session('errors.jangka_waktu')): ?>
                             <small class="text-danger"><?= session('errors.jangka_waktu') ?></small>
                         <?php endif; ?>
                     </div>
 
                     <div class="form-group mb-3">
-                        <label for="jaminan" class="form-label">Jaminan (Opsional)</label>
+                        <label for="jaminan" class="form-label">Jaminan (Opsional) | >3 Juta (Wajib)</label>
                         <input type="text" name="jaminan" class="form-control" value="<?= old('jaminan') ?>">
                     </div>
                 </div>
@@ -66,7 +66,7 @@
                         <div class="input-group">
                             <span class="input-group-text">Rp</span>
                             <input type="text" id="jumlah_pinjaman" class="form-control" required
-                                oninput="formatRibuan(this); hitungBunga(); hitungAngsuranBulanan();"
+                                oninput="formatRibuan(this); hitungBunga(); hitungAngsuranBulanan(); updateSimulasi();"
                                 autocomplete="off">
                         </div>
                         <input type="hidden" name="jumlah_pinjaman" id="jumlah_pinjaman_hidden"
@@ -77,12 +77,63 @@
                     </div>
 
                     <div class="form-group mb-3">
-                        <label for="bunga" class="form-label">Bunga (2.5%)</label>
+                        <label for="bunga" class="form-label">Bunga Simpanan (2.5%)</label>
                         <div class="input-group">
                             <span class="input-group-text">Rp</span>
                             <input type="text" id="bunga_display" class="form-control" disabled
                                 style="background-color: #f8f9fa;">
+                            <input type="hidden" name="bunga" id="bunga_hidden">
                         </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="jumlah_diterima" class="form-label">Jumlah Diterima</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Rp</span>
+                            <input type="text" id="jumlah_diterima" class="form-control" disabled
+                                style="background-color: #f8f9fa;">
+                            <input type="hidden" name="jumlah_diterima" id="jumlah_diterima_hidden">
+                        </div>
+                    </div>
+
+                    <div class="form-group mb-3">
+                        <label for="angsuran_pokok" class="form-label">Angsuran Pokok per Bulan</label>
+                        <div class="input-group">
+                            <span class="input-group-text">Rp</span>
+                            <input type="text" id="angsuran_pokok" class="form-control" disabled
+                                style="background-color: #f8f9fa;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Simulasi Pembayaran -->
+            <div class="row mt-4">
+                <div class="col-12">
+                    <h5>Simulasi Pembayaran Angsuran</h5>
+                    <div class="table-responsive">
+                        <table class="table table-bordered table-striped">
+                            <thead class="table-primary">
+                                <tr>
+                                    <th>Bulan</th>
+                                    <th>Angsuran Pokok</th>
+                                    <th>Bunga Transaksi (2%)</th>
+                                    <th>Total Bayar</th>
+                                    <th>Sisa Pinjaman</th>
+                                </tr>
+                            </thead>
+                            <tbody id="simulasi_body">
+                                <!-- Data simulasi akan diisi oleh JavaScript -->
+                            </tbody>
+                            <tfoot class="table-info">
+                                <tr>
+                                    <th colspan="2">Total</th>
+                                    <th id="total_bunga_transaksi">Rp 0</th>
+                                    <th id="total_pembayaran">Rp 0</th>
+                                    <th>-</th>
+                                </tr>
+                            </tfoot>
+                        </table>
                     </div>
                 </div>
             </div>
@@ -112,15 +163,17 @@
         return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
     }
 
-    // Hitung bunga dan total pinjaman
+    // Hitung bunga dan jumlah diterima
     function hitungBunga() {
         const pinjaman = parseInt(document.getElementById("jumlah_pinjaman_hidden").value || 0);
         const bungaPersentase = 2.5;
-        const bungaRupiah = pinjaman * (bungaPersentase / 100);
-        const totalPinjaman = pinjaman + bungaRupiah;
+        const bungaRupiah = Math.round(pinjaman * (bungaPersentase / 100));
+        const jumlahDiterima = pinjaman - bungaRupiah;
 
-        document.getElementById("bunga_display").value = formatNumber(Math.round(bungaRupiah));
-        document.getElementById("total_pinjaman").value = formatNumber(Math.round(totalPinjaman));
+        document.getElementById("bunga_display").value = formatNumber(bungaRupiah);
+        document.getElementById("bunga_hidden").value = bungaRupiah;
+        document.getElementById("jumlah_diterima").value = formatNumber(jumlahDiterima);
+        document.getElementById("jumlah_diterima_hidden").value = jumlahDiterima;
     }
 
     // Hitung angsuran bulanan
@@ -129,13 +182,47 @@
         const jangkaWaktu = parseInt(document.getElementById("jangka_waktu").value || 0);
 
         if (pinjaman > 0 && jangkaWaktu > 0) {
-            const angsuranPokok = pinjaman / jangkaWaktu;
-            const bungaPerBulan = pinjaman * (2.5 / 100);
-            const totalAngsuranPerBulan = angsuranPokok + bungaPerBulan;
-
-            document.getElementById("angsuran_bulanan").value = formatNumber(Math.round(totalAngsuranPerBulan));
+            const angsuranPokok = Math.round(pinjaman / jangkaWaktu);
+            document.getElementById("angsuran_pokok").value = formatNumber(angsuranPokok);
         } else {
-            document.getElementById("angsuran_bulanan").value = "0";
+            document.getElementById("angsuran_pokok").value = "0";
+        }
+    }
+
+    // Update tabel simulasi pembayaran
+    function updateSimulasi() {
+        const pinjaman = parseInt(document.getElementById("jumlah_pinjaman_hidden").value || 0);
+        const jangkaWaktu = parseInt(document.getElementById("jangka_waktu").value || 0);
+        let simulasiBody = document.getElementById("simulasi_body");
+        simulasiBody.innerHTML = '';
+
+        if (pinjaman > 0 && jangkaWaktu > 0) {
+            const angsuranPokok = Math.round(pinjaman / jangkaWaktu);
+            let sisaPinjaman = pinjaman;
+            let totalBungaTransaksi = 0;
+            let totalPembayaran = 0;
+
+            for (let i = 1; i <= jangkaWaktu; i++) {
+                const bungaTransaksi = Math.round(angsuranPokok * 0.02); // Bunga 2% per transaksi
+                const totalBayar = angsuranPokok + bungaTransaksi;
+                sisaPinjaman -= angsuranPokok;
+
+                totalBungaTransaksi += bungaTransaksi;
+                totalPembayaran += totalBayar;
+
+                let row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${i}</td>
+                    <td>Rp ${formatNumber(angsuranPokok)}</td>
+                    <td>Rp ${formatNumber(bungaTransaksi)}</td>
+                    <td>Rp ${formatNumber(totalBayar)}</td>
+                    <td>Rp ${formatNumber(Math.max(0, sisaPinjaman))}</td>
+                `;
+                simulasiBody.appendChild(row);
+            }
+
+            document.getElementById("total_bunga_transaksi").innerText = `Rp ${formatNumber(totalBungaTransaksi)}`;
+            document.getElementById("total_pembayaran").innerText = `Rp ${formatNumber(totalPembayaran)}`;
         }
     }
 
@@ -147,6 +234,7 @@
             document.getElementById("jumlah_pinjaman_hidden").value = oldPinjaman;
             hitungBunga();
             hitungAngsuranBulanan();
+            updateSimulasi();
         }
     });
 </script>
