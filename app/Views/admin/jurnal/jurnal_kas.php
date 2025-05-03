@@ -106,13 +106,13 @@
                                         <td></td> <!-- Placeholder for JS numbering -->
                                         <td>
                                             <input type="date" class="form-control form-control-sm date-input"
-                                                value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" required>
+                                                value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" disabled required>
                                         </td>
                                         <td><input type="text" class="form-control form-control-sm uraian-input"
-                                                value="<?= $k['uraian'] ?>"></td>
+                                                value="<?= $k['uraian'] ?>" disabled></td>
                                         <td>
                                             <input type="text" class="form-control form-control-sm dum"
-                                                value="<?= number_format($k['jumlah'], 0, ',', '.') ?>">
+                                                value="<?= number_format($k['jumlah'], 0, ',', '.') ?>" disabled>
                                         </td>
                                         <td style="text-align: center;">
                                             <button class="btn btn-danger btn-sm"
@@ -155,13 +155,13 @@
                                         <td></td> <!-- Placeholder for JS numbering -->
                                         <td>
                                             <input type="date" class="form-control form-control-sm date-input"
-                                                value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" required>
+                                                value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" disabled required>
                                         </td>
                                         <td><input type="text" class="form-control form-control-sm uraian-input"
-                                                value="<?= $k['uraian'] ?>"></td>
+                                                value="<?= $k['uraian'] ?>" disabled></td>
                                         <td>
                                             <input type="text" class="form-control form-control-sm duk"
-                                                value="<?= number_format($k['jumlah'], 0, ',', '.') ?>">
+                                                value="<?= number_format($k['jumlah'], 0, ',', '.') ?>" disabled>
                                         </td>
                                         <td style="text-align: center;">
                                             <button class="btn btn-danger btn-sm"
