@@ -7,11 +7,34 @@
         <a href="<?= site_url('admin/tambah_anggota') ?>" class="btn btn-success">Tambah Anggota</a>
     </div>
     <br>
-    <?php if (session()->getFlashdata('message')): ?>
-        <div class="alert alert-success">
-            <?= esc(session()->getFlashdata('message')) ?>
+
+    <!-- START: Notifikasi Flash Data -->
+    <?php if (session()->getFlashdata('success')): ?>
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <?= esc(session()->getFlashdata('success')) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     <?php endif; ?>
+
+    <?php if (session()->getFlashdata('error')): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <?= esc(session()->getFlashdata('error')) ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+
+    <?php if (session('errors')): ?>
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <strong>Terjadi Kesalahan Validasi:</strong>
+            <ul>
+                <?php foreach (session('errors') as $error): ?>
+                    <li><?= esc($error) ?></li>
+                <?php endforeach; ?>
+            </ul>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    <?php endif; ?>
+    <!-- END: Notifikasi Flash Data -->
 
     <div class="card mb-4">
         <div class="card-header bg-success text-white">
@@ -59,6 +82,7 @@
                                 </a>
                                 <form action="<?= site_url('admin/hapus_anggota/' . $row->id_anggota) ?>" method="post"
                                     class="d-inline" onsubmit="return confirm('Yakin ingin menghapus anggota ini?');">
+                                    <?= csrf_field() ?> <!-- Tambahkan CSRF field untuk form delete -->
                                     <button type="submit" class="btn btn-danger btn-sm">
                                         <i class="fas fa-trash"></i> Hapus
                                     </button>
