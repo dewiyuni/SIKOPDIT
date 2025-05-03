@@ -1413,8 +1413,8 @@ class BukuBesarController extends BaseController
         // Judul
         $sheet->mergeCells('A1:D1')->setCellValue('A1', "NERACA KOMPARATIF");
         $sheet->mergeCells('A2:D2')->setCellValue('A2', "Per " . date('t', strtotime("$tahun-$bulan-01")) . " " . $namaBulanCurrent . " " . $tahun . " dan " . date('t', strtotime("$prevTahun-$prevBulan-01")) . " " . $namaBulanPrev . " " . $prevTahun);
-        $sheet->getStyle('A1:D1')->applyFromArray(['font' => ['bold' => true, 'size' => 14], 'alignment' => ['horizontal' => ExcelAlignment::HORIZONTAL_CENTER]]);
-        $sheet->getStyle('A2:D2')->applyFromArray(['font' => ['bold' => false, 'size' => 11], 'alignment' => ['horizontal' => ExcelAlignment::HORIZONTAL_CENTER]]);
+        $sheet->getStyle('A1:D1')->applyFromArray(['font' => ['bold' => true, 'size' => 14], 'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER]]);
+        $sheet->getStyle('A2:D2')->applyFromArray(['font' => ['bold' => false, 'size' => 11], 'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER]]);
 
         // Header Tabel
         $row = 4;
@@ -1424,9 +1424,9 @@ class BukuBesarController extends BaseController
         $sheet->setCellValue('D' . $row, $namaBulanPrev . ', ' . $prevTahun);
         $headerStyle = [
             'font' => ['bold' => true],
-            'fill' => ['fillType' => ExcelFill::FILL_SOLID, 'startColor' => ['rgb' => 'D9E1F2']],
-            'borders' => ['allBorders' => ['borderStyle' => ExcelBorder::BORDER_THIN]],
-            'alignment' => ['horizontal' => ExcelAlignment::HORIZONTAL_CENTER, 'vertical' => ExcelAlignment::VERTICAL_CENTER]
+            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D9E1F2']],
+            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
+            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER]
         ];
         $sheet->getStyle('A' . $row . ':D' . $row)->applyFromArray($headerStyle);
         $sheet->getRowDimension($row)->setRowHeight(20);
@@ -1482,7 +1482,7 @@ class BukuBesarController extends BaseController
             $totalPrevToShow = ($groupData['label'] == 'ASET TETAP') ? ($groupData['total_net_prev'] ?? 0) : $groupData['total_prev'];
             $sheet->setCellValue('C' . $currentRow, $totalCurrentToShow);
             $sheet->setCellValue('D' . $currentRow, $totalPrevToShow);
-            $sheet->getStyle('A' . $currentRow . ':D' . $currentRow)->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => ExcelFill::FILL_SOLID, 'startColor' => ['rgb' => 'F2F2F2']]]);
+            $sheet->getStyle('A' . $currentRow . ':D' . $currentRow)->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F2F2F2']]]);
             $sheet->getStyle('C' . $currentRow . ':D' . $currentRow)->getNumberFormat()->setFormatCode($numberFormat);
             $currentRow++;
             $sheet->getRowDimension($currentRow)->setRowHeight(5); // Spacer
@@ -1502,7 +1502,7 @@ class BukuBesarController extends BaseController
         $sheet->setCellValue('B' . $row, 'JUMLAH ASET');
         $sheet->setCellValue('C' . $row, $grandTotalAset_current);
         $sheet->setCellValue('D' . $row, $grandTotalAset_prev);
-        $sheet->getStyle('A' . $row . ':D' . $row)->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => ExcelFill::FILL_SOLID, 'startColor' => ['rgb' => 'D9E1F2']]]);
+        $sheet->getStyle('A' . $row . ':D' . $row)->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D9E1F2']]]);
         $sheet->getStyle('C' . $row . ':D' . $row)->getNumberFormat()->setFormatCode($numberFormat);
         $row++;
         $sheet->getRowDimension($row)->setRowHeight(10); // Spacer besar
@@ -1539,7 +1539,7 @@ class BukuBesarController extends BaseController
         $sheet->setCellValue('B' . $currentRowEkuitas, 'SUB TOTAL ' . $groupEkuitas['label']);
         $sheet->setCellValue('C' . $currentRowEkuitas, $groupEkuitas['total_current'] + $labaRugiBersihPeriode);
         $sheet->setCellValue('D' . $currentRowEkuitas, $groupEkuitas['total_prev']);
-        $sheet->getStyle('A' . $currentRowEkuitas . ':D' . $currentRowEkuitas)->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => ExcelFill::FILL_SOLID, 'startColor' => ['rgb' => 'F2F2F2']]]);
+        $sheet->getStyle('A' . $currentRowEkuitas . ':D' . $currentRowEkuitas)->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F2F2F2']]]);
         $sheet->getStyle('C' . $currentRowEkuitas . ':D' . $currentRowEkuitas)->getNumberFormat()->setFormatCode($numberFormat);
         $row = $currentRowEkuitas + 1; // Update row utama
         $sheet->getRowDimension($row)->setRowHeight(5); // Spacer
@@ -1550,7 +1550,7 @@ class BukuBesarController extends BaseController
         $sheet->setCellValue('B' . $row, 'JUMLAH KEWAJIBAN & EKUITAS');
         $sheet->setCellValue('C' . $row, $grandTotalPasivaModal_current);
         $sheet->setCellValue('D' . $row, $grandTotalPasivaModal_prev);
-        $sheet->getStyle('A' . $row . ':D' . $row)->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => ExcelFill::FILL_SOLID, 'startColor' => ['rgb' => 'D9E1F2']]]);
+        $sheet->getStyle('A' . $row . ':D' . $row)->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D9E1F2']]]);
         $sheet->getStyle('C' . $row . ':D' . $row)->getNumberFormat()->setFormatCode($numberFormat);
         $row++;
 
