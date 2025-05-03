@@ -92,14 +92,14 @@ $routes->post('admin/jurnal_kas/simpan', 'JurnalKasController::simpan');
 $routes->put('admin/jurnal_kas/update', 'JurnalKasController::update');
 
 $routes->get('admin/jurnal/jurnal_kas', 'JurnalKasController::index');
-$routes->get('jurnal', 'JurnalKasController::getData'); // Menampilkan semua data
-$routes->post('jurnal/create', 'JurnalKasController::createKas'); // Menambah data
-$routes->put('jurnal/update', 'JurnalKasController::updateKas'); // Mengupdate data
+$routes->get('admin/jurnal', 'JurnalKasController::getData'); // Menampilkan semua data
+$routes->post('admin/jurnal/create', 'JurnalKasController::createKas'); // Menambah data
+$routes->put('admin/jurnal/update', 'JurnalKasController::updateKas'); // Mengupdate data
 $routes->post('/jurnal/saveDUK', 'JurnalKasController::saveDUK');
 $routes->post('admin/jurnal/simpan', 'JurnalKasController::simpan');
-$routes->post('/jurnal/createKas', 'JurnalKasController::createKas');
-$routes->put('jurnal/update/(:num)', 'JurnalKasController::update/$1');
-$routes->delete('admin/jurnal_kas/delete/(:num)', 'JurnalKasController::delete/$1'); //hapus
+$routes->post('admin/jurnal/createKas', 'JurnalKasController::createKas');
+$routes->put('admin/jurnal/update/(:num)', 'JurnalKasController::update/$1');
+$routes->delete('admin/jurnal/delete/(:num)', 'JurnalKasController::delete/$1'); //hapus
 
 $routes->get('export-excel', 'JurnalKasController::exportExcel');
 $routes->post('admin/jurnal/import_excel', 'JurnalKasController::importExcel');

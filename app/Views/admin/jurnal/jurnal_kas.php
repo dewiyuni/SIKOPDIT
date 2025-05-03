@@ -3,7 +3,7 @@
 <div class="container-fluid px-4">
     <h3 class="mt-4">Jurnal Kas</h3>
     <div class="card mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
+        <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h5 class="mb-0">Data Kas</h5>
             <div class="d-flex gap-3 flex-column flex-md-row align-items-center">
                 <!-- Tombol Ekspor -->
@@ -26,10 +26,10 @@
         </div>
 
         <div class="card-body">
-            <div class="row mb-3">
+            <div class="row mb-3 g-2">
                 <div class="col-md-3">
                     <label for="tahunSelect">Pilih Tahun</label>
-                    <select id="tahunSelect" class="form-select" onchange="filterData()">
+                    <select id="tahunSelect" class="form-select">
                         <option value="">Pilih Tahun</option>
                         <?php for ($year = date("Y"); $year >= 2015; $year--): ?>
                             <option value="<?= $year; ?>"><?= $year; ?></option>
@@ -38,7 +38,7 @@
                 </div>
                 <div class="col-md-3">
                     <label for="bulanSelect">Pilih Bulan</label>
-                    <select id="bulanSelect" class="form-select" onchange="filterData()">
+                    <select id="bulanSelect" class="form-select">
                         <option value="">Pilih Bulan</option>
                         <option value="01">Januari</option>
                         <option value="02">Februari</option>
@@ -59,44 +59,43 @@
                 </div>
             </div>
 
+            <!-- Tombol Simpan Semua Perubahan dipindah ke sini -->
+            <button class="btn btn-success mb-3" onclick="simpanKeDatabase()">Simpan Semua Perubahan</button>
+
+
             <div id="dataContainer" style="display: none;">
                 <div class="d-flex justify-content-between align-items-center">
-                    <h4 class="mt-4">Data DUM</h4>
+                    <h4 class="mt-2 mb-2">Data DUM</h4>
                 </div>
                 <div style="overflow-x: auto;">
-                    <table class="table table-bordered table-striped mt-3">
+                    <table class="table table-bordered table-striped">
                         <thead>
                             <tr>
-                                <th>No</th>
-                                <th>Tanggal</th>
+                                <th style="width: 50px;">No</th>
+                                <th style="width: 120px;">Tanggal</th>
                                 <th>Uraian</th>
-                                <th>DUM</th>
-                                <th style="text-align: center;">Aksi</th>
+                                <th style="width: 150px;">DUM</th>
+                                <th style="width: 100px; text-align: center;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="dumBody">
-                            <?php $no = 1;
-                            foreach ($jurnal_kas as $k): ?>
+                            <?php $no = 1; foreach ($jurnal_kas as $k): ?>
                                 <?php if ($k['kategori'] == 'DUM'): ?>
                                     <tr data-id="<?= $k['id'] ?>" class="data-row" style="display: none;">
                                         <td><?= $no++ ?></td>
                                         <td>
-                                            <input type="date" class="form-control date-dum"
+                                            <input type="date" class="form-control form-control-sm date-dum"
                                                 value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" required
-                                                oninput="hitungTotalPerHari()">
+                                                oninput="hitungTotal()">
                                         </td>
-                                        <td><input type="text" class="form-control" value="<?= $k['uraian'] ?>"
-                                                data-id="<?= $k['id'] ?>"></td>
+                                        <td><input type="text" class="form-control form-control-sm" value="<?= $k['uraian'] ?>"></td>
                                         <td>
-                                            <input type="text" class="form-control dum"
-                                                value="<?= number_format($k['jumlah'], 0, ',', '.') ?>" data-id="<?= $k['id'] ?>"
-                                                disabled
+                                            <input type="text" class="form-control form-control-sm dum"
+                                                value="<?= number_format($k['jumlah'], 0, ',', '.') ?>"
                                                 oninput="formatRibuan(this)">
                                         </td>
                                         <td style="text-align: center;">
                                             <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'dum')">Hapus</button>
-                                            <button class="btn btn-success btn-sm"
-                                                onclick="simpanBaris(this, 'dum')">Simpan</button>
                                         </td>
                                     </tr>
                                 <?php endif; ?>
@@ -111,45 +110,40 @@
                         </tfoot>
                     </table>
                 </div>
-                <button class="btn btn-info" style="width: 100%; display: block;" onclick="tambahDUM()">Tambah DUM</button>
+                <button class="btn btn-info btn-sm" style="width: 100%; display: block;" onclick="tambahDUM()">Tambah DUM</button>
 
                 <div class="d-flex justify-content-between align-items-center">
-                    <h4 class="mt-4">Data DUK</h4>
+                    <h4 class="mt-4 mb-2">Data DUK</h4>
                 </div>
                 <div style="overflow-x: auto;">
-                    <table class="table table-bordered table-striped mt-3">
+                    <table class="table table-bordered table-striped">
                         <thead>
                             <tr>
-                                <th style="text-align: center;">No</th>
-                                <th>Tanggal</th>
+                                <th style="width: 50px;">No</th>
+                                <th style="width: 120px;">Tanggal</th>
                                 <th>Uraian</th>
-                                <th>DUK</th>
-                                <th style="text-align: center;">Aksi</th>
+                                <th style="width: 150px;">DUK</th>
+                                <th style="width: 100px; text-align: center;">Aksi</th>
                             </tr>
                         </thead>
                         <tbody id="dukBody">
-                            <?php $no = 1;
-                            foreach ($jurnal_kas as $k): ?>
+                            <?php $no = 1; foreach ($jurnal_kas as $k): ?>
                                 <?php if ($k['kategori'] == 'DUK'): ?>
                                     <tr data-id="<?= $k['id'] ?>" class="data-row" style="display: none;">
                                         <td><?= $no++ ?></td>
                                         <td>
-                                            <input type="date" class="form-control date-duk"
+                                            <input type="date" class="form-control form-control-sm date-duk"
                                                 value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" required
-                                                oninput="hitungTotalPerHari()">
+                                                oninput="hitungTotal()">
                                         </td>
-                                        <td><input type="text" class="form-control" value="<?= $k['uraian'] ?>"
-                                                data-id="<?= $k['id'] ?>"></td>
+                                        <td><input type="text" class="form-control form-control-sm" value="<?= $k['uraian'] ?>"></td>
                                         <td>
-                                            <input type="text" class="form-control duk"
-                                                value="<?= number_format($k['jumlah'], 0, ',', '.') ?>" data-id="<?= $k['id'] ?>"
-                                                disabled
+                                            <input type="text" class="form-control form-control-sm duk"
+                                                value="<?= number_format($k['jumlah'], 0, ',', '.') ?>"
                                                 oninput="formatRibuan(this)">
                                         </td>
                                         <td style="text-align: center;">
                                             <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'duk')">Hapus</button>
-                                            <button class="btn btn-success btn-sm"
-                                                onclick="simpanBaris(this, 'duk')">Simpan</button>
                                         </td>
                                     </tr>
                                 <?php endif; ?>
@@ -164,10 +158,11 @@
                         </tfoot>
                     </table>
                 </div>
-                <button class="btn btn-info" style="width: 100%; display: block;" onclick="tambahDUK()">Tambah DUK</button>
+                <button class="btn btn-info btn-sm" style="width: 100%; display: block;" onclick="tambahDUK()">Tambah DUK</button>
 
-                <h4 class="mt-4">Total Per Bulan</h4>
-                <table class="table table-bordered table-striped mt-3">
+
+                <h4 class="mt-4 mb-2">Total Per Bulan</h4>
+                <table class="table table-bordered table-striped">
                     <thead>
                         <tr>
                             <th>Periode</th>
@@ -177,11 +172,12 @@
                         </tr>
                     </thead>
                     <tbody id="totalPerHariBody">
+                        <!-- Data akan diisi oleh Javascript -->
                     </tbody>
                 </table>
             </div>
-            
-            <div id="noDataMessage" class="alert alert-info mt-3">
+
+            <div id="noDataMessage" class="alert alert-info mt-3 text-center">
                 Silakan pilih tahun dan bulan terlebih dahulu untuk menampilkan data.
             </div>
         </div>
@@ -189,149 +185,196 @@
 </div>
 
 <script>
-    let counterDUM = 1;
-    let counterDUK = 1;
-
-    function tambahDUM() {
-        let tbody = document.getElementById("dumBody");
-        let row = tbody.insertRow();
-        let nomor = tbody.children.length; // Get row number based on total rows
-
-        row.classList.add("data-row");
-        row.innerHTML = `
-            <td>${nomor}</td>
-            <td><input type="date" class="form-control date-dum" required oninput="hitungTotalPerHari()"></td>
-            <td><input type="text" class="form-control" placeholder="Uraian"></td>
-            <td><input type="text" class="form-control dum" value="0" oninput="formatRibuan(this); hitungTotal();"></td>
-            <td>
-                <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'dum')">Hapus</button>
-                <button class="btn btn-success btn-sm" onclick="simpanBaris(this, 'dum')">Simpan</button>
-            </td>
-        `;
-
-        // Set default date based on selected filters
-        let selectedYear = document.getElementById("tahunSelect").value;
-        let selectedMonth = document.getElementById("bulanSelect").value;
-        if (selectedYear && selectedMonth) {
-            let defaultDate = `${selectedYear}-${selectedMonth}-01`;
-            row.querySelector(".date-dum").value = defaultDate;
-        } else {
-            // Use current date if no filters selected
-            let today = new Date().toISOString().split('T')[0];
-            row.querySelector(".date-dum").value = today;
-        }
-
-        // Trigger calculations after adding a new row
-        hitungTotal();
-        hitungTotalPerHari();
-    }
-
-    function tambahDUK() {
-        let tbody = document.getElementById("dukBody");
-        let row = tbody.insertRow();
-        let nomor = tbody.children.length;
-
-        row.classList.add("data-row");
-        row.innerHTML = `
-            <td>${nomor}</td>
-            <td><input type="date" class="form-control date-duk" required oninput="hitungTotalPerHari()"></td>
-            <td><input type="text" class="form-control" placeholder="Uraian"></td>
-            <td><input type="text" class="form-control duk" value="0" oninput="formatRibuan(this); hitungTotal();"></td>
-            <td>
-                <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'duk')">Hapus</button>
-                <button class="btn btn-success btn-sm" onclick="simpanBaris(this, 'duk')">Simpan</button>
-            </td>
-        `;
-
-        // Set default date based on selected filters
-        let selectedYear = document.getElementById("tahunSelect").value;
-        let selectedMonth = document.getElementById("bulanSelect").value;
-        if (selectedYear && selectedMonth) {
-            let defaultDate = `${selectedYear}-${selectedMonth}-01`;
-            row.querySelector(".date-duk").value = defaultDate;
-        } else {
-            // Use current date if no filters selected
-            let today = new Date().toISOString().split('T')[0];
-            row.querySelector(".date-duk").value = today;
-        }
-
-        // Trigger calculations after adding a new row
-        hitungTotal();
-        hitungTotalPerHari();
-    }
-
-    // Function to clean number from thousand format before calculation
+    // Fungsi untuk membersihkan angka dari format ribuan
     function cleanNumber(value) {
         return parseFloat(value.replace(/\./g, "").replace(",", ".")) || 0;
     }
 
-    // Function to format number back to thousand format
+    // Fungsi untuk memformat angka ke format ribuan (IDR)
     function formatRibuan(input) {
-        let number = input.value.replace(/\D/g, ""); // Remove non-numeric characters
-        if (number === "") number = "0"; // If empty, set to 0
-        input.value = new Intl.NumberFormat("id-ID").format(number);
-        hitungTotal(); // Update totals after formatting
+        let number = input.value.replace(/\D/g, "");
+         if (number === "") {
+             input.value = "";
+        } else {
+             input.value = new Intl.NumberFormat("id-ID").format(number);
+        }
+        hitungTotal(); // Perbarui total setelah format
     }
 
-    // Function to calculate total DUM & DUK
+     // Fungsi untuk memformat angka numerik ke string format ribuan
+    function formatNumberString(number) {
+        if (typeof number !== 'number' || isNaN(number)) {
+            return "0";
+        }
+         return new Intl.NumberFormat("id-ID").format(number);
+    }
+
+     // Fungsi untuk menambah baris DUM
+    function tambahDUM() {
+        let tbody = document.getElementById("dumBody");
+        let row = tbody.insertRow();
+
+        row.classList.add("data-row");
+        row.innerHTML = `
+            <td></td> <!-- Placeholder for row number -->
+            <td><input type="date" class="form-control form-control-sm date-dum" required oninput="hitungTotal()"></td>
+            <td><input type="text" class="form-control form-control-sm" placeholder="Uraian"></td>
+            <td><input type="text" class="form-control form-control-sm dum" value="0" oninput="formatRibuan(this)"></td>
+            <td style="text-align: center;">
+                <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'dum')">Hapus</button>
+            </td>
+        `;
+
+        let selectedYear = document.getElementById("tahunSelect").value;
+        let selectedMonth = document.getElementById("bulanSelect").value;
+        if (selectedYear && selectedMonth) {
+            let defaultDate = `${selectedYear}-${selectedMonth}-01`;
+             try {
+                 const checkDate = new Date(defaultDate);
+                 if (!isNaN(checkDate.getTime())) {
+                      row.querySelector(".date-dum").value = defaultDate;
+                 } else {
+                      row.querySelector(".date-dum").value = `${selectedYear}-${selectedMonth}-01`;
+                 }
+             } catch (e) {
+                  row.querySelector(".date-dum").value = `${selectedYear}-${selectedMonth}-01`;
+             }
+        } else {
+             let today = new Date().toISOString().split('T')[0];
+             row.querySelector(".date-dum").value = today;
+        }
+
+         const rowDate = new Date(row.querySelector(".date-dum").value);
+         const rowYear = rowDate.getFullYear();
+         const rowMonth = (rowDate.getMonth() + 1).toString().padStart(2, '0');
+
+         if (selectedYear == rowYear && selectedMonth == rowMonth) {
+             row.style.display = "";
+         } else {
+              row.style.display = "none";
+         }
+
+        hitungTotal();
+        renumberRows("#dumBody");
+    }
+
+    // Fungsi untuk menambah baris DUK
+    function tambahDUK() {
+        let tbody = document.getElementById("dukBody");
+        let row = tbody.insertRow();
+
+        row.classList.add("data-row");
+        row.innerHTML = `
+            <td></td>
+            <td><input type="date" class="form-control form-control-sm date-duk" required oninput="hitungTotal()"></td>
+            <td><input type="text" class="form-control form-control-sm" placeholder="Uraian"></td>
+            <td><input type="text" class="form-control form-control-sm duk" value="0" oninput="formatRibuan(this)"></td>
+            <td style="text-align: center;">
+                <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'duk')">Hapus</button>
+            </td>
+        `;
+
+        let selectedYear = document.getElementById("tahunSelect").value;
+        let selectedMonth = document.getElementById("bulanSelect").value;
+        if (selectedYear && selectedMonth) {
+            let defaultDate = `${selectedYear}-${selectedMonth}-01`;
+             try {
+                 const checkDate = new Date(defaultDate);
+                 if (!isNaN(checkDate.getTime())) {
+                      row.querySelector(".date-duk").value = defaultDate;
+                 } else {
+                     row.querySelector(".date-duk").value = `${selectedYear}-${selectedMonth}-01`;
+                 }
+             } catch (e) {
+                  row.querySelector(".date-duk").value = `${selectedYear}-${selectedMonth}-01`;
+             }
+        } else {
+             let today = new Date().toISOString().split('T')[0];
+             row.querySelector(".date-duk").value = today;
+        }
+
+         const rowDate = new Date(row.querySelector(".date-duk").value);
+         const rowYear = rowDate.getFullYear();
+         const rowMonth = (rowDate.getMonth() + 1).toString().padStart(2, '0');
+
+         if (selectedYear == rowYear && selectedMonth == rowMonth) {
+             row.style.display = "";
+         } else {
+              row.style.display = "none";
+         }
+
+        hitungTotal();
+        renumberRows("#dukBody");
+    }
+
+    // Fungsi untuk menghitung total DUM & DUK dari baris yang *terlihat*
     function hitungTotal() {
         let totalDUM = 0;
         let totalDUK = 0;
 
-        document.querySelectorAll(".dum").forEach(input => {
-            if (input.closest('tr').style.display !== 'none') {
-                totalDUM += cleanNumber(input.value);
+        document.querySelectorAll("#dumBody tr.data-row").forEach(row => {
+            if (row.style.display !== 'none') {
+                 let input = row.querySelector(".dum");
+                 if (input) {
+                    totalDUM += cleanNumber(input.value);
+                 }
             }
         });
 
-        document.querySelectorAll(".duk").forEach(input => {
-            if (input.closest('tr').style.display !== 'none') {
-                totalDUK += cleanNumber(input.value);
+        document.querySelectorAll("#dukBody tr.data-row").forEach(row => {
+            if (row.style.display !== 'none') {
+                let input = row.querySelector(".duk");
+                if (input) {
+                    totalDUK += cleanNumber(input.value);
+                }
             }
         });
 
-        document.getElementById("totalDUM").textContent = totalDUM.toLocaleString("id-ID");
-        document.getElementById("totalDUK").textContent = totalDUK.toLocaleString("id-ID");
+        document.getElementById("totalDUM").textContent = formatNumberString(totalDUM);
+        document.getElementById("totalDUK").textContent = formatNumberString(totalDUK);
 
         hitungTotalPerHari();
     }
 
-    // Function to calculate total per month
+    // Fungsi untuk menghitung total per bulan dari data yang *terlihat*
     function hitungTotalPerHari() {
         let totals = {};
-
-        document.querySelectorAll(".date-dum, .date-duk").forEach(tanggalInput => {
-            let row = tanggalInput.closest("tr");
-            if (row.style.display === 'none') return; // Skip hidden rows
-            
-            let tanggal = tanggalInput.value.trim();
-            if (tanggal === "") return; // Skip if date is empty
-
-            // Extract year and month for grouping
-            let yearMonth = tanggal.substring(0, 7); // Format: YYYY-MM
-
-            let dum = cleanNumber(row.querySelector(".dum")?.value || "0");
-            let duk = cleanNumber(row.querySelector(".duk")?.value || "0");
-
-            if (!totals[yearMonth]) totals[yearMonth] = { dum: 0, duk: 0 };
-
-            // Add values based on which table the row belongs to
-            if (row.closest("#dumBody")) {
-                totals[yearMonth].dum += dum;
-            } else if (row.closest("#dukBody")) {
-                totals[yearMonth].duk += duk;
-            }
-        });
-
         let tbody = document.getElementById("totalPerHariBody");
         tbody.innerHTML = "";
 
+        document.querySelectorAll("#dumBody tr.data-row, #dukBody tr.data-row").forEach(row => {
+             if (row.style.display !== 'none') {
+                let tanggalInput = row.querySelector("input[type='date']");
+                let dumInput = row.querySelector(".dum");
+                let dukInput = row.querySelector(".duk");
+
+                if (tanggalInput && tanggalInput.value) {
+                    let tanggal = tanggalInput.value.trim();
+                    let yearMonth = tanggal.substring(0, 7);
+
+                    if (!totals[yearMonth]) totals[yearMonth] = { dum: 0, duk: 0 };
+
+                    if (dumInput) {
+                        totals[yearMonth].dum += cleanNumber(dumInput.value || "0");
+                    }
+                    if (dukInput) {
+                        totals[yearMonth].duk += cleanNumber(dukInput.value || "0");
+                    }
+                }
+            }
+        });
+
         if (Object.keys(totals).length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" class="text-center">Tidak ada data</td></tr>`;
+             let selectedYear = document.getElementById("tahunSelect").value;
+             let selectedMonth = document.getElementById("bulanSelect").value;
+             if (selectedYear && selectedMonth) {
+                  tbody.innerHTML = `<tr><td colspan="4" class="text-center">Tidak ada data untuk periode ini</td></tr>`;
+             } else {
+                 tbody.innerHTML = `<tr><td colspan="4" class="text-center">Pilih periode untuk melihat total</td></tr>`;
+             }
             return;
         }
 
-        // Sort by year and month
         Object.keys(totals).sort().forEach(yearMonth => {
             let [year, month] = yearMonth.split('-');
             let monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni",
@@ -342,219 +385,254 @@
             let row = tbody.insertRow();
             row.innerHTML = `
                 <td>${monthName} ${year}</td>
-                <td>${totals[yearMonth].dum.toLocaleString("id-ID")}</td>
-                <td>${totals[yearMonth].duk.toLocaleString("id-ID")}</td>
-                <td>${saldo.toLocaleString("id-ID")}</td>
+                <td>${formatNumberString(totals[yearMonth].dum)}</td>
+                <td>${formatNumberString(totals[yearMonth].duk)}</td>
+                <td>${formatNumberString(saldo)}</td>
             `;
         });
     }
 
-    function simpanBaris(button, tipe) {
-        let row = button.closest("tr");
-        let tanggal = row.querySelector("input[type='date']").value;
-        let uraian = row.querySelector("input[type='text']").value;
-        let jumlah = cleanNumber(row.querySelector(`.${tipe}`)?.value || "0");
-
-        // Validate the inputs
-        if (!tanggal || !uraian || !jumlah) {
-            alert("Mohon lengkapi semua field sebelum menyimpan.");
-            return;
-        }
-
-        // Prepare the data to send to the server
-        let data = {
-            tanggal: tanggal,
-            uraian: uraian,
-            jumlah: jumlah,
-            kategori: tipe === 'dum' ? "DUM" : "DUK"
-        };
-
-        console.log("Saving row data:", data); // Log data being sent
-
-        // Send the save request to the backend
-        fetch("<?= base_url('admin/jurnal/simpan') ?>", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify([data]), // Wrap in an array for batch processing
-        })
-            .then(response => response.json())
-            .then(result => {
-                alert(result.message);
-                if (result.status === 'success') {
-                    location.reload(); // Reload to see updates
-                }
-            })
-            .catch(error => {
-                console.error("Error:", error);
-                alert("Terjadi kesalahan saat menyimpan data.");
-            });
-    }
-
-    // Function to delete row & update total
+    // Fungsi untuk menghapus baris
     function hapusBaris(button, tipe) {
         let row = button.closest("tr");
         let id = row.getAttribute('data-id');
+        let rowNumber = row.cells[0].textContent;
 
-        if (id) {
-            // If the row has an ID, it exists in the database
-            if (confirm("Apakah Anda yakin ingin menghapus data ini?")) {
+        if (confirm(`Apakah Anda yakin ingin menghapus baris No. ${rowNumber} ini?`)) {
+            row.remove();
+
+            if (id) {
                 fetch(`<?= base_url('admin/jurnal/delete/') ?>${id}`, {
                     method: "DELETE",
+                     headers: {
+                         // Tambahkan header jika CI4 CSRF diaktifkan
+                         // 'X-CSRF-Token': '<?php // echo csrf_hash(); ?>'
+                         'X-Requested-With': 'XMLHttpRequest'
+                    }
                 })
-                    .then(response => response.json())
-                    .then(result => {
-                        if (result.status === 'success') {
-                            alert(result.message);
-                            row.remove(); // Remove row from view
-                            hitungTotal(); // Update totals
-                            hitungTotalPerHari(); // Update totals per month
-                        } else {
-                            alert(result.message);
-                        }
-                    })
-                    .catch(error => console.error("Error:", error));
+                .then(response => {
+                    const contentType = response.headers.get("content-type");
+                     if (contentType && contentType.indexOf("application/json") !== -1) {
+                        return response.json();
+                     } else {
+                        console.error("Server response was not JSON during delete:", response);
+                        return response.text().then(text => { throw new Error("Unexpected server response during delete: " + text) });
+                     }
+                })
+                .then(result => {
+                    console.log("Delete result:", result);
+                })
+                .catch(error => {
+                    console.error("Error deleting row:", error);
+                    alert("Terjadi kesalahan saat menghapus data. Detail di console log.");
+                });
             }
-        } else {
-            // If the row doesn't have an ID, it's a new row that hasn't been saved
-            row.remove();
+
             hitungTotal();
-            hitungTotalPerHari();
+            renumberRows("#" + tipe + "Body");
         }
     }
 
-    // Function to save to database
+    // Fungsi untuk menyimpan SEMUA perubahan
     function simpanKeDatabase() {
-        let data = [];
+        let dataToSave = [];
+        let incompleteRows = 0;
 
-        // Process DUM entries
-        document.querySelectorAll("#dumBody tr").forEach(row => {
-            if (row.style.display === 'none') return; // Skip hidden rows
-            
-            let tanggal = row.querySelector(".date-dum")?.value;
-            let uraian = row.querySelector("input[type='text']")?.value;
-            let jumlah = cleanNumber(row.querySelector(".dum")?.value || "0");
+        // Proses SEMUA baris .data-row di DOM, terlepas dari visibility
+        document.querySelectorAll("#dumBody tr.data-row, #dukBody tr.data-row").forEach(row => {
+            let tanggalInput = row.querySelector("input[type='date']");
+            let uraianInput = row.querySelector("input[type='text']");
+            let jumlahInput = row.querySelector(".dum") || row.querySelector(".duk");
+
             let id = row.getAttribute('data-id');
+            let kategori = row.closest("#dumBody") ? "DUM" : "DUK";
 
-            if (tanggal && uraian && jumlah) {
-                data.push({
+            if (tanggalInput && tanggalInput.value && uraianInput && uraianInput.value.trim() !== '' && jumlahInput) {
+                dataToSave.push({
                     id: id || null,
-                    tanggal,
-                    uraian,
-                    jumlah,
-                    kategori: "DUM"
+                    tanggal: tanggalInput.value,
+                    uraian: uraianInput.value.trim(),
+                    jumlah: cleanNumber(jumlahInput.value || "0"),
+                    kategori: kategori
                 });
-            }
+             } else {
+                 incompleteRows++;
+                 console.warn("Skipping incomplete row during save:", row);
+             }
         });
 
-        // Process DUK entries
-        document.querySelectorAll("#dukBody tr").forEach(row => {
-            if (row.style.display === 'none') return; // Skip hidden rows
-            
-            let tanggal = row.querySelector(".date-duk")?.value;
-            let uraian = row.querySelector("input[type='text']")?.value;
-            let jumlah = cleanNumber(row.querySelector(".duk")?.value || "0");
-            let id = row.getAttribute('data-id');
-
-            if (tanggal && uraian && jumlah) {
-                data.push({
-                    id: id || null,
-                    tanggal,
-                    uraian,
-                    jumlah,
-                    kategori: "DUK"
-                });
-            }
-        });
-
-        if (data.length === 0) {
-            alert("Tidak ada data yang disimpan.");
+        if (dataToSave.length === 0) {
+             if (incompleteRows > 0) {
+                  alert(`Tidak ada data lengkap untuk disimpan. Ditemukan ${incompleteRows} baris tidak lengkap yang dilewati.`);
+             } else {
+                  alert("Tidak ada data baru atau perubahan yang terdeteksi.");
+             }
             return;
         }
+
+        if (!confirm(`Anda akan menyimpan ${dataToSave.length} data (termasuk update dan data baru). Lanjutkan?`)) {
+             return;
+        }
+
+        const saveButton = document.querySelector("button.btn-success.mb-3");
+        saveButton.disabled = true;
+        saveButton.textContent = "Menyimpan...";
 
         fetch("<?= base_url('admin/jurnal/simpan') ?>", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data),
+            headers: {
+                "Content-Type": "application/json",
+                 // Tambahkan header jika CI4 CSRF diaktifkan
+                 // 'X-CSRF-Token': '<?php // echo csrf_hash(); ?>'
+                 'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: JSON.stringify(dataToSave),
         })
-            .then(response => response.json())
-            .then(result => {
-                alert(result.message);
-                location.reload();
-            })
-            .catch(error => {
-                console.error("Error:", error);
-                alert("Terjadi kesalahan saat menyimpan data.");
-            });
+        .then(response => {
+             if (!response.ok) {
+                 return response.text().then(text => { throw new Error(`HTTP error! status: ${response.status}, body: ${text}`) });
+             }
+             const contentType = response.headers.get("content-type");
+             if (contentType && contentType.indexOf("application/json") !== -1) {
+                return response.json();
+             } else {
+                return response.text().then(text => { throw new Error("Unexpected server response (not JSON): " + text) });
+             }
+        })
+        .then(result => {
+            console.log("Simpan result:", result);
+            alert(result.message);
+            if (result.status === 'success' || result.status === 'partial') {
+                // === START CACHE FILTER ===
+                // Simpan filter saat ini ke sessionStorage SEBELUM reload
+                sessionStorage.setItem('lastYearFilter', document.getElementById("tahunSelect").value);
+                sessionStorage.setItem('lastMonthFilter', document.getElementById("bulanSelect").value);
+                // === END CACHE FILTER ===
+                location.reload(); // Reload halaman
+            }
+        })
+        .catch(error => {
+            console.error("Error saving data:", error);
+             const errorMessage = error.message || "Terjadi kesalahan yang tidak diketahui saat menyimpan data.";
+            alert(`Terjadi kesalahan saat menyimpan data: ${errorMessage}. Detail lebih lanjut di console log.`);
+        })
+         .finally(() => {
+             saveButton.disabled = false;
+             saveButton.textContent = "Simpan Semua Perubahan";
+         });
     }
 
-    // Function to filter data based on selected year and month
+    // Fungsi untuk memfilter data
     function filterData() {
         let selectedYear = document.getElementById("tahunSelect").value;
         let selectedMonth = document.getElementById("bulanSelect").value;
-        
-        // Check if both year and month are selected
+
         if (selectedYear === "" || selectedMonth === "") {
             document.getElementById("dataContainer").style.display = "none";
             document.getElementById("noDataMessage").style.display = "block";
+            document.getElementById("totalDUM").textContent = formatNumberString(0);
+            document.getElementById("totalDUK").textContent = formatNumberString(0);
+            document.getElementById("totalPerHariBody").innerHTML = `<tr><td colspan="4" class="text-center">Pilih periode untuk melihat total</td></tr>`;
+
+            document.querySelectorAll("#dumBody tr.data-row, #dukBody tr.data-row").forEach(row => {
+                row.style.display = "none";
+            });
+
             return;
         }
-        
-        // Show data container and hide message
+
         document.getElementById("dataContainer").style.display = "block";
         document.getElementById("noDataMessage").style.display = "none";
-        
-        // Reset display of all rows
-        document.querySelectorAll("#dumBody tr, #dukBody tr").forEach(row => {
-            row.style.display = "none";
-        });
-        
-        // Show rows that match the filter
-        document.querySelectorAll("#dumBody tr, #dukBody tr").forEach(row => {
+
+        document.querySelectorAll("#dumBody tr.data-row, #dukBody tr.data-row").forEach(row => {
             let dateInput = row.querySelector("input[type='date']");
-            if (dateInput) {
+            if (dateInput && dateInput.value) {
                 let rowDate = new Date(dateInput.value);
                 let rowYear = rowDate.getFullYear();
-                let rowMonth = rowDate.getMonth() + 1; // Month starts from 0
-                
-                let monthStr = rowMonth < 10 ? '0' + rowMonth : '' + rowMonth;
-                
-                if (rowYear == selectedYear && monthStr == selectedMonth) {
+                let rowMonth = (rowDate.getMonth() + 1).toString().padStart(2, '0');
+
+                if (rowYear == selectedYear && rowMonth == selectedMonth) {
                     row.style.display = "";
+                } else {
+                    row.style.display = "none";
                 }
+            } else {
+                 row.style.display = "none";
             }
         });
-        
-        // Update totals after filtering
+
         hitungTotal();
-        hitungTotalPerHari();
-        
-        // Renumber visible rows
         renumberRows("#dumBody");
         renumberRows("#dukBody");
     }
-    
-    // Function to renumber rows after filtering
+
+    // Fungsi untuk memberi nomor ulang pada baris yang *terlihat*
     function renumberRows(tableSelector) {
-        let visibleRows = document.querySelectorAll(`${tableSelector} tr:not([style*="display: none"])`);
+        let visibleRows = document.querySelectorAll(`${tableSelector} tr.data-row:not([style*="display: none"])`);
         visibleRows.forEach((row, index) => {
             row.cells[0].textContent = index + 1;
         });
     }
 
-    // Run on page load
+    // Jalankan saat dokumen selesai dimuat
     document.addEventListener("DOMContentLoaded", function () {
-        // Hide data container initially
-        document.getElementById("dataContainer").style.display = "none";
-        document.getElementById("noDataMessage").style.display = "block";
-        
-        // Set default date to today for new entries
-        let today = new Date();
-        let currentYear = today.getFullYear();
-        let currentMonth = (today.getMonth() + 1).toString().padStart(2, '0');
-        
-        // Pre-select current year and month
-        document.getElementById("tahunSelect").value = currentYear;
-        document.getElementById("bulanSelect").value = currentMonth;
+        const tahunSelect = document.getElementById("tahunSelect");
+        const bulanSelect = document.getElementById("bulanSelect");
+
+        // === START CACHE FILTER ===
+        // Coba ambil filter dari sessionStorage
+        const lastYear = sessionStorage.getItem('lastYearFilter');
+        const lastMonth = sessionStorage.getItem('lastMonthFilter');
+
+        let yearToFilter, monthToFilter;
+
+        if (lastYear && lastMonth) {
+            // Jika ada di sessionStorage, gunakan nilai tersebut
+            yearToFilter = lastYear;
+            monthToFilter = lastMonth;
+
+            // Hapus dari sessionStorage setelah digunakan agar tidak persist
+            sessionStorage.removeItem('lastYearFilter');
+            sessionStorage.removeItem('lastMonthFilter');
+        } else {
+            // Jika tidak ada di sessionStorage, gunakan tanggal hari ini
+            const today = new Date();
+            yearToFilter = today.getFullYear().toString();
+            monthToFilter = (today.getMonth() + 1).toString().padStart(2, '0');
+        }
+        // === END CACHE FILTER ===
+
+
+        // Setel nilai dropdown berdasarkan yearToFilter dan monthToFilter
+        // Pastikan nilainya ada dalam opsi dropdown sebelum disetel
+        if (tahunSelect.querySelector(`option[value="${yearToFilter}"]`)) {
+             tahunSelect.value = yearToFilter;
+        } else {
+             tahunSelect.value = ""; // Reset jika nilai tidak valid
+        }
+
+        if (bulanSelect.querySelector(`option[value="${monthToFilter}"]`)) {
+            bulanSelect.value = monthToFilter;
+        } else {
+             bulanSelect.value = ""; // Reset jika nilai tidak valid
+        }
+
+
+        // Panggil filterData() untuk menampilkan data berdasarkan pilihan yang sudah disetel
+        filterData();
+
+        // Tambahkan event listener untuk perubahan manual pada dropdown filter
+        tahunSelect.addEventListener("change", filterData);
+        bulanSelect.addEventListener("change", filterData);
+
+        // Tambahkan event listener untuk input jumlah dan tanggal
+        document.querySelectorAll(".dum, .duk").forEach(input => {
+             // formatRibuan sudah memanggil hitungTotal()
+        });
+        document.querySelectorAll(".date-dum, .date-duk").forEach(input => {
+             input.addEventListener("change", hitungTotal);
+        });
+
     });
 </script>
 <?= $this->endSection(); ?>
