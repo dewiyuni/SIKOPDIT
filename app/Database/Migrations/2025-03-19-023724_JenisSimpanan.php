@@ -11,13 +11,13 @@ class JenisSimpanan extends Migration
         $this->forge->addField([
             'id_jenis_simpanan' => [
                 'type' => 'INT',
-                'constraint' => 11,
+                'constraint' => 4,
                 'unsigned' => true,
                 'auto_increment' => true
             ],
             'nama_simpanan' => [
                 'type' => 'VARCHAR',
-                'constraint' => 50
+                'constraint' => 30
             ],
             'created_at' => [
                 'type' => 'DATETIME',

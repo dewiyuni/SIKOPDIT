@@ -10,18 +10,41 @@ class Akun extends Migration
     public function up()
     {
         $this->forge->addField([
-            'id' => ['type' => 'INT', 'unsigned' => true, 'auto_increment' => true],
-            'kode_akun' => ['type' => 'VARCHAR', 'constraint' => 20],
-            'nama_akun' => ['type' => 'VARCHAR', 'constraint' => 100],
-            'kategori' => ['type' => 'VARCHAR', 'constraint' => 100],
-            'jenis' => ['type' => 'ENUM', 'constraint' => ['Debit', 'Kredit']],
-            'saldo_awal' => ['type' => 'DECIMAL', 'constraint' => '15,2', 'default' => 0.00],
+            'id' => [
+                'type' => 'INT',
+                'unsigned' => true,
+                'auto_increment' => true
+            ],
+            'kode_akun' => [
+                'type' => 'VARCHAR',
+                'constraint' => 10,
+            ],
+            'nama_akun' => [
+                'type' => 'VARCHAR',
+                'constraint' => 50,
+            ],
+            'kategori' => [
+                'type' => 'VARCHAR',
+                'constraint' => 50,
+            ],
+            'jenis' => [
+                'type' => 'ENUM',
+                'constraint' => ['Debit', 'Kredit'],
+            ],
+            'saldo_awal' => [
+                'type' => 'DECIMAL',
+                'constraint' => '10,2',
+                'default' => 0.00
+            ],
             'created_at' => [
                 'type' => 'TIMESTAMP',
                 'null' => true,
                 'default' => new \CodeIgniter\Database\RawSql('CURRENT_TIMESTAMP')
             ],
-            'updated_at' => ['type' => 'TIMESTAMP', 'null' => true], // akan kita ubah manual setelahnya
+            'updated_at' => [
+                'type' => 'TIMESTAMP',
+                'null' => true,  // Ini akan diupdate manual
+            ]
         ]);
 
         $this->forge->addKey('id', true);

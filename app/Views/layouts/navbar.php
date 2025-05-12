@@ -23,9 +23,9 @@
             <li class="nav-item">
                 <a class="nav-link" href="/admin/dashboard">🏠 <span>Dashboard</span></a>
             </li>
-            <li class="nav-item">
+            <!-- <li class="nav-item">
                 <a class="nav-link" href="/admin/jenis_simpanan">💰 <span>Jenis Simpanan</span></a>
-            </li>
+            </li> -->
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="kelolaUserDropdown" role="button" data-bs-toggle="dropdown"
                     aria-expanded="false">

@@ -9,10 +9,10 @@ class BukuBesar extends Migration
     public function up()
     {
         $this->forge->addField([
-            'id' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'auto_increment' => true],
+            'id' => ['type' => 'INT', 'constraint' => 10, 'unsigned' => true, 'auto_increment' => true],
             'tanggal' => ['type' => 'DATE'],
-            'id_akun' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'null' => true],
-            'id_jurnal' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'null' => true],
+            'id_akun' => ['type' => 'INT', 'constraint' => 10, 'unsigned' => true, 'null' => true],
+            'id_jurnal' => ['type' => 'INT', 'constraint' => 10, 'unsigned' => true, 'null' => true],
             'keterangan' => ['type' => 'TEXT', 'null' => true],
             'debit' => ['type' => 'DECIMAL', 'constraint' => '15,2', 'default' => 0.00],
             'kredit' => ['type' => 'DECIMAL', 'constraint' => '15,2', 'default' => 0.00],

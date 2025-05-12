@@ -11,18 +11,18 @@ class Anggota extends Migration
         $this->forge->addField([
             'id_anggota' => [
                 'type' => 'INT',
-                'constraint' => 11,
+                'constraint' => 5,
                 'unsigned' => true,
                 'auto_increment' => true
             ],
             'no_ba' => [
                 'type' => 'VARCHAR',
-                'constraint' => '50',
+                'constraint' => '25',
                 'unique' => true
             ],
             'nama' => [
                 'type' => 'VARCHAR',
-                'constraint' => '100'
+                'constraint' => '50'
             ],
             'nik' => [
                 'type' => 'VARCHAR',
@@ -58,14 +58,14 @@ class Anggota extends Migration
             ],
             'pekerjaan' => [
                 'type' => 'VARCHAR',
-                'constraint' => '100'
+                'constraint' => '50'
             ],
             'tgl_lahir' => [
                 'type' => 'DATE'
             ],
             'nama_pasangan' => [
                 'type' => 'VARCHAR',
-                'constraint' => '100',
+                'constraint' => '50',
                 'null' => true
             ],
             'status' => [

@@ -9,7 +9,7 @@ class SaldoAkun extends Migration
     public function up()
     {
         $this->forge->addField([
-            'id' => ['type' => 'INT', 'constraint' => 11, 'unsigned' => true, 'auto_increment' => true],
+            'id' => ['type' => 'INT', 'constraint' => 10, 'unsigned' => true, 'auto_increment' => true],
             'id_akun' => ['type' => 'INT', 'unsigned' => true, 'null' => false],
             'bulan' => ['type' => 'INT', 'constraint' => 2],
             'tahun' => ['type' => 'INT', 'constraint' => 4],

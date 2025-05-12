@@ -11,13 +11,13 @@ class PemetaanAkun extends Migration
         $this->forge->addField([
             'id' => [
                 'type' => 'INT',
-                'constraint' => 11, // Sesuai SQL int(11)
+                'constraint' => 10, // Sesuai SQL int(11)
                 'unsigned' => true,
                 'auto_increment' => true,
             ],
             'pola_uraian' => [ // Mengganti uraian_jurnal
                 'type' => 'VARCHAR',
-                'constraint' => 255,
+                'constraint' => 100,
                 'null' => false, // NOT NULL
                 'comment' => 'Gunakan % sebagai wildcard LIKE',
             ],
@@ -29,21 +29,21 @@ class PemetaanAkun extends Migration
             ],
             'id_akun_debit' => [
                 'type' => 'INT',
-                'constraint' => 11, // Sesuai SQL int(11)
+                'constraint' => 10, // Sesuai SQL int(11)
                 'unsigned' => true,
                 'null' => false, // NOT NULL (berubah dari null=true)
                 'comment' => 'FK ke tabel akun',
             ],
             'id_akun_kredit' => [
                 'type' => 'INT',
-                'constraint' => 11, // Sesuai SQL int(11)
+                'constraint' => 10, // Sesuai SQL int(11)
                 'unsigned' => true,
                 'null' => false, // NOT NULL (berubah dari null=true)
                 'comment' => 'FK ke tabel akun',
             ],
             'prioritas' => [ // Kolom baru
                 'type' => 'INT',
-                'constraint' => 11,
+                'constraint' => 3,
                 'null' => false, // NOT NULL
                 'default' => 0,     // DEFAULT 0
                 'comment' => 'Angka lebih tinggi diproses dulu jika pola sama',

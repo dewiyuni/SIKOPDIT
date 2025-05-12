@@ -11,7 +11,7 @@ class JurnalKas extends Migration
         $this->forge->addField([
             'id' => [
                 'type' => 'INT',
-                'constraint' => 11,
+                'constraint' => 10,
                 'unsigned' => true,
                 'auto_increment' => true,
             ],
@@ -21,7 +21,7 @@ class JurnalKas extends Migration
             ],
             'uraian' => [
                 'type' => 'VARCHAR',
-                'constraint' => 255,
+                'constraint' => 100,
                 'null' => false,
             ],
             'kategori' => [

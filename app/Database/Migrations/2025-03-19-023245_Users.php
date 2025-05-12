@@ -11,21 +11,21 @@ class Users extends Migration
         $this->forge->addField([
             'id_user' => [
                 'type' => 'INT',
-                'constraint' => 11,
+                'constraint' => 5,
                 'unsigned' => true,
                 'auto_increment' => true
             ],
             'nama' => [
                 'type' => 'VARCHAR',
-                'constraint' => 100
+                'constraint' => 50,
             ],
             'email' => [
                 'type' => 'VARCHAR',
-                'constraint' => 100,
+                'constraint' => 75,
             ],
             'password' => [
                 'type' => 'VARCHAR',
-                'constraint' => 255
+                'constraint' => 255,
             ],
             'role' => [
                 'type' => 'ENUM',

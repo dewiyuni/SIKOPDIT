@@ -11,7 +11,7 @@ class CreateNeracaTables extends Migration
         $this->forge->addField([
             'id_neraca_awal' => [
                 'type' => 'INT',
-                'constraint' => 11,
+                'constraint' => 10,
                 'unsigned' => true,
                 'auto_increment' => true,
             ],
@@ -38,13 +38,13 @@ class CreateNeracaTables extends Migration
         $this->forge->addField([
             'id_kategori' => [
                 'type' => 'INT',
-                'constraint' => 11,
+                'constraint' => 10,
                 'unsigned' => true,
                 'auto_increment' => true,
             ],
             'nama_kategori' => [
                 'type' => 'VARCHAR',
-                'constraint' => 100,
+                'constraint' => 50,
             ],
             'created_at' => [
                 'type' => 'DATETIME',
@@ -62,23 +62,23 @@ class CreateNeracaTables extends Migration
         $this->forge->addField([
             'id_detail' => [
                 'type' => 'INT',
-                'constraint' => 11,
+                'constraint' => 10,
                 'unsigned' => true,
                 'auto_increment' => true,
             ],
             'id_neraca_awal' => [
                 'type' => 'INT',
-                'constraint' => 11,
+                'constraint' => 10,
                 'unsigned' => true,
             ],
             'id_kategori' => [
                 'type' => 'INT',
-                'constraint' => 11,
+                'constraint' => 10,
                 'unsigned' => true,
             ],
             'uraian' => [
                 'type' => 'VARCHAR',
-                'constraint' => 255,
+                'constraint' => 75,
             ],
             'nilai' => [
                 'type' => 'DECIMAL',

@@ -11,18 +11,18 @@ class KeuanganKoperasi extends Migration
         $this->forge->addField([
             'id_keuangan' => [
                 'type' => 'INT',
-                'constraint' => 11,
+                'constraint' => 6,
                 'auto_increment' => true,
                 'unsigned' => true,
             ],
             'id_anggota' => [
                 'type' => 'INT',
-                'constraint' => 11,
+                'constraint' => 5,
                 'unsigned' => true,
             ],
             'keterangan' => [
                 'type' => 'VARCHAR',
-                'constraint' => 255,
+                'constraint' => 150,
             ],
             'jumlah' => [
                 'type' => 'INT',

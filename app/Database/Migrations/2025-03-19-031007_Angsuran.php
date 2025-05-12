@@ -11,13 +11,13 @@ class Angsuran extends Migration
         $this->forge->addField([
             'id_angsuran' => [
                 'type' => 'INT',
-                'constraint' => 11,
+                'constraint' => 10,
                 'unsigned' => true,
                 'auto_increment' => true
             ],
             'id_pinjaman' => [
                 'type' => 'INT',
-                'constraint' => 11,
+                'constraint' => 5,
                 'unsigned' => true
             ],
             'tanggal_angsuran' => [
