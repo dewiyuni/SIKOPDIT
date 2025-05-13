@@ -21,16 +21,21 @@
         </div>
     <?php endif; ?>
 
-    <div class="card mb-4">
-        <!-- Di dalam <div class="card-header ..."> -->
-        <div class="ms-auto d-flex gap-2"> <!-- Tambahkan div ini agar tombol rapi -->
-            <a href="<?= base_url('admin/buku_besar/pemetaan/generate-otomatis') ?>" class="btn btn-success btn-sm"
-                onclick="return confirm('Apakah Anda yakin ingin membuat pemetaan otomatis? Ini akan mencoba menambahkan aturan baru berdasarkan pencocokan nama Jurnal Kas dengan Nama Akun. Aturan yang sudah ada tidak akan ditimpa. Proses ini mungkin memerlukan waktu.');">
-                <i class="fas fa-magic me-1"></i> Buat Otomatis
-            </a>
-            <a href="<?= base_url('admin/buku_besar/pemetaan/create') ?>" class="btn btn-primary btn-sm">
-                <i class="fas fa-plus me-1"></i> Tambah Aturan Manual
-            </a>
+    <div class="card mb-4 table-responsive">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">Daftar Pemetaan</h5>
+            <div>
+                <a href="<?= base_url('admin/buku_besar') ?>" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-arrow-left"></i> Kembali
+                </a>
+                <a href="<?= base_url('admin/buku_besar/pemetaan/generate-otomatis') ?>" class="btn btn-success btn-sm"
+                    onclick="return confirm('Apakah Anda yakin ingin membuat pemetaan otomatis? Ini akan mencoba menambahkan aturan baru berdasarkan pencocokan nama Jurnal Kas dengan Nama Akun. Aturan yang sudah ada tidak akan ditimpa. Proses ini mungkin memerlukan waktu.');">
+                    <i class="fas fa-magic me-1"></i> Buat Otomatis
+                </a>
+                <a href="<?= base_url('admin/buku_besar/pemetaan/create') ?>" class="btn btn-primary btn-sm">
+                    <i class="fas fa-plus me-1"></i> Tambah Aturan Manual
+                </a>
+            </div>
         </div>
         <div class="card-body">
             <div class="table-responsive">
@@ -69,20 +74,22 @@
                                     </td>
                                     <td><?= esc($item['deskripsi']) ?></td>
                                     <td>
-                                        <a href="<?= base_url('admin/buku_besar/pemetaan/edit/' . $item['id']) ?>"
-                                            class="btn btn-warning btn-sm" title="Edit">
-                                            <i class="fas fa-edit"></i>
-                                        </a>
-                                        <form action="<?= base_url('admin/buku_besar/pemetaan/delete/' . $item['id']) ?>"
-                                            method="post" class="d-inline"
-                                            onsubmit="return confirm('Apakah Anda yakin ingin menghapus aturan pemetaan ini?');">
-                                            <?= csrf_field() ?>
-                                            <input type="hidden" name="_method" value="DELETE">
-                                            <!-- Opsional, bisa pakai route delete -->
-                                            <button type="submit" class="btn btn-danger btn-sm" title="Hapus">
-                                                <i class="fas fa-trash-alt"></i>
-                                            </button>
-                                        </form>
+                                        <div class="d-flex">
+                                            <a href="<?= base_url('admin/buku_besar/pemetaan/edit/' . $item['id']) ?>"
+                                                class="btn btn-warning btn-sm me-2" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </a>
+                                            <form action="<?= base_url('admin/buku_besar/pemetaan/delete/' . $item['id']) ?>"
+                                                method="post" class="d-inline"
+                                                onsubmit="return confirm('Apakah Anda yakin ingin menghapus aturan pemetaan ini?');">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="_method" value="DELETE">
+                                                <!-- Opsional, bisa pakai route delete -->
+                                                <button type="submit" class="btn btn-danger btn-sm" title="Hapus">
+                                                    <i class="fas fa-trash-alt"></i>
+                                                </button>
+                                            </form>
+                                        </div>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>

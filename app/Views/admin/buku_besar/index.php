@@ -82,7 +82,8 @@
                         <i class="fas fa-cog"></i> Pengaturan
                     </button>
                     <ul class="dropdown-menu" aria-labelledby="settingsDropdown">
-                        <li><a class="dropdown-item" href="<?= base_url('admin/akun') ?>">Kelola Akun</a></li>
+                        <li><a class="dropdown-item" href="<?= base_url('admin/buku_besar/akun') ?>">Kelola Akun</a>
+                        </li>
                         <li><a class="dropdown-item" href="<?= base_url('admin/buku_besar/pemetaan') ?>">Kelola Pemetaan
                                 Jurnal</a></li>
                     </ul>
@@ -157,13 +158,15 @@
                                                 <tr>
                                                     <td colspan="3" class="text-end"><strong>Total</strong></td>
                                                     <td class="text-end">
-                                                        <?= number_to_currency($totalSaldoAwal, 'IDR', 'id', 0) ?></td>
+                                                        <?= number_to_currency($totalSaldoAwal, 'IDR', 'id', 0) ?>
+                                                    </td>
                                                     <td class="text-end"><?= number_to_currency($totalDebit, 'IDR', 'id', 0) ?>
                                                     </td>
                                                     <td class="text-end"><?= number_to_currency($totalKredit, 'IDR', 'id', 0) ?>
                                                     </td>
                                                     <td class="text-end">
-                                                        <?= number_to_currency($totalSaldoAkhir, 'IDR', 'id', 0) ?></td>
+                                                        <?= number_to_currency($totalSaldoAkhir, 'IDR', 'id', 0) ?>
+                                                    </td>
                                                 </tr>
                                             </tfoot>
                                         </table>
