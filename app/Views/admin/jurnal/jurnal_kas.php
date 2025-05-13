@@ -6,11 +6,16 @@
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
             <h5 class="mb-0">Data Kas</h5>
             <div class="d-flex gap-3 flex-column flex-md-row align-items-center">
+
+
                 <!-- Tombol Ekspor -->
                 <a href="<?= base_url('export-excel'); ?>" class="btn btn-success btn-sm">
                     <i class="fas fa-file-excel"></i> Ekspor ke Excel
                 </a>
-
+                <!-- template excel -->
+                <a href="<?= base_url('template/template_jurnal.xlsx') ?>" class="btn btn-info btn-sm" download>
+                    <i class="fas fa-download"></i> Download Template
+                </a>
                 <!-- Form Upload Excel -->
                 <form action="<?= base_url('admin/jurnal/import_excel') ?>" method="post" enctype="multipart/form-data"
                     class="d-flex flex-column flex-md-row align-items-center gap-2" id="importExcelForm">
