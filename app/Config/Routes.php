@@ -180,4 +180,6 @@ $routes->get('admin/buku_besar/pemetaan/otomatis', 'BukuBesarController::pemetaa
 $routes->get('admin/buku_besar/debug', 'BukuBesarController::debug');
 $routes->get('admin/buku_besar/pemetaan/debug', 'BukuBesarController::debugPemetaan');
 
+// option akun
+$routes->get('akun/options', 'AkunController::options');
 

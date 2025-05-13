@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Models\AkunModel;
 use App\Models\JurnalKasModel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -11,18 +12,21 @@ use CodeIgniter\RESTful\ResourceController;
 class JurnalKasController extends ResourceController
 {
     protected $jurnalkasModel;
+    protected $akunModel;
     protected $format = 'json';
     protected $db;
 
     public function __construct()
     {
         $this->jurnalkasModel = new JurnalKasModel();
+        $this->akunModel = new AkunModel();
         $this->db = \Config\Database::connect();
     }
 
     public function index()
     {
         $data['jurnal_kas'] = $this->jurnalkasModel->orderBy('tanggal', 'ASC')->findAll(); // Tambahkan orderBy
+        $data['akun'] = $this->akunModel->findAll();
 
         log_message('debug', json_encode($data['jurnal_kas'])); // Debugging
 

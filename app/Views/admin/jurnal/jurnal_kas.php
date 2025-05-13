@@ -113,8 +113,15 @@
                                             <input type="date" class="form-control form-control-sm date-input"
                                                 value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" disabled required>
                                         </td>
-                                        <td><input type="text" class="form-control form-control-sm uraian-input"
-                                                value="<?= $k['uraian'] ?>" disabled></td>
+                                        <td>
+                                            <select class="form-select form-select-sm" name="uraian" disabled>
+                                                <?php foreach ($akun as $a): ?>
+                                                    <option value="<?= $a['nama_akun'] ?>" <?= $a['nama_akun'] == $k['uraian'] ? 'selected' : '' ?>>
+                                                        <?= $a['nama_akun'] ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </td>
                                         <td>
                                             <input type="text" class="form-control form-control-sm dum"
                                                 value="<?= number_format($k['jumlah'], 0, ',', '.') ?>" disabled>
@@ -162,8 +169,14 @@
                                             <input type="date" class="form-control form-control-sm date-input"
                                                 value="<?= date('Y-m-d', strtotime($k['tanggal'])) ?>" disabled required>
                                         </td>
-                                        <td><input type="text" class="form-control form-control-sm uraian-input"
-                                                value="<?= $k['uraian'] ?>" disabled></td>
+                                        <td><select class="form-select form-select-sm" name="uraian" disabled>
+                                                <?php foreach ($akun as $a): ?>
+                                                    <option value="<?= $a['nama_akun'] ?>" <?= $a['nama_akun'] == $k['uraian'] ? 'selected' : '' ?>>
+                                                        <?= $a['nama_akun'] ?>
+                                                    </option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                        </td>
                                         <td>
                                             <input type="text" class="form-control form-control-sm duk"
                                                 value="<?= number_format($k['jumlah'], 0, ',', '.') ?>" disabled>
@@ -340,14 +353,16 @@
             });
         } else { console.warn("Date input not found for row:", row); }
 
+        // Event listener untuk select uraian (dropdown)
         if (uraianInput) {
-            uraianInput.addEventListener('input', () => {
-                console.log('Event: Uraian input changed.');
-                markAsChanged(); // Mark changes
-                checkAndHighlightRows(); // Check duplicates when uraian changes
+            uraianInput.addEventListener('change', () => {
+                console.log('Event: Uraian select changed.');
+                markAsChanged(); // Tandai perubahan
+                checkAndHighlightRows(); // Cek duplikat ketika uraian berubah
             });
-        } else { console.warn("Uraian input not found for row:", row); }
-
+        } else {
+            console.warn("Uraian input not found for row:", row);
+        }
         if (amountInput) {
             amountInput.addEventListener('input', function () {
                 markAsChanged(); // Mark changes
@@ -387,6 +402,23 @@
         return new Intl.NumberFormat("id-ID").format(number);
     }
 
+    function isiOpsiAkun(selectElement) {
+        fetch('/akun/options')  // Ganti dengan URL endpoint yang benar
+            .then(response => response.json())
+            .then(akunOptions => {
+                akunOptions.forEach(option => {
+                    const opt = document.createElement('option');
+                    opt.value = option.id_akun;
+                    opt.textContent = option.nama_akun;
+                    selectElement.appendChild(opt);
+                });
+            })
+            .catch(error => {
+                console.error('Gagal mengambil data akun:', error);
+                selectElement.innerHTML = '<option value="">Gagal memuat akun</option>';
+            });
+    }
+
     // Fungsi untuk menambah baris DUM
     function tambahDUM() {
         let tbody = document.getElementById("dumBody");
@@ -396,7 +428,9 @@
         row.innerHTML = `
             <td></td>
             <td><input type="date" class="form-control form-control-sm date-input" required></td>
-            <td><input type="text" class="form-control form-control-sm uraian-input" placeholder="Uraian"></td>
+            <td><select class="form-select form-select-sm uraian-input">
+                <!-- Opsi akun akan ditambahkan di sini -->
+            </select></td>
             <td><input type="text" class="form-control form-control-sm dum" value="0"></td>
             <td style="text-align: center;">
                 <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'dum')">Hapus</button>
@@ -446,6 +480,9 @@
             row.style.display = "none";
         }
 
+        // Ambil opsi akun dari server menggunakan AJAX (misalnya)
+        isiOpsiAkun(row.querySelector('.uraian-input')) // Ganti dengan endpoint yang sesuai
+
         addRowEventListeners(row);
         checkAndHighlightRows();
         hitungTotal(); // This also calls hitungTotalPerHari()
@@ -461,7 +498,9 @@
         row.innerHTML = `
             <td></td>
             <td><input type="date" class="form-control form-control-sm date-input" required></td>
-            <td><input type="text" class="form-control form-control-sm uraian-input" placeholder="Uraian"></td>
+            <td><select class="form-select form-select-sm uraian-input">
+                <!-- Opsi akun akan ditambahkan di sini -->
+            </select></td>
             <td><input type="text" class="form-control form-control-sm duk" value="0"></td>
             <td style="text-align: center;">
                 <button class="btn btn-danger btn-sm" onclick="hapusBaris(this, 'duk')">Hapus</button>
@@ -511,6 +550,8 @@
             row.style.display = "none";
         }
 
+        // Ambil opsi akun dari server menggunakan AJAX (misalnya)
+        isiOpsiAkun(row.querySelector('.uraian-input')) // Ganti dengan endpoint yang sesuai
 
         addRowEventListeners(row);
         checkAndHighlightRows();
