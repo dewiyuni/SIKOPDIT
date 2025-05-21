@@ -504,62 +504,66 @@ class BukuBesarController extends BaseController
         $bulan = $this->request->getGet('bulan') ?? date('n');
         $tahun = $this->request->getGet('tahun') ?? date('Y');
 
-        // Model MENGEMBALIKAN data dengan kategori:
-        // PEMASUKAN, BIAYA BIAYA, BIAYA PAJAK, PENYISIHAN BEBAN DANA, PENYUSUTAN PENYUSUTAN
         $laporanData = $this->saldoAkunModel->getLaporanLabaRugi($bulan, $tahun);
 
-        $pendapatanItems = []; // Array untuk menampung item pendapatan
-        $bebanItems = [];      // Array untuk menampung item beban
+        // DEBUGGING: Cek apa yang dikembalikan model dan bagaimana controller memprosesnya
+        // echo "<pre>Laporan Data dari Model untuk {$bulan}-{$tahun}:\n";
+        // print_r($laporanData);
+        // echo "</pre>";
+        // // die; // Aktifkan untuk berhenti di sini saat debugging
+
+        $pendapatanItems = [];
+        $bebanItems = [];
         $totalPendapatan = 0;
         $totalBeban = 0;
 
-        // Definisikan KATEGORI AKTUAL yang dianggap BEBAN (sesuai query Model)
+        // Kategori disesuaikan dengan yang ada di Model (dan di tabel 'akun')
+        $kategoriPendapatanActual = ['PENDAPATAN'];
         $kategoriBebanActual = [
-            'BIAYA BIAYA',
-            'BIAYA PAJAK',
-            'PENYISIHAN BEBAN DANA',
-            'PENYUSUTAN PENYUSUTAN'
+            'BEBAN',
+            'BEBAN PENYUSUTAN', // Harus sama dengan di Model
+            // 'BEBAN PAJAK',   // Harus sama dengan di Model
         ];
-        // Definisikan KATEGORI AKTUAL yang dianggap PENDAPATAN (sesuai query Model)
-        $kategoriPendapatanActual = ['PEMASUKAN'];
 
         if (!empty($laporanData)) {
-            // Proses hasil dari Model menggunakan KATEGORI AKTUAL
             foreach ($laporanData as $item) {
+                // 'saldo' dari model adalah saldo mutasi periode
                 $saldo = floatval($item['saldo'] ?? 0);
+
                 if (isset($item['kategori'])) {
-                    // Cek apakah kategori item termasuk dalam kategori pendapatan aktual
                     if (in_array($item['kategori'], $kategoriPendapatanActual)) {
                         $totalPendapatan += $saldo;
-                        $pendapatanItems[] = $item; // Tambahkan ke list pendapatan
-                    }
-                    // Cek apakah kategori item termasuk dalam kategori beban aktual
-                    elseif (in_array($item['kategori'], $kategoriBebanActual)) {
+                        $pendapatanItems[] = $item;
+                    } elseif (in_array($item['kategori'], $kategoriBebanActual)) {
                         $totalBeban += $saldo;
-                        $bebanItems[] = $item; // Tambahkan ke list beban
+                        $bebanItems[] = $item;
+                    } else {
+                        log_message('debug', "[Controller::labaRugi] Akun '{$item['nama_akun']}' (Kategori: '{$item['kategori']}') tidak termasuk dalam definisi L/R saat ini.");
                     }
                 }
             }
         }
+        // echo "<pre>Pendapatan Items:\n"; print_r($pendapatanItems); echo "</pre>";
+        // echo "<pre>Beban Items:\n"; print_r($bebanItems); echo "</pre>";
+        // echo "<pre>Total Pendapatan: $totalPendapatan, Total Beban: $totalBeban</pre>";
+        // // die; // Aktifkan untuk berhenti di sini saat debugging
 
-        // Laba Rugi = Total Pendapatan - Total Beban
+
         $labaRugiBersih = $totalPendapatan - $totalBeban;
 
-        // Siapkan data untuk view dengan variabel yang BENAR
         $data = [
             'title' => 'Laporan Laba Rugi',
             'bulan' => $bulan,
             'tahun' => $tahun,
-            'pendapatan_items' => $pendapatanItems, // <-- Kirim list pendapatan
-            'beban_items' => $bebanItems,      // <-- Kirim list beban
-            'total_pendapatan' => $totalPendapatan, // <-- Total yang sudah benar
-            'total_beban' => $totalBeban,      // <-- Total yang sudah benar
+            'pendapatan_items' => $pendapatanItems,
+            'beban_items' => $bebanItems,
+            'total_pendapatan' => $totalPendapatan,
+            'total_beban' => $totalBeban,
             'laba_rugi_bersih' => $labaRugiBersih,
-            'bulanNames' => $this->bulanNames // Pastikan $bulanNames ada dari construct
+            'bulanNames' => $this->bulanNames,
         ];
 
-        // View laba_rugi.php Anda sudah benar (tidak perlu diubah lagi)
-        return view('admin/buku_besar/laba_rugi', $data);
+        return view('admin/buku_besar/laba_rugi', $data); // Sesuaikan path view jika perlu
     }
 
     /**
