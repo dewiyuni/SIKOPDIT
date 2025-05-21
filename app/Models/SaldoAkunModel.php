@@ -166,26 +166,36 @@ class SaldoAkunModel extends Model
     public function getNeracaComparativeData(array $listKodeAkunNeraca, int $bulan, int $tahun, int $prevBulan, int $prevTahun): array
     {
         if (empty($listKodeAkunNeraca)) {
-            return []; // Tidak ada akun untuk dicari
+            return [];
         }
 
         $db = \Config\Database::connect();
-        $placeholders = implode(',', array_fill(0, count($listKodeAkunNeraca), '?'));
-        $bindings = array_merge([$bulan, $tahun, $prevBulan, $prevTahun], $listKodeAkunNeraca);
+        // Buat string ('kode1', 'kode2', ...) untuk klausa IN
+        $placeholdersKode = "'" . implode("','", array_map([$db, 'escapeString'], $listKodeAkunNeraca)) . "'";
+
+        // Bindings untuk bulan dan tahun
+        $bindings = [$bulan, $tahun, $prevBulan, $prevTahun];
 
         $sql = "
             SELECT
-                a.id, a.kode_akun, a.nama_akun, a.jenis,
+                a.id, a.kode_akun, a.nama_akun, a.jenis, a.kategori, -- Tambah kategori untuk debug
                 COALESCE(sa_current.saldo_akhir, a.saldo_awal) as saldo_current,
                 COALESCE(sa_prev.saldo_akhir, a.saldo_awal) as saldo_prev
             FROM akun a
             LEFT JOIN saldo_akun sa_current ON a.id = sa_current.id_akun AND sa_current.bulan = ? AND sa_current.tahun = ?
             LEFT JOIN saldo_akun sa_prev ON a.id = sa_prev.id_akun AND sa_prev.bulan = ? AND sa_prev.tahun = ?
-            WHERE a.kode_akun IN ($placeholders)
-        ";
+            WHERE a.kode_akun IN ($placeholdersKode)
+        "; // Menggunakan placeholdersKode langsung karena sudah di-escape
+
+        log_message('debug', '[SaldoAkunModel::getNeracaComparativeData] SQL: ' . $sql);
+        log_message('debug', '[SaldoAkunModel::getNeracaComparativeData] Bindings (bulan/tahun): ' . json_encode($bindings));
+        log_message('debug', '[SaldoAkunModel::getNeracaComparativeData] Kode Akun IN Clause: ' . $placeholdersKode);
+
 
         $query = $db->query($sql, $bindings);
-        return $query->getResultArray();
+        $result = $query->getResultArray();
+        log_message('debug', '[SaldoAkunModel::getNeracaComparativeData] Result Count: ' . count($result));
+        return $result;
     }
 
 } // End Class

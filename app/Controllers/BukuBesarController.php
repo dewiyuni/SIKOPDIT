@@ -572,69 +572,83 @@ class BukuBesarController extends BaseController
      */
     private function getNeracaMappingData(): array
     {
-        // Format: 'KODE_AKUN' => ['GROUP_LAPORAN', URUTAN_GROUP, IS_AKUMULASI (bool), KODE_PARENT_ASET (jika IS_AKUMULASI true)]
-        // GROUP_LAPORAN: ASET_LANCAR, ASET_TAK_LANCAR, ASET_TETAP, KEWAJIBAN_PENDEK, KEWAJIBAN_PANJANG, EKUITAS
+        // Helper untuk mendapatkan kode akun berdasarkan ID, untuk kejelasan
+        $getKode = function ($idAkun) {
+            // Cache sederhana untuk lookup ID ke Kode Akun dalam satu request
+            static $akunCache = [];
+            if (!isset($akunCache[$idAkun])) {
+                $akun = $this->akunModel->select('kode_akun')->find($idAkun);
+                $akunCache[$idAkun] = $akun ? $akun['kode_akun'] : 'KODE_NOT_FOUND_FOR_ID_' . $idAkun;
+            }
+            return $akunCache[$idAkun];
+        };
+
+        // Kode Akun untuk ASET TETAP AKTUAL.
+        // Ini harus ID dari akun ASET di tabel 'akun', BUKAN akun beban pembelian.
+        // Ambil dari pemetaan DUK untuk "Pembelian Inventaris..." jika ID tersebut benar-benar akun ASET.
+        // Jika tidak, Anda harus tahu ID akun asetnya secara manual.
+        // Contoh: ID 148 adalah 'Pembelian Inventaris Komputer' (DUK), asumsikan ini akun asetnya.
+        $kodeInvKomputer = $getKode(148); // Ganti 148 dengan ID akun ASET 'Inventaris Komputer'
+        $kodeInvMebel = $getKode(146);    // Ganti 146 dengan ID akun ASET 'Inventaris Mebel'
+        $kodeInvGedung = $getKode(147);   // Ganti 147 dengan ID akun ASET 'Inventaris Gedung/Bangunan' (atau 138)
+        $kodeInvKendaraan = $getKode(149); // Ganti 149 dengan ID akun ASET 'Inventaris Kendaraan'
+
         return [
             // --- ASET LANCAR (Urutan 1) ---
-            'PNG002' => ['ASET_LANCAR', 1, false, null], // Simpanan di Bank (Diasumsikan Kas/Bank)
-            'PNG003' => ['ASET_LANCAR', 1, false, null], // Simpanan DEPOSITO
-            'PNG001' => ['ASET_LANCAR', 1, false, null], // Piutang Anggota (Piutang Biasa)
-
-            // --- ASET TAK LANCAR (Urutan 2) - Contoh, sesuaikan ---
-            // 'INV001' => ['ASET_TAK_LANCAR', 2, false, null], // Misal: Investasi Jk Panjang
-            // 'INV002' => ['ASET_TAK_LANCAR', 2, false, null], // Misal: Simpanan di BKD
+            $getKode(1) => ['ASET_LANCAR', 1, false, null], // Kas
+            $getKode(2) => ['ASET_LANCAR', 1, false, null], // Simpanan di Bank
+            $getKode(52) => ['ASET_LANCAR', 1, false, null], // Pinjaman Anggota (Piutang)
+            $getKode(53) => ['ASET_LANCAR', 1, false, null], // Simpanan Deposito (Aset)
 
             // --- ASET TETAP (Urutan 3) ---
-            'PNG028' => ['ASET_TETAP', 3, false, null], // Pembelian Inventaris Mebeler (Ini akun asetnya?) **VERIFIKASI KODE**
-            'AKM001' => ['ASET_TETAP', 3, true, 'PNG028'], // Akum. Penyusutan Mebeler
-            'PNG031' => ['ASET_TETAP', 3, false, null], // Inventaris Gedung/Bangunan (Ini akun asetnya?) **VERIFIKASI KODE**
-            'AKM002' => ['ASET_TETAP', 3, true, 'PNG031'], // Akum. Penyusutan Gedung
-            'PNG030' => ['ASET_TETAP', 3, false, null], // Pembelian Inventaris Komputer (Ini akun asetnya?) **VERIFIKASI KODE**
-            'AKM004' => ['ASET_TETAP', 3, true, 'PNG030'], // Akum. Penyusutan Komputer
-            // 'AST004' => ['ASET_TETAP', 3, false, null], // Inventaris Tanah **TAMBAHKAN KODE & AKUN JIKA ADA**
-            // 'AKM005' => ['ASET_TETAP', 3, true, 'AST004'], // Akum. Penyusutan Tanah
-            // 'AST005' => ['ASET_TETAP', 3, false, null], // Inventaris Kendaraan **TAMBAHKAN KODE & AKUN JIKA ADA**
-            'AKM003' => ['ASET_TETAP', 3, true, 'AST005'], // Akum. Penyusutan Spd Mtr **PASTIKAN KODE PARENT AST005 BENAR**
+            $kodeInvKomputer => ['ASET_TETAP', 3, false, null],      // Inventaris Komputer
+            $getKode(3) => ['ASET_TETAP', 3, true, $kodeInvKomputer],   // Akum. Peny. Komputer
+
+            $kodeInvMebel => ['ASET_TETAP', 3, false, null],      // Inventaris Mebel
+            $getKode(4) => ['ASET_TETAP', 3, true, $kodeInvMebel],      // Akum. Peny. Mebel
+
+            $kodeInvGedung => ['ASET_TETAP', 3, false, null],      // Inventaris Gedung
+            $getKode(5) => ['ASET_TETAP', 3, true, $kodeInvGedung],     // Akum. Peny. Gedung
+
+            $kodeInvKendaraan => ['ASET_TETAP', 3, false, null],      // Inventaris Kendaraan
+            $getKode(6) => ['ASET_TETAP', 3, true, $kodeInvKendaraan],  // Akum. Peny. Kendaraan
+
+            // $getKode(ID_ASET_TERTANGGUH) => ['ASET_TETAP', 3, false, null], // Jika ada Aset Tertangguh
+            // $getKode(40)      => ['ASET_TETAP', 3, true,  $getKode(ID_ASET_TERTANGGUH)], // Akum. Peny. Tertangguh
 
             // --- KEWAJIBAN JANGKA PENDEK (Urutan 4) ---
-            'PEM006' => ['KEWAJIBAN_PENDEK', 4, false, null], // S.Non Saham
-            'PEM007' => ['KEWAJIBAN_PENDEK', 4, false, null], // S.Jasa Non Saham
-            'PEM005' => ['KEWAJIBAN_PENDEK', 4, false, null], // SS (Simpanan Sukarela)
-            // 'DANA01' => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana Pengurus **TAMBAHKAN KODE JIKA ADA AKUN SALDO**
-            // 'DANA02' => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana Pendidikan **TAMBAHKAN KODE JIKA ADA AKUN SALDO**
-            // 'DANA03' => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana Karyawan **TAMBAHKAN KODE JIKA ADA AKUN SALDO**
-            // 'DANA04' => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana PDK **TAMBAHKAN KODE JIKA ADA AKUN SALDO**
-            // 'DANA05' => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana Sosial **TAMBAHKAN KODE JIKA ADA AKUN SALDO**
-            // 'DANA06' => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana Insentif **TAMBAHKAN KODE JIKA ADA AKUN SALDO**
-            'PPN002' => ['KEWAJIBAN_PENDEK', 4, false, null], // Penyisihan Dana RAT (Untuk tahun depan?)
-            'PPN005' => ['KEWAJIBAN_PENDEK', 4, false, null], // Titip Dana Kesejahteraan
-            'PPN010' => ['KEWAJIBAN_PENDEK', 4, false, null], // Penyisihan Pemilihan Pengurus
-            'PEM012' => ['KEWAJIBAN_PENDEK', 4, false, null], // Titip Pajak (Js Non Shm) - **VERIFIKASI KODE & NAMA**
-            // 'SHU001' => ['KEWAJIBAN_PENDEK', 4, false, null], // SHU Tahun Lalu (belum dibagi) **TAMBAHKAN KODE JIKA ADA**
+            $getKode(17) => ['KEWAJIBAN_PENDEK', 4, false, null], // Simpanan Non-Saham
+            $getKode(20) => ['KEWAJIBAN_PENDEK', 4, false, null], // Simpanan Sukarela (SS)
+            $getKode(24) => ['KEWAJIBAN_PENDEK', 4, false, null], // Titipan Dana Kesejahteraan
+            $getKode(27) => ['KEWAJIBAN_PENDEK', 4, false, null], // Titipan Dana RAT
+            $getKode(28) => ['KEWAJIBAN_PENDEK', 4, false, null], // Titipan Dana Pendampingan
+            $getKode(29) => ['KEWAJIBAN_PENDEK', 4, false, null], // Titipan Penyisihan Pajak SHU
+            $getKode(35) => ['KEWAJIBAN_PENDEK', 4, false, null], // Titipan Pajak Jasa Non Saham
+            $getKode(43) => ['KEWAJIBAN_PENDEK', 4, false, null], // Jaminan PJKR
+            $getKode(50) => ['KEWAJIBAN_PENDEK', 4, false, null], // Titipan Utang Pajak SHU
+            // $getKode(18) => ['KEWAJIBAN_PENDEK', 4, false, null], // Jasa Simpanan Non-Saham (Jika Utang Jasa)
 
             // --- KEWAJIBAN JANGKA PANJANG (Urutan 5) ---
-            'PEM013' => ['KEWAJIBAN_PANJANG', 5, false, null], // Pinjaman dari BPD
-            'PPN001' => ['KEWAJIBAN_PANJANG', 5, false, null], // Penyisihan Tab Hari Tua Karyawan
-            'PPN009' => ['KEWAJIBAN_PANJANG', 5, false, null], // Titipan Tunj. Pesangon Karyawan
-            'PPN003' => ['KEWAJIBAN_PANJANG', 5, false, null], // Titipan CAP (Cad. Aktiva Produktif)
-            'PPN008' => ['KEWAJIBAN_PANJANG', 5, false, null], // Titipan Penyisihan Pjk SHU
-            'PPN007' => ['KEWAJIBAN_PANJANG', 5, false, null], // Titip Dana Pendampingan
-            'PPN006' => ['KEWAJIBAN_PANJANG', 5, false, null], // Titip Dana RAT (Jangka Panjang?) - **VERIFIKASI**
-            // 'KWJ001' => ['KEWAJIBAN_PANJANG', 5, false, null], // Dana Sehat (jika kewajiban jk panjang) **TAMBAHKAN KODE**
-            // 'KWJ002' => ['KEWAJIBAN_PANJANG', 5, false, null], // Titip SP/SW (jika benar kewajiban) **TAMBAHKAN KODE**
-
+            $getKode(15) => ['KEWAJIBAN_PANJANG', 5, false, null], // Pinjaman dari BPD
+            $getKode(25) => ['KEWAJIBAN_PANJANG', 5, false, null], // Titipan Tunjangan Pesangon Karyawan
 
             // --- EKUITAS (MODAL) (Urutan 6) ---
-            'PEM001' => ['EKUITAS', 6, false, null], // Uang Pangkal
-            'PEM002' => ['EKUITAS', 6, false, null], // SP (Simpanan Pokok)
-            'PEM003' => ['EKUITAS', 6, false, null], // SW (Simpanan Wajib)
-            'PEM004' => ['EKUITAS', 6, false, null], // SWP (Simp Wajib Penyertaan?)
-            'PEM023' => ['EKUITAS', 6, false, null], // Hibah
-            'PEM015' => ['EKUITAS', 6, false, null], // Dana Resiko (Re)
-            'PEM021' => ['EKUITAS', 6, false, null], // Pemupukan Modal Tetap (Diasumsikan Ekuitas) **VERIFIKASI**
-            // 'EKU001' => ['EKUITAS', 6, false, null], // Cadangan Likuiditas **TAMBAHKAN KODE JIKA ADA**
-            // 'EKU002' => ['EKUITAS', 6, false, null], // Cadangan Koperasi **TAMBAHKAN KODE JIKA ADA**
-            // SHU Tahun Berjalan akan ditambahkan secara terpisah
+            $getKode(26) => ['EKUITAS', 6, false, null], // Uang Pangkal
+            $getKode(19) => ['EKUITAS', 6, false, null], // Simpanan Pokok (SP)
+            $getKode(21) => ['EKUITAS', 6, false, null], // Simpanan Wajib (SW)
+            $getKode(22) => ['EKUITAS', 6, false, null], // Simpanan Wajib Penyertaan (SWP)
+            $getKode(8) => ['EKUITAS', 6, false, null], // Cadangan Aktiva Produktif (CAP)
+            $getKode(14) => ['EKUITAS', 6, false, null], // Penyisihan Dana Pemilihan Pengurus
+            $getKode(49) => ['EKUITAS', 6, false, null], // Modal Tetap
+            $getKode(41) => ['EKUITAS', 6, false, null], // Penyisihan Dana Kesehatan
+            $getKode(42) => ['EKUITAS', 6, false, null], // Tabungan Hari Tua Karyawan
+            $getKode(44) => ['EKUITAS', 6, false, null], // Dana Pendidikan
+            $getKode(45) => ['EKUITAS', 6, false, null], // Dana PDK
+            $getKode(46) => ['EKUITAS', 6, false, null], // Dana Sosial
+            $getKode(47) => ['EKUITAS', 6, false, null], // Simpanan Hasil Usaha
+            $getKode(48) => ['EKUITAS', 6, false, null], // Dana Pengelola
+            $getKode(51) => ['EKUITAS', 6, false, null], // Penyisihan Modal Simpanan Anggota
+            $getKode(76) => ['EKUITAS', 6, false, null], // Dana Cadangan RAT
         ];
     }
 
@@ -643,48 +657,79 @@ class BukuBesarController extends BaseController
      */
     public function neraca()
     {
-        $bulan = $this->request->getGet('bulan') ?? date('n');
-        $tahun = $this->request->getGet('tahun') ?? date('Y');
+        $bulanParam = $this->request->getGet('bulan');
+        $tahunParam = $this->request->getGet('tahun');
 
-        // Tentukan periode sebelumnya
-        $currentDate = new \DateTimeImmutable("$tahun-$bulan-01"); // Use Immutable for safety
+        $bulan = !empty($bulanParam) ? (int) $bulanParam : (int) date('n');
+        $tahun = !empty($tahunParam) ? (int) $tahunParam : (int) date('Y');
+
+        try {
+            $currentDate = new \DateTimeImmutable("$tahun-$bulan-01");
+        } catch (\Exception $e) {
+            log_message('error', "Invalid date for neraca: tahun=$tahun, bulan=$bulan. Error: " . $e->getMessage());
+            $currentDate = new \DateTimeImmutable(date('Y-m-01'));
+            $bulan = (int) $currentDate->format('n');
+            $tahun = (int) $currentDate->format('Y');
+        }
+
         $prevDate = $currentDate->modify('-1 month');
         $prevBulan = (int) $prevDate->format('n');
         $prevTahun = (int) $prevDate->format('Y');
 
-        // 1. Dapatkan mapping dan daftar kode akun
         $mappingData = $this->getNeracaMappingData();
-        $listKodeAkunNeraca = array_keys($mappingData);
+        $listKodeAkunNeraca = array_keys($mappingData); // Kode Akun yang sudah benar dari mapping
+        $listKodeAkunNeraca = array_filter($listKodeAkunNeraca, function ($kode) { // Filter kode yang tidak valid
+            return strpos($kode, 'KODE_NOT_FOUND') === false;
+        });
 
-        // 2. Ambil data saldo komparatif
-        $neracaRawData = $this->saldoAkunModel->getNeracaComparativeData(
-            $listKodeAkunNeraca,
-            $bulan,
-            $tahun,
-            $prevBulan,
-            $prevTahun
-        );
 
-        // 3. Olah data mentah menjadi struktur laporan
+        $neracaRawData = [];
+        if (!empty($listKodeAkunNeraca)) {
+            $neracaRawData = $this->saldoAkunModel->getNeracaComparativeData(
+                $listKodeAkunNeraca,
+                $bulan,
+                $tahun,
+                $prevBulan,
+                $prevTahun
+            );
+        }
+
+        log_message('debug', "[NeracaController::neraca] Periode: {$bulan}-{$tahun}, Prev: {$prevBulan}-{$prevTahun}");
+        log_message('debug', "[NeracaController::neraca] Mapping Keys (List Kode Akun Neraca): " . json_encode($listKodeAkunNeraca));
+        log_message('debug', "[NeracaController::neraca] Neraca Raw Data (Count: " . count($neracaRawData) . "): " . json_encode($neracaRawData));
+
         $laporan = [
             'ASET_LANCAR' => ['label' => 'ASET LANCAR', 'urutan' => 1, 'items' => [], 'total_current' => 0, 'total_prev' => 0],
-            'ASET_TAK_LANCAR' => ['label' => 'ASET TAK LANCAR', 'urutan' => 2, 'items' => [], 'total_current' => 0, 'total_prev' => 0],
-            'ASET_TETAP' => ['label' => 'ASET TETAP', 'urutan' => 3, 'items' => [], 'total_current' => 0, 'total_prev' => 0, 'akumulasi_lookup' => []],
+            'ASET_TETAP' => ['label' => 'ASET TETAP', 'urutan' => 3, 'items' => [], 'total_current' => 0, 'total_prev' => 0, 'akumulasi_lookup' => [], 'total_net_current' => 0, 'total_net_prev' => 0],
             'KEWAJIBAN_PENDEK' => ['label' => 'KEWAJIBAN JANGKA PENDEK', 'urutan' => 4, 'items' => [], 'total_current' => 0, 'total_prev' => 0],
             'KEWAJIBAN_PANJANG' => ['label' => 'KEWAJIBAN JANGKA PANJANG', 'urutan' => 5, 'items' => [], 'total_current' => 0, 'total_prev' => 0],
             'EKUITAS' => ['label' => 'EKUITAS (MODAL)', 'urutan' => 6, 'items' => [], 'total_current' => 0, 'total_prev' => 0],
             'TIDAK_TERPETAKAN' => ['label' => 'Akun Tidak Terpetakan', 'urutan' => 99, 'items' => [], 'total_current' => 0, 'total_prev' => 0],
         ];
+        if (in_array('ASET_TAK_LANCAR', array_column($mappingData, 0))) {
+            $laporan['ASET_TAK_LANCAR'] = ['label' => 'ASET TAK LANCAR', 'urutan' => 2, 'items' => [], 'total_current' => 0, 'total_prev' => 0];
+        }
 
-        $akumulasiLookup = []; // [parent_kode => data_akumulasi]
+        $akumulasiLookup = [];
 
         foreach ($neracaRawData as $item) {
             $kodeAkun = $item['kode_akun'];
-            // Ambil info dari mapping, gunakan default jika tidak ada
-            $mapInfo = $mappingData[$kodeAkun] ?? ['TIDAK_TERPETAKAN', 99, false, null];
+            if (!isset($mappingData[$kodeAkun])) {
+                log_message('warning', "[NeracaController::neraca] Kode Akun '{$kodeAkun}' dari database tidak ditemukan di mappingData.");
+                $laporan['TIDAK_TERPETAKAN']['items'][$kodeAkun] = [
+                    'kode' => $kodeAkun,
+                    'nama' => $item['nama_akun'],
+                    'saldo_current' => floatval($item['saldo_current'] ?? 0),
+                    'saldo_prev' => floatval($item['saldo_prev'] ?? 0),
+                    'is_akumulasi' => false
+                ];
+                continue;
+            }
+
+            $mapInfo = $mappingData[$kodeAkun];
             $kelompok = $mapInfo[0];
             $isAkumulasi = $mapInfo[2];
-            $parentKode = $mapInfo[3];
+            $parentKode = $mapInfo[3]; // Kode akun aset tetap parent
 
             $dataItem = [
                 'kode' => $kodeAkun,
@@ -694,70 +739,78 @@ class BukuBesarController extends BaseController
                 'is_akumulasi' => $isAkumulasi
             ];
 
-            // Pastikan kelompok ada di $laporan sebelum menambah item
             if (isset($laporan[$kelompok])) {
                 if ($isAkumulasi && $parentKode) {
-                    $akumulasiLookup[$parentKode] = $dataItem;
-                    // Saldo akumulasi (kredit) akan mengurangi aset tetap
+                    $akumulasiLookup[$parentKode] = $dataItem; // Key adalah KODE AKUN PARENT ASET
                 } else {
                     $laporan[$kelompok]['items'][$kodeAkun] = $dataItem;
-                    // Akumulasi saldo bruto per kelompok
                     $laporan[$kelompok]['total_current'] += $dataItem['saldo_current'];
                     $laporan[$kelompok]['total_prev'] += $dataItem['saldo_prev'];
                 }
             } else {
-                // Masukkan ke Tidak Terpetakan jika kelompok tidak dikenal
+                log_message('warning', "[NeracaController::neraca] Kelompok '{$kelompok}' untuk akun '{$kodeAkun}' tidak ada di struktur \$laporan.");
                 $laporan['TIDAK_TERPETAKAN']['items'][$kodeAkun] = $dataItem;
             }
         }
-        $laporan['ASET_TETAP']['akumulasi_lookup'] = $akumulasiLookup; // Attach lookup ke grup Aset Tetap
+        if (isset($laporan['ASET_TETAP'])) { // Pastikan grup ASET_TETAP ada
+            $laporan['ASET_TETAP']['akumulasi_lookup'] = $akumulasiLookup;
+        }
 
-        // Urutkan Akun dalam setiap kelompok berdasarkan Kode Akun
+
         foreach ($laporan as $kelompok => &$dataKelompok) {
             if (!empty($dataKelompok['items'])) {
-                ksort($dataKelompok['items']); // ksort mengurutkan berdasarkan key (kode akun)
+                uasort($dataKelompok['items'], function ($a, $b) {
+                    return strcmp($a['kode'], $b['kode']);
+                });
             }
         }
-        unset($dataKelompok); // Hapus reference
-
-        // Urutkan Kelompok Laporan utama berdasarkan 'urutan'
+        unset($dataKelompok);
         uasort($laporan, function ($a, $b) {
-            return $a['urutan'] <=> $b['urutan']; // PHP 7+ spaceship operator
+            return $a['urutan'] <=> $b['urutan'];
         });
 
+        if (isset($laporan['ASET_TETAP'])) {
+            $totalAkumCurrent = 0;
+            $totalAkumPrev = 0;
+            if (!empty($laporan['ASET_TETAP']['akumulasi_lookup'])) {
+                foreach ($laporan['ASET_TETAP']['akumulasi_lookup'] as $akumItem) {
+                    // Akumulasi penyusutan mengurangi aset, jadi saldonya (yg normal kredit) kita ambil sbg pengurang.
+                    // Jika saldo_current sudah negatif (misal koreksi), biarkan. Jika positif, jadikan negatif.
+                    $totalAkumCurrent += $akumItem['saldo_current']; // Akumulasi adalah kredit, jadi saldo positif
+                    $totalAkumPrev += $akumItem['saldo_prev'];
+                }
+            }
+            // Saldo akumulasi penyusutan adalah kredit. Untuk neraca, ia mengurangi aset.
+            // Jadi jika saldo_current nya positif (normalnya begitu), kita kurangkan.
+            $laporan['ASET_TETAP']['total_net_current'] = ($laporan['ASET_TETAP']['total_current'] ?? 0) - $totalAkumCurrent;
+            $laporan['ASET_TETAP']['total_net_prev'] = ($laporan['ASET_TETAP']['total_prev'] ?? 0) - $totalAkumPrev;
+        }
 
-        // Hitung Total NETTO Aset Tetap
-        $totalAkumCurrent = array_sum(array_column($akumulasiLookup, 'saldo_current'));
-        $totalAkumPrev = array_sum(array_column($akumulasiLookup, 'saldo_prev'));
-        $laporan['ASET_TETAP']['total_net_current'] = $laporan['ASET_TETAP']['total_current'] - $totalAkumCurrent;
-        $laporan['ASET_TETAP']['total_net_prev'] = $laporan['ASET_TETAP']['total_prev'] - $totalAkumPrev;
 
-        // 4. Hitung Laba Rugi Bersih Periode Berjalan (current period only)
         $labaRugiBersihPeriode = $this->hitungLabaRugiBersih($bulan, $tahun);
 
-        // 5. Hitung Total Keseluruhan
         $grandTotalAset_current = ($laporan['ASET_LANCAR']['total_current'] ?? 0)
             + ($laporan['ASET_TAK_LANCAR']['total_current'] ?? 0)
-            + ($laporan['ASET_TETAP']['total_net_current'] ?? 0); // Gunakan Netto
+            + ($laporan['ASET_TETAP']['total_net_current'] ?? 0);
         $grandTotalAset_prev = ($laporan['ASET_LANCAR']['total_prev'] ?? 0)
             + ($laporan['ASET_TAK_LANCAR']['total_prev'] ?? 0)
-            + ($laporan['ASET_TETAP']['total_net_prev'] ?? 0); // Gunakan Netto
+            + ($laporan['ASET_TETAP']['total_net_prev'] ?? 0);
 
         $grandTotalPasivaModal_current = ($laporan['KEWAJIBAN_PENDEK']['total_current'] ?? 0)
             + ($laporan['KEWAJIBAN_PANJANG']['total_current'] ?? 0)
             + ($laporan['EKUITAS']['total_current'] ?? 0)
-            + $labaRugiBersihPeriode; // Tambah L/R periode ini
+            + $labaRugiBersihPeriode;
         $grandTotalPasivaModal_prev = ($laporan['KEWAJIBAN_PENDEK']['total_prev'] ?? 0)
             + ($laporan['KEWAJIBAN_PANJANG']['total_prev'] ?? 0)
-            + ($laporan['EKUITAS']['total_prev'] ?? 0); // L/R lalu sdh masuk Ekuitas
+            + ($laporan['EKUITAS']['total_prev'] ?? 0);
 
         $data = [
-            'title' => 'Neraca',
+            'title' => 'Neraca Komparatif',
             'bulan' => $bulan,
             'tahun' => $tahun,
             'prevBulan' => $prevBulan,
             'prevTahun' => $prevTahun,
-            'laporan' => $laporan, // Data terstruktur siap pakai
+            'laporan' => $laporan,
             'laba_rugi_bersih_current' => $labaRugiBersihPeriode,
             'grand_total_aset_current' => $grandTotalAset_current,
             'grand_total_aset_prev' => $grandTotalAset_prev,
@@ -765,25 +818,32 @@ class BukuBesarController extends BaseController
             'grand_total_pasiva_modal_prev' => $grandTotalPasivaModal_prev,
             'bulanNames' => $this->bulanNames
         ];
-
-        // Nama view baru
         return view('admin/buku_besar/neraca', $data);
     }
+
 
     /**
      * Helper function untuk menghitung Laba Rugi Bersih periode tertentu.
      */
     private function hitungLabaRugiBersih($bulan, $tahun): float
     {
+        // Pastikan kategori SAMA dengan SaldoAkunModel::getLaporanLabaRugi dan BukuBesarController::labaRugi
         $labaRugiData = $this->saldoAkunModel->getLaporanLabaRugi($bulan, $tahun);
         $totalPendapatanLR = 0;
         $totalBebanLR = 0;
-        $kategoriBebanActualLR = ['BIAYA BIAYA', 'BIAYA PAJAK', 'PENYISIHAN BEBAN DANA', 'PENYUSUTAN PENYUSUTAN'];
+
+        $kategoriPendapatanActualLR = ['PENDAPATAN'];
+        $kategoriBebanActualLR = [
+            'BEBAN',
+            'BEBAN PENYUSUTAN',
+            // 'BEBAN PAJAK',
+        ];
+
         if (!empty($labaRugiData)) {
             foreach ($labaRugiData as $itemLR) {
                 $saldoLR = floatval($itemLR['saldo'] ?? 0);
                 if (isset($itemLR['kategori'])) {
-                    if ($itemLR['kategori'] == 'PEMASUKAN') {
+                    if (in_array($itemLR['kategori'], $kategoriPendapatanActualLR)) {
                         $totalPendapatanLR += $saldoLR;
                     } elseif (in_array($itemLR['kategori'], $kategoriBebanActualLR)) {
                         $totalBebanLR += $saldoLR;
