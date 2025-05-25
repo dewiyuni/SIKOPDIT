@@ -22,7 +22,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
-
+    <?= $this->renderSection('styles') // Tempat untuk CSS tambahan per halaman ?>
 </head>
 
 
@@ -38,6 +38,7 @@
 
     <!-- SB Admin 2 JS -->
     <script src="<?= base_url('assets/js/sb-admin-2.min.js') ?>"></script>
+    <?= $this->renderSection('scripts') // Tempat untuk JS tambahan per halaman ?>
 </body>
 
 </html>
