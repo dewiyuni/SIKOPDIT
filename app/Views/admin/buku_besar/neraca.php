@@ -222,12 +222,7 @@ $namaBulanPrev = ($bulanNames[$prevBulan] ?? "Bulan_" . $prevBulan) ?? date('F',
                                     <?php endif; ?>
 
                                     <?php if ($group_key == 'EKUITAS'): ?>
-                                        <tr>
-                                            <td></td>
-                                            <td><span style="padding-left: 15px;">Laba (Rugi) Berjalan</span></td>
-                                            <td class="text-end"><?= formatNumber($laba_rugi_bersih_current ?? 0) ?></td>
-                                            <td class="text-end">-</td>
-                                        </tr>
+
                                     <?php endif; ?>
 
                                     <tr class="table-secondary">
