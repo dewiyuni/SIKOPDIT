@@ -7,6 +7,7 @@ use App\Models\BukuBesarModel;
 use App\Models\JurnalKasModel;
 use App\Models\SaldoAkunModel;
 use App\Models\PemetaanAkunModel;
+use App\Models\NeracaDataModel;
 use App\Controllers\BaseController;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
@@ -19,6 +20,7 @@ class BukuBesarController extends BaseController
     protected $pemetaanModel;
     protected $saldoAkunModel;
     protected $jurnalKasModel;
+    protected $neracaModel;
     protected $bulanNames;
 
 
@@ -29,6 +31,7 @@ class BukuBesarController extends BaseController
         $this->pemetaanModel = new PemetaanAkunModel();
         $this->saldoAkunModel = new SaldoAkunModel();
         $this->jurnalKasModel = new JurnalKasModel();
+        $this->neracaModel = new NeracaDataModel();
         helper('number');
         $this->bulanNames = [
             1 => 'Januari',
@@ -651,209 +654,477 @@ class BukuBesarController extends BaseController
             $getKode(76) => ['EKUITAS', 6, false, null], // Dana Cadangan RAT
         ];
     }
-
-    /**
-     * Menampilkan Neraca Komparatif dengan format baru.
-     */
-    public function neraca()
+    private function getMasterNeracaStructure(): array
     {
-        $bulanParam = $this->request->getGet('bulan');
-        $tahunParam = $this->request->getGet('tahun');
-
-        $bulan = !empty($bulanParam) ? (int) $bulanParam : (int) date('n');
-        $tahun = !empty($tahunParam) ? (int) $tahunParam : (int) date('Y');
-
-        try {
-            $currentDate = new \DateTimeImmutable("$tahun-$bulan-01");
-        } catch (\Exception $e) {
-            log_message('error', "Invalid date for neraca: tahun=$tahun, bulan=$bulan. Error: " . $e->getMessage());
-            $currentDate = new \DateTimeImmutable(date('Y-m-01'));
-            $bulan = (int) $currentDate->format('n');
-            $tahun = (int) $currentDate->format('Y');
-        }
-
-        $prevDate = $currentDate->modify('-1 month');
-        $prevBulan = (int) $prevDate->format('n');
-        $prevTahun = (int) $prevDate->format('Y');
-
-        $mappingData = $this->getNeracaMappingData();
-        $listKodeAkunNeraca = array_keys($mappingData); // Kode Akun yang sudah benar dari mapping
-        $listKodeAkunNeraca = array_filter($listKodeAkunNeraca, function ($kode) { // Filter kode yang tidak valid
-            return strpos($kode, 'KODE_NOT_FOUND') === false;
-        });
-
-
-        $neracaRawData = [];
-        if (!empty($listKodeAkunNeraca)) {
-            $neracaRawData = $this->saldoAkunModel->getNeracaComparativeData(
-                $listKodeAkunNeraca,
-                $bulan,
-                $tahun,
-                $prevBulan,
-                $prevTahun
-            );
-        }
-
-        log_message('debug', "[NeracaController::neraca] Periode: {$bulan}-{$tahun}, Prev: {$prevBulan}-{$prevTahun}");
-        log_message('debug', "[NeracaController::neraca] Mapping Keys (List Kode Akun Neraca): " . json_encode($listKodeAkunNeraca));
-        log_message('debug', "[NeracaController::neraca] Neraca Raw Data (Count: " . count($neracaRawData) . "): " . json_encode($neracaRawData));
-
-        $laporan = [
-            'ASET_LANCAR' => ['label' => 'ASET LANCAR', 'urutan' => 1, 'items' => [], 'total_current' => 0, 'total_prev' => 0],
-            'ASET_TETAP' => ['label' => 'ASET TETAP', 'urutan' => 3, 'items' => [], 'total_current' => 0, 'total_prev' => 0, 'akumulasi_lookup' => [], 'total_net_current' => 0, 'total_net_prev' => 0],
-            'KEWAJIBAN_PENDEK' => ['label' => 'KEWAJIBAN JANGKA PENDEK', 'urutan' => 4, 'items' => [], 'total_current' => 0, 'total_prev' => 0],
-            'KEWAJIBAN_PANJANG' => ['label' => 'KEWAJIBAN JANGKA PANJANG', 'urutan' => 5, 'items' => [], 'total_current' => 0, 'total_prev' => 0],
-            'EKUITAS' => ['label' => 'EKUITAS (MODAL)', 'urutan' => 6, 'items' => [], 'total_current' => 0, 'total_prev' => 0],
-            'TIDAK_TERPETAKAN' => ['label' => 'Akun Tidak Terpetakan', 'urutan' => 99, 'items' => [], 'total_current' => 0, 'total_prev' => 0],
+        return [
+            'ASET_LANCAR' => [
+                'label' => 'ASET LANCAR',
+                'urutan' => 1,
+                'no_induk_prefix' => 'I',
+                'no_induk_val' => 1,
+                'items_template' => [
+                    'KAS' => ['nama' => 'kas', 'is_editable' => true, 'nomor_display_sub' => '1', 'grup_laporan' => 'ASET_LANCAR', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'SIMPANAN_BANK' => ['nama' => 'Simpanan di Bank', 'is_editable' => true, 'nomor_display_sub' => '2', 'grup_laporan' => 'ASET_LANCAR', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'SIMPANAN_DEPOSITO' => ['nama' => 'Simpanan deposito', 'is_editable' => true, 'nomor_display_sub' => '3', 'grup_laporan' => 'ASET_LANCAR', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'PIUTANG_BIASA' => ['nama' => 'Piutang Biasa', 'is_editable' => true, 'nomor_display_sub' => '4', 'grup_laporan' => 'ASET_LANCAR', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'PIUTANG_KHUSUS' => ['nama' => 'Piutang Khusus', 'is_editable' => true, 'nomor_display_sub' => '5', 'grup_laporan' => 'ASET_LANCAR', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'PIUTANG_RAGU' => ['nama' => 'Piutang Ragu-ragu', 'is_editable' => true, 'nomor_display_sub' => '6', 'grup_laporan' => 'ASET_LANCAR', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'PENY_PIUTANG_RAGU' => ['nama' => 'Penyusutan Piutang Ragu', 'is_editable' => true, 'nomor_display_sub' => '7', 'grup_laporan' => 'ASET_LANCAR', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true], // Sebenarnya ini kontra-aset
+                ]
+            ],
+            'ASET_TAK_LANCAR' => [
+                'label' => 'ASET TAK LANCAR',
+                'urutan' => 2,
+                'no_induk_prefix' => 'I',
+                'no_induk_val' => 2,
+                'items_template' => [
+                    'SIMPANAN_BKD' => ['nama' => 'Simpanan di BK#D', 'is_editable' => true, 'nomor_display_sub' => '1', 'grup_laporan' => 'ASET_TAK_LANCAR', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'INVESTASI' => ['nama' => 'Investasi', 'is_editable' => true, 'nomor_display_sub' => '2', 'grup_laporan' => 'ASET_TAK_LANCAR', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'SERTA_DATA' => ['nama' => 'Serta Data', 'is_editable' => true, 'nomor_display_sub' => '3', 'grup_laporan' => 'ASET_TAK_LANCAR', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                ]
+            ],
+            'ASET_TETAP' => [
+                'label' => 'ASET TETAP',
+                'urutan' => 3,
+                'no_induk_prefix' => 'I',
+                'no_induk_val' => 3,
+                'items_template' => [
+                    'INV_MEBEL' => ['nama' => 'Inventaris Barang Mebeler', 'is_editable' => true, 'nomor_display_sub' => '1', 'grup_laporan' => 'ASET_TETAP', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'BEBAN_TERTANGGUH' => ['nama' => 'Beban Tertangguh', 'is_editable' => true, 'nomor_display_sub' => '2', 'grup_laporan' => 'ASET_TETAP', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'INV_GEDUNG' => ['nama' => 'Inventaris Gedung/Bangunan', 'is_editable' => true, 'nomor_display_sub' => '3', 'grup_laporan' => 'ASET_TETAP', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'INV_PAGAR' => ['nama' => 'Inventaris Pagar', 'is_editable' => true, 'nomor_display_sub' => '4', 'grup_laporan' => 'ASET_TETAP', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'INV_TANAH' => ['nama' => 'Inventaris tanah', 'is_editable' => false, 'nomor_display_sub' => '5', 'grup_laporan' => 'ASET_TETAP', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'INV_KOMPUTER' => ['nama' => 'Inventaris Komputer', 'is_editable' => true, 'nomor_display_sub' => '6', 'grup_laporan' => 'ASET_TETAP', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'INV_KENDARAAN' => ['nama' => 'Inventaris Kendaraan', 'is_editable' => true, 'nomor_display_sub' => '7', 'grup_laporan' => 'ASET_TETAP', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                ],
+                'akumulasi_template' => [ // Kunci di sini adalah kode_akun_internal dari ASET INDUKNYA
+                    'INV_MEBEL' => ['kode_akun_internal_akum' => 'AKUM_INV_MEBEL', 'uraian_akun' => '(Akumulasi Penyusutan Mebeler)', 'is_editable' => true, 'grup_laporan' => 'ASET_TETAP', 'is_akumulasi' => true, 'is_item_utama' => false],
+                    'BEBAN_TERTANGGUH' => ['kode_akun_internal_akum' => 'AKUM_BEBAN_TERTANGGUH', 'uraian_akun' => '(Akumulasi Penyusutan Beban Tertangguh)', 'is_editable' => true, 'grup_laporan' => 'ASET_TETAP', 'is_akumulasi' => true, 'is_item_utama' => false],
+                    'INV_GEDUNG' => ['kode_akun_internal_akum' => 'AKUM_INV_GEDUNG', 'uraian_akun' => '(Akumulasi Penyusutan Gedung)', 'is_editable' => true, 'grup_laporan' => 'ASET_TETAP', 'is_akumulasi' => true, 'is_item_utama' => false],
+                    'INV_TANAH' => ['kode_akun_internal_akum' => 'AKUM_INV_TANAH', 'uraian_akun' => '(Akumulasi Penyusutan Tanah)', 'is_editable' => false, 'grup_laporan' => 'ASET_TETAP', 'is_akumulasi' => true, 'is_item_utama' => false],
+                    'INV_KOMPUTER' => ['kode_akun_internal_akum' => 'AKUM_INV_KOMPUTER', 'uraian_akun' => '(Akumulasi Penyusutan Komputer)', 'is_editable' => true, 'grup_laporan' => 'ASET_TETAP', 'is_akumulasi' => true, 'is_item_utama' => false],
+                    'INV_KENDARAAN' => ['kode_akun_internal_akum' => 'AKUM_INV_KENDARAAN', 'uraian_akun' => '(Akumulasi Penyusutan Kendaraan)', 'is_editable' => true, 'grup_laporan' => 'ASET_TETAP', 'is_akumulasi' => true, 'is_item_utama' => false],
+                ]
+            ],
+            'KEWAJIBAN_JANGKA_PENDEK' => [
+                'label' => 'KEWAJIBAN JANGKA PENDEK',
+                'urutan' => 4,
+                'no_induk_prefix' => 'II',
+                'no_induk_val' => 1,
+                'items_template' => [
+                    'SIMP_NON_SAHAM' => ['nama' => 'simpanan Non Saham', 'is_editable' => true, 'nomor_display_sub' => '1', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PENDEK', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'SIMP_JASA_NON_SAHAM' => ['nama' => 'Simpanan Jasa Non Saham', 'is_editable' => true, 'nomor_display_sub' => '2', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PENDEK', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'SIMP_SUKARELA' => ['nama' => 'Simpanan Suka Rela', 'is_editable' => true, 'nomor_display_sub' => '3', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PENDEK', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'SIMP_DANA' => ['nama' => 'Simpanan Dana', 'is_editable' => true, 'nomor_display_sub' => '4', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PENDEK', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'DANA_PENGURUS' => ['nama' => 'Dana Pengurus', 'is_editable' => true, 'nomor_display_sub' => '5', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PENDEK', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'DANA_PENDIDIKAN' => ['nama' => 'Dana Pendidikan', 'is_editable' => true, 'nomor_display_sub' => '6', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PENDEK', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'DANA_KARYAWAN' => ['nama' => 'Dana Karyawan', 'is_editable' => true, 'nomor_display_sub' => '7', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PENDEK', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'DANA_PDK' => ['nama' => 'Dana PDK', 'is_editable' => true, 'nomor_display_sub' => '8', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PENDEK', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'DANA_SOSIAL' => ['nama' => 'Dana Sosial', 'is_editable' => true, 'nomor_display_sub' => '9', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PENDEK', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'DANA_INSENTIF' => ['nama' => 'Dana Insentif', 'is_editable' => true, 'nomor_display_sub' => '10', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PENDEK', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'DANA_SUPERVISI' => ['nama' => 'Dana Supervisi', 'is_editable' => true, 'nomor_display_sub' => '11', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PENDEK', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'Beban_YMHDB' => ['nama' => 'Beban yang Masih harus di Bayar', 'is_editable' => true, 'nomor_display_sub' => '12', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PENDEK', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'DANA_RAT' => ['nama' => '1. Dana RAT', 'is_editable' => true, 'nomor_display_sub' => '13', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PENDEK', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'DANA_KESEJAHTERAAN' => ['nama' => '2. Dana Kesejahteraan', 'is_editable' => true, 'nomor_display_sub' => '14', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PENDEK', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'DANA_SHU_LALU' => ['nama' => '3. Dana SHU tahun lalu', 'is_editable' => true, 'nomor_display_sub' => '15', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PENDEK', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'TITIPAN_PENGURUS' => ['nama' => '4. Titipan Pemilihan Pengurus', 'is_editable' => true, 'nomor_display_sub' => '15.1', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PENDEK', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'SHU_TAHUN_INI_KEWAJIBAN' => ['nama' => '4. SHU tahun sekarang', 'is_editable' => true, 'nomor_display_sub' => '16', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PENDEK', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                ]
+            ],
+            'KEWAJIBAN_JANGKA_PANJANG' => [
+                'label' => 'KEWAJIBAN JANGKA PANJANG',
+                'urutan' => 5,
+                'no_induk_prefix' => 'II',
+                'no_induk_val' => 2,
+                'items_template' => [
+                    'DANA_SEHAT_KJP' => ['nama' => 'Dana Sehat', 'is_editable' => true, 'nomor_display_sub' => '1', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PANJANG', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'TITIP_SPSW' => ['nama' => 'Titip SP/SW', 'is_editable' => true, 'nomor_display_sub' => '2', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PANJANG', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'TITIPAN_DANADANA' => ['nama' => 'Titipan Dana-dana', 'is_editable' => true, 'nomor_display_sub' => '3', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PANJANG', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'TITIPAN_CAP' => ['nama' => 'Titipan (CAP)', 'is_editable' => true, 'nomor_display_sub' => '4', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PANJANG', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'TITIPAN_DANA_RAT_KJP' => ['nama' => 'Titipan Dana RAT', 'is_editable' => true, 'nomor_display_sub' => '5', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PANJANG', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'TITIPAN_BIAYA_PAJAK' => ['nama' => 'Titipan Biaya Pajak', 'is_editable' => true, 'nomor_display_sub' => '6', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PANJANG', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'TITIPAN_DANA_PENDAMPING' => ['nama' => 'Titipan Dana Pendamping', 'is_editable' => true, 'nomor_display_sub' => '7', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PANJANG', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'PEMUPUKAN_MODAL_TETAP' => ['nama' => 'Pemupukan Modal tetap', 'is_editable' => true, 'nomor_display_sub' => '8', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PANJANG', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'TAB_PESANGON' => ['nama' => 'Tabungan Pesangon Karyawan', 'is_editable' => true, 'nomor_display_sub' => '9', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PANJANG', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'PINJAMAN_PIHAK2' => ['nama' => 'Pinjaman Pihak Ke-2', 'is_editable' => true, 'nomor_display_sub' => '10', 'grup_laporan' => 'KEWAJIBAN_JANGKA_PANJANG', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                ]
+            ],
+            'EKUITAS' => [
+                'label' => 'EKUITAS (MODAL)',
+                'urutan' => 6,
+                'no_induk_prefix' => 'II',
+                'no_induk_val' => 3,
+                'items_template' => [
+                    'SIMP_POKOK' => ['nama' => 'Simpanan Pokok', 'is_editable' => true, 'nomor_display_sub' => '1', 'grup_laporan' => 'EKUITAS', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'SIMP_WAJIB' => ['nama' => 'Simpanan Wajib', 'is_editable' => true, 'nomor_display_sub' => '2', 'grup_laporan' => 'EKUITAS', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'SIMP_SWP' => ['nama' => 'Simpanan SWP', 'is_editable' => true, 'nomor_display_sub' => '3', 'grup_laporan' => 'EKUITAS', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'IURAN_DANA_SEHAT' => ['nama' => 'Iuran Dana Sehat', 'is_editable' => true, 'nomor_display_sub' => '4', 'grup_laporan' => 'EKUITAS', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'HIBAH' => ['nama' => 'Hibah', 'is_editable' => true, 'nomor_display_sub' => '5', 'grup_laporan' => 'EKUITAS', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'CAD_LIKUIDITAS' => ['nama' => 'Cadangan Likuiditas', 'is_editable' => true, 'nomor_display_sub' => '6', 'grup_laporan' => 'EKUITAS', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'CAD_KOPERASI' => ['nama' => 'Cadangan Koperasi', 'is_editable' => true, 'nomor_display_sub' => '7', 'grup_laporan' => 'EKUITAS', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'DANA_RESIKO' => ['nama' => 'Dana Resiko', 'is_editable' => true, 'nomor_display_sub' => '8', 'grup_laporan' => 'EKUITAS', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'PJKR' => ['nama' => 'PJKR', 'is_editable' => true, 'nomor_display_sub' => '9', 'grup_laporan' => 'EKUITAS', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                    'SHU_EKUITAS_TAHUN_INI' => ['nama' => 'SHU', 'is_editable' => true, 'nomor_display_sub' => '10', 'grup_laporan' => 'EKUITAS', 'is_akumulasi' => false, 'parent_kode_akun_internal' => null, 'is_item_utama' => true],
+                ]
+            ],
+            'TIDAK_TERPETAKAN' => ['label' => 'AKUN BELUM TERPETAKAN', 'urutan' => 99, 'no_induk_prefix' => '', 'no_induk_val' => 0, 'items_template' => []]
         ];
-        if (in_array('ASET_TAK_LANCAR', array_column($mappingData, 0))) {
-            $laporan['ASET_TAK_LANCAR'] = ['label' => 'ASET TAK LANCAR', 'urutan' => 2, 'items' => [], 'total_current' => 0, 'total_prev' => 0];
-        }
-
-        $akumulasiLookup = [];
-
-        foreach ($neracaRawData as $item) {
-            $kodeAkun = $item['kode_akun'];
-            if (!isset($mappingData[$kodeAkun])) {
-                log_message('warning', "[NeracaController::neraca] Kode Akun '{$kodeAkun}' dari database tidak ditemukan di mappingData.");
-                $laporan['TIDAK_TERPETAKAN']['items'][$kodeAkun] = [
-                    'kode' => $kodeAkun,
-                    'nama' => $item['nama_akun'],
-                    'saldo_current' => floatval($item['saldo_current'] ?? 0),
-                    'saldo_prev' => floatval($item['saldo_prev'] ?? 0),
-                    'is_akumulasi' => false
-                ];
-                continue;
-            }
-
-            $mapInfo = $mappingData[$kodeAkun];
-            $kelompok = $mapInfo[0];
-            $isAkumulasi = $mapInfo[2];
-            $parentKode = $mapInfo[3]; // Kode akun aset tetap parent
-
-            $dataItem = [
-                'kode' => $kodeAkun,
-                'nama' => $item['nama_akun'],
-                'saldo_current' => floatval($item['saldo_current'] ?? 0),
-                'saldo_prev' => floatval($item['saldo_prev'] ?? 0),
-                'is_akumulasi' => $isAkumulasi
-            ];
-
-            if (isset($laporan[$kelompok])) {
-                if ($isAkumulasi && $parentKode) {
-                    $akumulasiLookup[$parentKode] = $dataItem; // Key adalah KODE AKUN PARENT ASET
-                } else {
-                    $laporan[$kelompok]['items'][$kodeAkun] = $dataItem;
-                    $laporan[$kelompok]['total_current'] += $dataItem['saldo_current'];
-                    $laporan[$kelompok]['total_prev'] += $dataItem['saldo_prev'];
-                }
-            } else {
-                log_message('warning', "[NeracaController::neraca] Kelompok '{$kelompok}' untuk akun '{$kodeAkun}' tidak ada di struktur \$laporan.");
-                $laporan['TIDAK_TERPETAKAN']['items'][$kodeAkun] = $dataItem;
-            }
-        }
-        if (isset($laporan['ASET_TETAP'])) { // Pastikan grup ASET_TETAP ada
-            $laporan['ASET_TETAP']['akumulasi_lookup'] = $akumulasiLookup;
-        }
-
-
-        foreach ($laporan as $kelompok => &$dataKelompok) {
-            if (!empty($dataKelompok['items'])) {
-                uasort($dataKelompok['items'], function ($a, $b) {
-                    return strcmp($a['kode'], $b['kode']);
-                });
-            }
-        }
-        unset($dataKelompok);
-        uasort($laporan, function ($a, $b) {
-            return $a['urutan'] <=> $b['urutan'];
-        });
-
-        if (isset($laporan['ASET_TETAP'])) {
-            $totalAkumCurrent = 0;
-            $totalAkumPrev = 0;
-            if (!empty($laporan['ASET_TETAP']['akumulasi_lookup'])) {
-                foreach ($laporan['ASET_TETAP']['akumulasi_lookup'] as $akumItem) {
-                    // Akumulasi penyusutan mengurangi aset, jadi saldonya (yg normal kredit) kita ambil sbg pengurang.
-                    // Jika saldo_current sudah negatif (misal koreksi), biarkan. Jika positif, jadikan negatif.
-                    $totalAkumCurrent += $akumItem['saldo_current']; // Akumulasi adalah kredit, jadi saldo positif
-                    $totalAkumPrev += $akumItem['saldo_prev'];
-                }
-            }
-            // Saldo akumulasi penyusutan adalah kredit. Untuk neraca, ia mengurangi aset.
-            // Jadi jika saldo_current nya positif (normalnya begitu), kita kurangkan.
-            $laporan['ASET_TETAP']['total_net_current'] = ($laporan['ASET_TETAP']['total_current'] ?? 0) - $totalAkumCurrent;
-            $laporan['ASET_TETAP']['total_net_prev'] = ($laporan['ASET_TETAP']['total_prev'] ?? 0) - $totalAkumPrev;
-        }
-
-
-        $labaRugiBersihPeriode = $this->hitungLabaRugiBersih($bulan, $tahun);
-
-        $grandTotalAset_current = ($laporan['ASET_LANCAR']['total_current'] ?? 0)
-            + ($laporan['ASET_TAK_LANCAR']['total_current'] ?? 0)
-            + ($laporan['ASET_TETAP']['total_net_current'] ?? 0);
-        $grandTotalAset_prev = ($laporan['ASET_LANCAR']['total_prev'] ?? 0)
-            + ($laporan['ASET_TAK_LANCAR']['total_prev'] ?? 0)
-            + ($laporan['ASET_TETAP']['total_net_prev'] ?? 0);
-
-        $grandTotalPasivaModal_current = ($laporan['KEWAJIBAN_PENDEK']['total_current'] ?? 0)
-            + ($laporan['KEWAJIBAN_PANJANG']['total_current'] ?? 0)
-            + ($laporan['EKUITAS']['total_current'] ?? 0)
-            + $labaRugiBersihPeriode;
-        $grandTotalPasivaModal_prev = ($laporan['KEWAJIBAN_PENDEK']['total_prev'] ?? 0)
-            + ($laporan['KEWAJIBAN_PANJANG']['total_prev'] ?? 0)
-            + ($laporan['EKUITAS']['total_prev'] ?? 0);
-
-        $data = [
-            'title' => 'Neraca Komparatif',
-            'bulan' => $bulan,
-            'tahun' => $tahun,
-            'prevBulan' => $prevBulan,
-            'prevTahun' => $prevTahun,
-            'laporan' => $laporan,
-            'laba_rugi_bersih_current' => $labaRugiBersihPeriode,
-            'grand_total_aset_current' => $grandTotalAset_current,
-            'grand_total_aset_prev' => $grandTotalAset_prev,
-            'grand_total_pasiva_modal_current' => $grandTotalPasivaModal_current,
-            'grand_total_pasiva_modal_prev' => $grandTotalPasivaModal_prev,
-            'bulanNames' => $this->bulanNames
-        ];
-        return view('admin/buku_besar/neraca', $data);
     }
 
-
-    /**
-     * Helper function untuk menghitung Laba Rugi Bersih periode tertentu.
-     */
-    private function hitungLabaRugiBersih($bulan, $tahun): float
+    public function neraca()
     {
-        // Pastikan kategori SAMA dengan SaldoAkunModel::getLaporanLabaRugi dan BukuBesarController::labaRugi
-        $labaRugiData = $this->saldoAkunModel->getLaporanLabaRugi($bulan, $tahun);
-        $totalPendapatanLR = 0;
-        $totalBebanLR = 0;
+        if (!$this->neracaModel) {
+            log_message('error', 'NeracaDataModel tidak terinisialisasi di BukuBesarController::neraca().');
+            // Anda bisa menampilkan halaman error atau pesan yang lebih baik di sini
+            return "Error: Model data neraca tidak tersedia. Silakan hubungi administrator.";
+        }
 
-        $kategoriPendapatanActualLR = ['PENDAPATAN'];
-        $kategoriBebanActualLR = [
-            'BEBAN',
-            'BEBAN PENYUSUTAN',
-            // 'BEBAN PAJAK',
-        ];
+        $bulan_req = $this->request->getGet('bulan');
+        $tahun_req = $this->request->getGet('tahun');
 
-        if (!empty($labaRugiData)) {
-            foreach ($labaRugiData as $itemLR) {
-                $saldoLR = floatval($itemLR['saldo'] ?? 0);
-                if (isset($itemLR['kategori'])) {
-                    if (in_array($itemLR['kategori'], $kategoriPendapatanActualLR)) {
-                        $totalPendapatanLR += $saldoLR;
-                    } elseif (in_array($itemLR['kategori'], $kategoriBebanActualLR)) {
-                        $totalBebanLR += $saldoLR;
+        // Gunakan integer untuk bulan, default ke bulan saat ini jika tidak ada request
+        $bulan = !empty($bulan_req) ? (int) $bulan_req : (int) date('n');
+        $tahun = !empty($tahun_req) ? (int) $tahun_req : (int) date('Y');
+
+        $currentDate = new \DateTime();
+        $currentDate->setDate($tahun, $bulan, 1);
+
+        $prevDate = (clone $currentDate)->modify('-1 month');
+        $prevBulan = (int) $prevDate->format('n'); // 'n' untuk bulan tanpa leading zero (1-12)
+        $prevTahun = (int) $prevDate->format('Y');
+
+        // 1. Inisialisasi $laporan dari Master Structure
+        $masterStructure = $this->getMasterNeracaStructure();
+        $laporan = [];
+
+        foreach ($masterStructure as $groupKey => $groupDetails) {
+            $laporan[$groupKey] = [
+                'label' => $groupDetails['label'],
+                'urutan' => $groupDetails['urutan'],
+                'no_induk_prefix' => $groupDetails['no_induk_prefix'],
+                'no_induk_val' => $groupDetails['no_induk_val'],
+                'items' => [],
+                'akumulasi_lookup' => [],
+                'total_current' => 0,
+                'total_prev' => 0,
+                'total_net_current' => 0,
+                'total_net_prev' => 0,
+            ];
+
+            if (isset($groupDetails['items_template'])) {
+                foreach ($groupDetails['items_template'] as $itemKey => $itemDetails) {
+                    $laporan[$groupKey]['items'][$itemKey] = [
+                        'id' => null,
+                        'nama' => $itemDetails['nama'],
+                        'nomor_display_sub' => $itemDetails['nomor_display_sub'],
+                        'is_editable' => $itemDetails['is_editable'],
+                        'saldo_current' => 0,
+                        'saldo_prev' => 0
+                    ];
+                }
+            }
+            if ($groupKey === 'ASET_TETAP' && isset($groupDetails['akumulasi_template'])) {
+                foreach ($groupDetails['akumulasi_template'] as $itemKeyParent => $akumDetails) {
+                    $laporan[$groupKey]['akumulasi_lookup'][$itemKeyParent] = [
+                        'id' => null,
+                        'nama' => $akumDetails['uraian_akun'],
+                        'is_editable' => $akumDetails['is_editable'],
+                        'saldo_current' => 0,
+                        'saldo_prev' => 0
+                    ];
+                }
+            }
+        }
+
+        // 2. Fetch Data dari DB
+        $itemsCurrentPeriod = $this->neracaModel
+            ->where('periode_tahun', $tahun)
+            ->where('periode_bulan', $bulan) // DB menyimpan bulan sebagai integer
+            ->findAll();
+
+        $itemsPrevPeriod = $this->neracaModel
+            ->where('periode_tahun', $prevTahun)
+            ->where('periode_bulan', $prevBulan) // DB menyimpan bulan sebagai integer
+            ->findAll();
+
+        // 3. Merge Data DB ke $laporan
+        $dbCurrentMap = [];
+        foreach ($itemsCurrentPeriod as $dbItem) {
+            $dbCurrentMap[$dbItem['kode_akun_internal']] = $dbItem;
+        }
+        $dbPrevMap = [];
+        foreach ($itemsPrevPeriod as $dbItem) {
+            $dbPrevMap[$dbItem['kode_akun_internal']] = $dbItem;
+        }
+
+        foreach ($laporan as $groupKey => &$groupData) {
+            if (isset($groupData['items'])) {
+                foreach ($groupData['items'] as $itemKey => &$itemData) {
+                    if (isset($dbCurrentMap[$itemKey])) {
+                        $dbItemCurrent = $dbCurrentMap[$itemKey];
+                        if (!$dbItemCurrent['is_akumulasi']) {
+                            $itemData['id'] = $dbItemCurrent['id'];
+                            $itemData['saldo_current'] = (float) $dbItemCurrent['nilai'];
+                        }
+                    }
+                    if (isset($dbPrevMap[$itemKey])) {
+                        $dbItemPrev = $dbPrevMap[$itemKey];
+                        if (!$dbItemPrev['is_akumulasi']) {
+                            $itemData['saldo_prev'] = (float) $dbItemPrev['nilai'];
+                        }
+                    }
+                }
+                unset($itemData);
+            }
+
+            if ($groupKey === 'ASET_TETAP' && isset($groupData['akumulasi_lookup'])) {
+                foreach ($groupData['akumulasi_lookup'] as $itemKeyParent => &$akumData) {
+                    $akumKodeInternal = 'AKUM_' . $itemKeyParent;
+                    if (isset($dbCurrentMap[$akumKodeInternal])) {
+                        $dbAkumCurrent = $dbCurrentMap[$akumKodeInternal];
+                        if ($dbAkumCurrent['is_akumulasi'] && $dbAkumCurrent['parent_kode_akun_internal'] == $itemKeyParent) {
+                            $akumData['id'] = $dbAkumCurrent['id'];
+                            $akumData['saldo_current'] = (float) $dbAkumCurrent['nilai'];
+                        }
+                    }
+                    if (isset($dbPrevMap[$akumKodeInternal])) {
+                        $dbAkumPrev = $dbPrevMap[$akumKodeInternal];
+                        if ($dbAkumPrev['is_akumulasi'] && $dbAkumPrev['parent_kode_akun_internal'] == $itemKeyParent) {
+                            $akumData['saldo_prev'] = (float) $dbAkumPrev['nilai'];
+                        }
+                    }
+                }
+                unset($akumData);
+            }
+        }
+        unset($groupData);
+
+        // 4. Hitung Laba Rugi Bersih Current
+        $laba_rugi_bersih_current = 0;
+        // Asumsi SHU yang ada di Ekuitas adalah L/R yang sudah pasti untuk periode itu,
+        // atau L/R berjalan diambil dari perhitungan lain.
+        // Untuk neraca, L/R berjalan biasanya menambah Ekuitas.
+        if (isset($laporan['EKUITAS']['items']['SHU_EKUITAS_TAHUN_INI']['saldo_current'])) {
+            $laba_rugi_bersih_current = (float) $laporan['EKUITAS']['items']['SHU_EKUITAS_TAHUN_INI']['saldo_current'];
+            // Jika SHU_EKUITAS_TAHUN_INI adalah L/R berjalan, maka tidak perlu ada di 'items' ekuitas untuk perhitungan subtotal
+            // karena akan ditambahkan secara eksplisit. Alternatifnya, biarkan di items dan jangan tambahkan lagi.
+            // Untuk konsistensi dengan view, kita akan menambahkannya saat menghitung subtotal ekuitas
+        }
+        // Anda mungkin perlu mengambil $laba_rugi_bersih_current dari sumber lain jika tidak disimpan sebagai item neraca
+        // Misalnya dari tabel laba_rugi atau perhitungan dinamis.
+
+
+        // 5. Hitung Ulang Semua Total
+        $grand_total_aset_current = 0;
+        $grand_total_aset_prev = 0;
+        $grand_total_pasiva_modal_current = 0;
+        $grand_total_pasiva_modal_prev = 0;
+
+        foreach ($laporan as $groupKey => &$groupData) {
+            $current_group_total = 0;
+            $prev_group_total = 0;
+
+            if (isset($groupData['items'])) {
+                foreach ($groupData['items'] as $itemKey => $itemData) {
+                    // Jangan tambahkan SHU_EKUITAS_TAHUN_INI ke total item jika akan ditambahkan sebagai L/R Berjalan terpisah
+                    if (!($groupKey === 'EKUITAS' && $itemKey === 'SHU_EKUITAS_TAHUN_INI')) {
+                        $current_group_total += $itemData['saldo_current'];
+                    }
+                    $prev_group_total += $itemData['saldo_prev']; // SHU periode lalu sudah masuk sebagai item biasa
+                }
+            }
+            $groupData['total_current'] = $current_group_total;
+            $groupData['total_prev'] = $prev_group_total;
+
+
+            if ($groupKey === 'ASET_TETAP') {
+                $groupData['total_net_current'] = 0;
+                $groupData['total_net_prev'] = 0;
+                if (isset($groupData['items'])) {
+                    foreach ($groupData['items'] as $itemKey => $itemData) {
+                        $akum_current = $groupData['akumulasi_lookup'][$itemKey]['saldo_current'] ?? 0;
+                        $akum_prev = $groupData['akumulasi_lookup'][$itemKey]['saldo_prev'] ?? 0;
+                        $groupData['total_net_current'] += ($itemData['saldo_current'] + $akum_current);
+                        $groupData['total_net_prev'] += ($itemData['saldo_prev'] + $akum_prev);
                     }
                 }
             }
-        }
-        return $totalPendapatanLR - $totalBebanLR;
-    }
 
+            // Akumulasi Grand Total
+            if (in_array($groupKey, ['ASET_LANCAR', 'ASET_TAK_LANCAR'])) {
+                $grand_total_aset_current += $groupData['total_current'];
+                $grand_total_aset_prev += $groupData['total_prev'];
+            } elseif ($groupKey == 'ASET_TETAP') {
+                $grand_total_aset_current += $groupData['total_net_current'];
+                $grand_total_aset_prev += $groupData['total_net_prev'];
+            } elseif (in_array($groupKey, ['KEWAJIBAN_JANGKA_PENDEK', 'KEWAJIBAN_JANGKA_PANJANG'])) {
+                $grand_total_pasiva_modal_current += $groupData['total_current'];
+                $grand_total_pasiva_modal_prev += $groupData['total_prev'];
+            } elseif ($groupKey == 'EKUITAS') {
+                $grand_total_pasiva_modal_current += $groupData['total_current']; // Total item ekuitas (tanpa L/R berjalan jika dipisah)
+                $grand_total_pasiva_modal_current += $laba_rugi_bersih_current; // Tambahkan L/R Berjalan ke grand total
+                $grand_total_pasiva_modal_prev += $groupData['total_prev']; // SHU periode lalu sudah termasuk
+            }
+        }
+        unset($groupData);
+
+
+        $viewData = [
+            'laporan' => $laporan,
+            'grand_total_aset_current' => $grand_total_aset_current,
+            'grand_total_aset_prev' => $grand_total_aset_prev,
+            'grand_total_pasiva_modal_current' => $grand_total_pasiva_modal_current,
+            'grand_total_pasiva_modal_prev' => $grand_total_pasiva_modal_prev,
+            'laba_rugi_bersih_current' => $laba_rugi_bersih_current,
+            'bulan' => $bulan, // integer
+            'tahun' => $tahun,
+            'prevBulan' => $prevBulan, // integer
+            'prevTahun' => $prevTahun,
+            'bulanNames' => $this->bulanNames
+        ];
+
+        return view('admin/buku_besar/neraca', $viewData);
+    }
+    public function updateNeracaItem()
+    {
+        if (!$this->neracaModel) {
+            return $this->response->setStatusCode(500)->setJSON(['status' => 'error', 'message' => 'Kesalahan internal server: Model tidak termuat.']);
+        }
+
+        if ($this->request->isAJAX() && $this->request->getMethod(true) === 'POST') {
+            $id = $this->request->getPost('id');
+            $is_new_flag = $this->request->getPost('is_new'); // Ambil flag is_new
+            $nilai_raw = $this->request->getPost('nilai');
+
+            $nilai_db_str = str_replace(',', '.', (string) $nilai_raw);
+            if (!is_numeric($nilai_db_str)) {
+                return $this->response->setJSON(['status' => 'error', 'message' => 'Nilai yang dimasukkan harus berupa angka.']);
+            }
+            $nilai_db = floatval($nilai_db_str);
+
+            // Logika untuk INSERT jika 'id' kosong DAN 'is_new' adalah 'true'
+            if (empty($id) && $is_new_flag === 'true') {
+                $kode_akun_internal_js = $this->request->getPost('kode_akun_internal');
+                $periode_tahun = (int) $this->request->getPost('periode_tahun');
+                $periode_bulan = (int) $this->request->getPost('periode_bulan');
+
+                if (empty($kode_akun_internal_js) || empty($periode_tahun) || empty($periode_bulan)) {
+                    return $this->response->setJSON(['status' => 'error', 'message' => 'Data untuk membuat item baru tidak lengkap (kode akun, tahun, atau bulan).']);
+                }
+
+                $masterStructure = $this->getMasterNeracaStructure();
+                $templateForInsert = null; // Ini akan berisi detail akun dari master
+                $final_kode_akun_internal_db = $kode_akun_internal_js; // Default, bisa di-override untuk akumulasi
+                $parent_for_akum_insert = null;
+
+                if (strpos($kode_akun_internal_js, 'akum_') === 0) { // Handle Akumulasi
+                    $parent_kode_internal_insert = substr($kode_akun_internal_js, 5);
+                    if (isset($masterStructure['ASET_TETAP']['akumulasi_template'][$parent_kode_internal_insert])) {
+                        $templateForInsert = $masterStructure['ASET_TETAP']['akumulasi_template'][$parent_kode_internal_insert];
+                        $final_kode_akun_internal_db = $templateForInsert['kode_akun_internal_akum']; // Gunakan kode internal akumulasi yg benar
+                        $parent_for_akum_insert = $parent_kode_internal_insert; // Simpan parent untuk DB
+                    }
+                } else { // Handle Item Utama
+                    foreach ($masterStructure as $groupDetails) {
+                        if (isset($groupDetails['items_template'][$kode_akun_internal_js])) {
+                            $templateForInsert = $groupDetails['items_template'][$kode_akun_internal_js];
+                            break;
+                        }
+                    }
+                }
+
+                if (!$templateForInsert) {
+                    return $this->response->setJSON(['status' => 'error', 'message' => 'Definisi master akun tidak ditemukan untuk kode: ' . esc($kode_akun_internal_js)]);
+                }
+
+                // Pastikan semua field yang dibutuhkan ada di template
+                $required_keys = ['grup_laporan', 'is_editable', 'is_akumulasi', 'is_item_utama'];
+                if (strpos($kode_akun_internal_js, 'akum_') === 0) {
+                    $required_keys[] = 'uraian_akun'; // uraian_akun ada di template akumulasi
+                } else {
+                    $required_keys[] = 'nama'; // 'nama' ada di template item
+                    $required_keys[] = 'nomor_display_sub';
+                }
+
+                foreach ($required_keys as $req_key) {
+                    if (!isset($templateForInsert[$req_key])) {
+                        return $this->response->setJSON(['status' => 'error', 'message' => "Template master akun untuk '" . esc($kode_akun_internal_js) . "' tidak lengkap, field '" . esc($req_key) . "' tidak ada."]);
+                    }
+                }
+
+
+                // Tentukan urutan_display (ini adalah bagian yang paling tricky untuk item baru)
+                // Anda mungkin perlu logika yang lebih baik di sini, atau kolom urutan di master COA DB.
+                $urutan_display_val = 9900; // Default tinggi jika tidak ditemukan
+                $found_group_for_order = $templateForInsert['grup_laporan'];
+                if (isset($masterStructure[$found_group_for_order])) {
+                    $urutan_display_val = $masterStructure[$found_group_for_order]['urutan'] * 100; // Basis urutan grup
+                    if ($is_new_flag === 'true' && strpos($kode_akun_internal_js, 'akum_') === 0) {
+                        // Akumulasi biasanya setelah item induknya
+                        $urutan_display_val += (int) preg_replace('/[^0-9]/', '', $masterStructure[$found_group_for_order]['items_template'][$parent_for_akum_insert]['nomor_display_sub'] ?? '0') + 0.5; // Tambah 0.5 agar setelah induk
+                    } else {
+                        $urutan_display_val += (int) preg_replace('/[^0-9]/', '', $templateForInsert['nomor_display_sub'] ?? '99');
+                    }
+                }
+
+
+                $dataToInsert = [
+                    'periode_tahun' => $periode_tahun,
+                    'periode_bulan' => $periode_bulan,
+                    'kode_akun_internal' => $final_kode_akun_internal_db,
+                    'uraian_akun' => $templateForInsert['uraian_akun'] ?? $templateForInsert['nama'], // Ambil uraian yang sesuai
+                    'grup_laporan' => $templateForInsert['grup_laporan'],
+                    'nomor_display_main' => $masterStructure[$templateForInsert['grup_laporan']]['no_induk_prefix'] ?? null,
+                    'nomor_display_sub' => $templateForInsert['nomor_display_sub'] ?? null,
+                    'nilai' => $nilai_db,
+                    'is_item_utama' => (bool) $templateForInsert['is_item_utama'],
+                    'is_akumulasi' => (bool) $templateForInsert['is_akumulasi'],
+                    'parent_kode_akun_internal' => $parent_for_akum_insert, // Ini penting untuk akumulasi
+                    'is_editable' => (bool) $templateForInsert['is_editable'],
+                    'urutan_display' => (int) $urutan_display_val,
+                    // Default lain dari skema DB akan berlaku (is_header_grup=0, dll.)
+                ];
+
+                try {
+                    $newId = $this->neracaModel->insert($dataToInsert, true);
+                    if ($newId) {
+                        return $this->response->setJSON([
+                            'status' => 'success',
+                            'message' => 'Data baru berhasil disimpan.',
+                            'new_id' => $newId // Kirim ID baru ke client
+                        ]);
+                    } else {
+                        $errors = $this->neracaModel->errors();
+                        log_message('error', 'Gagal insert neraca item: ' . json_encode($dataToInsert) . ' Errors: ' . json_encode($errors));
+                        return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal menyimpan data baru ke database.', 'errors' => $errors]);
+                    }
+                } catch (\Exception $e) {
+                    log_message('error', '[ERROR] Exception in insertNeracaItem: ' . $e->getMessage() . ' Data: ' . json_encode($dataToInsert));
+                    return $this->response->setJSON(['status' => 'error', 'message' => 'Terjadi kesalahan server saat menyimpan: ' . $e->getMessage()]);
+                }
+
+            } elseif (!empty($id) && is_numeric($id)) { // Proses UPDATE
+                try {
+                    if ($this->neracaModel->update($id, ['nilai' => $nilai_db])) {
+                        return $this->response->setJSON([
+                            'status' => 'success',
+                            'message' => 'Data berhasil diperbarui.'
+                        ]);
+                    } else {
+                        $errors = $this->neracaModel->errors();
+                        log_message('error', 'Gagal update neraca item ID ' . $id . ': ' . json_encode($errors));
+                        return $this->response->setJSON(['status' => 'error', 'message' => 'Gagal memperbarui data di database.', 'errors' => $errors]);
+                    }
+                } catch (\Exception $e) {
+                    log_message('error', '[ERROR] Exception in updateNeracaItem (update part): ' . $e->getMessage() . ' - ID: ' . $id . ' Nilai: ' . $nilai_raw);
+                    return $this->response->setJSON(['status' => 'error', 'message' => 'Terjadi kesalahan pada server: ' . $e->getMessage()]);
+                }
+            } else {
+                return $this->response->setJSON(['status' => 'error', 'message' => 'Permintaan tidak valid (ID atau flag tidak sesuai untuk operasi).']);
+            }
+        }
+        return $this->response->setStatusCode(405)->setJSON(['status' => 'error', 'message' => 'Metode tidak diizinkan.']);
+    }
     public function exportBukuBesar($idAkun)
     {
         $bulan = $this->request->getGet('bulan') ?? date('n');
@@ -866,13 +1137,13 @@ class BukuBesarController extends BaseController
         }
 
         $bulanNames = [
-            1 => 'Januari',
-            2 => 'Februari',
-            3 => 'Maret',
-            4 => 'April',
-            5 => 'Mei',
-            6 => 'Juni',
-            7 => 'Juli',
+            01 => 'Januari',
+            02 => 'Februari',
+            03 => 'Maret',
+            04 => 'April',
+            05 => 'Mei',
+            06 => 'Juni',
+            07 => 'Juli',
             8 => 'Agustus',
             9 => 'September',
             10 => 'Oktober',

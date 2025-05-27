@@ -126,6 +126,7 @@ $routes->group('admin', function ($routes) {
     $routes->post('neraca/kategori_neraca/update/(:num)', 'KategoriNeraca::update/$1');
     $routes->get('neraca/kategori_neraca/delete/(:num)', 'KategoriNeraca::delete/$1');
     $routes->post('anggota/import-excel', 'AnggotaController::importExcelAnggota');
+    $routes->post('buku_besar/updateNeracaItem', 'BukuBesarController::updateNeracaItem');
 
 });
 $routes->group('admin', function ($routes) {
