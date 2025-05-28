@@ -12,6 +12,10 @@ use App\Controllers\BaseController;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
+use PhpOffice\PhpSpreadsheet\Style\Alignment as PhpSpreadsheetAlignment;
+use PhpOffice\PhpSpreadsheet\Style\Border as ExcelBorder; // <--- TAMBAHKAN/PASTIKAN INI ADA
+use PhpOffice\PhpSpreadsheet\Style\Fill as ExcelFill;     // <--- TAMBAHKAN/PASTIKAN INI ADA
+
 
 class BukuBesarController extends BaseController
 {
@@ -771,6 +775,196 @@ class BukuBesarController extends BaseController
         ];
     }
 
+    /**
+     * Method helper untuk menyiapkan data Neraca yang akan digunakan oleh view dan export.
+     */
+    private function _prepareNeracaViewData(int $tahun, int $bulan): array
+    {
+        if (!$this->neracaModel) {
+            // Kembalikan struktur kosong jika model tidak ada, agar tidak error total
+            return [
+                'laporan' => $this->getMasterNeracaStructure(), // Kirim struktur dasar
+                'grand_total_aset_current' => 0,
+                'grand_total_aset_prev' => 0,
+                'grand_total_pasiva_modal_current' => 0,
+                'grand_total_pasiva_modal_prev' => 0,
+                'laba_rugi_bersih_current' => 0,
+                'prevBulan' => (int) date('n', strtotime("$tahun-$bulan-01 -1 month")),
+                'prevTahun' => (int) date('Y', strtotime("$tahun-$bulan-01 -1 month")),
+            ];
+        }
+
+        $currentDate = new \DateTime();
+        try {
+            $currentDate->setDate($tahun, $bulan, 1);
+        } catch (\Exception $e) {
+            // Default ke tanggal saat ini jika tanggal tidak valid
+            $currentDate = new \DateTime();
+            $tahun = (int) $currentDate->format('Y');
+            $bulan = (int) $currentDate->format('n');
+            log_message('error', 'Tanggal tidak valid di _prepareNeracaViewData: ' . $e->getMessage());
+        }
+
+
+        $prevDate = (clone $currentDate)->modify('-1 month');
+        $prevBulan = (int) $prevDate->format('n');
+        $prevTahun = (int) $prevDate->format('Y');
+
+        $masterStructure = $this->getMasterNeracaStructure();
+        $laporan = [];
+
+        foreach ($masterStructure as $groupKey => $groupDetails) {
+            $laporan[$groupKey] = [
+                'label' => $groupDetails['label'],
+                'urutan' => $groupDetails['urutan'],
+                'no_induk_prefix' => $groupDetails['no_induk_prefix'],
+                'no_induk_val' => $groupDetails['no_induk_val'],
+                'items' => [],
+                'akumulasi_lookup' => [],
+                'total_current' => 0,
+                'total_prev' => 0,
+                'total_net_current' => 0,
+                'total_net_prev' => 0,
+            ];
+            if (isset($groupDetails['items_template'])) {
+                foreach ($groupDetails['items_template'] as $itemKey => $itemDetails) {
+                    $laporan[$groupKey]['items'][$itemKey] = [
+                        'id' => null,
+                        'nama' => $itemDetails['nama'],
+                        'nomor_display_sub' => $itemDetails['nomor_display_sub'],
+                        'is_editable' => $itemDetails['is_editable'],
+                        'saldo_current' => 0,
+                        'saldo_prev' => 0
+                    ];
+                }
+            }
+            if ($groupKey === 'ASET_TETAP' && isset($groupDetails['akumulasi_template'])) {
+                foreach ($groupDetails['akumulasi_template'] as $itemKeyParent => $akumDetails) {
+                    $laporan[$groupKey]['akumulasi_lookup'][$itemKeyParent] = [
+                        'id' => null,
+                        'nama' => $akumDetails['uraian_akun'],
+                        'is_editable' => $akumDetails['is_editable'],
+                        'saldo_current' => 0,
+                        'saldo_prev' => 0
+                    ];
+                }
+            }
+        }
+
+        $itemsCurrentPeriod = $this->neracaModel->where('periode_tahun', $tahun)->where('periode_bulan', $bulan)->findAll();
+        $itemsPrevPeriod = $this->neracaModel->where('periode_tahun', $prevTahun)->where('periode_bulan', $prevBulan)->findAll();
+
+        $dbCurrentMap = [];
+        foreach ($itemsCurrentPeriod as $dbItem) {
+            $dbCurrentMap[$dbItem['kode_akun_internal']] = $dbItem;
+        }
+        $dbPrevMap = [];
+        foreach ($itemsPrevPeriod as $dbItem) {
+            $dbPrevMap[$dbItem['kode_akun_internal']] = $dbItem;
+        }
+
+        foreach ($laporan as $groupKey => &$groupData) {
+            if (isset($groupData['items'])) {
+                foreach ($groupData['items'] as $itemKey => &$itemData) {
+                    if (isset($dbCurrentMap[$itemKey]) && !$dbCurrentMap[$itemKey]['is_akumulasi']) {
+                        $itemData['id'] = $dbCurrentMap[$itemKey]['id'];
+                        $itemData['saldo_current'] = (float) $dbCurrentMap[$itemKey]['nilai'];
+                    }
+                    if (isset($dbPrevMap[$itemKey]) && !$dbPrevMap[$itemKey]['is_akumulasi']) {
+                        $itemData['saldo_prev'] = (float) $dbPrevMap[$itemKey]['nilai'];
+                    }
+                }
+                unset($itemData);
+            }
+            if ($groupKey === 'ASET_TETAP' && isset($groupData['akumulasi_lookup'])) {
+                foreach ($groupData['akumulasi_lookup'] as $itemKeyParent => &$akumData) {
+                    $akumKodeInternal = 'AKUM_' . $itemKeyParent;
+                    if (isset($dbCurrentMap[$akumKodeInternal]) && $dbCurrentMap[$akumKodeInternal]['is_akumulasi'] && $dbCurrentMap[$akumKodeInternal]['parent_kode_akun_internal'] == $itemKeyParent) {
+                        $akumData['id'] = $dbCurrentMap[$akumKodeInternal]['id'];
+                        $akumData['saldo_current'] = (float) $dbCurrentMap[$akumKodeInternal]['nilai'];
+                    }
+                    if (isset($dbPrevMap[$akumKodeInternal]) && $dbPrevMap[$akumKodeInternal]['is_akumulasi'] && $dbPrevMap[$akumKodeInternal]['parent_kode_akun_internal'] == $itemKeyParent) {
+                        $akumData['saldo_prev'] = (float) $dbPrevMap[$akumKodeInternal]['nilai'];
+                    }
+                }
+                unset($akumData);
+            }
+        }
+        unset($groupData);
+
+        $laba_rugi_bersih_current = 0;
+        if (isset($laporan['EKUITAS']['items']['SHU_EKUITAS_TAHUN_INI']['saldo_current'])) {
+            $laba_rugi_bersih_current = (float) $laporan['EKUITAS']['items']['SHU_EKUITAS_TAHUN_INI']['saldo_current'];
+        }
+        // Atau, jika SHU tahun ini di Kewajiban Jangka Pendek juga relevan (jarang untuk L/R Berjalan di neraca)
+        // if(isset($laporan['KEWAJIBAN_JANGKA_PENDEK']['items']['SHU_TAHUN_INI_KEWAJIBAN']['saldo_current'])){
+        //    // $laba_rugi_bersih_current = (float) $laporan['KEWAJIBAN_JANGKA_PENDEK']['items']['SHU_TAHUN_INI_KEWAJIBAN']['saldo_current'];
+        // }
+
+
+        $grand_total_aset_current = 0;
+        $grand_total_aset_prev = 0;
+        $grand_total_pasiva_modal_current = 0;
+        $grand_total_pasiva_modal_prev = 0;
+
+        foreach ($laporan as $groupKey => &$groupData) {
+            $current_group_total = 0;
+            $prev_group_total = 0;
+            if (isset($groupData['items'])) {
+                foreach ($groupData['items'] as $itemKey => $itemData) {
+                    // Untuk total grup, jangan masukkan SHU_EKUITAS_TAHUN_INI jika L/R berjalan akan ditambahkan terpisah ke subtotal Ekuitas
+                    if (!($groupKey === 'EKUITAS' && $itemKey === 'SHU_EKUITAS_TAHUN_INI' && ($laba_rugi_bersih_current == $itemData['saldo_current']))) {
+                        $current_group_total += $itemData['saldo_current'];
+                    }
+                    $prev_group_total += $itemData['saldo_prev'];
+                }
+            }
+            $groupData['total_current'] = $current_group_total;
+            $groupData['total_prev'] = $prev_group_total;
+
+            if ($groupKey === 'ASET_TETAP') {
+                $net_current_total_aset_tetap = 0;
+                $net_prev_total_aset_tetap = 0;
+                if (isset($groupData['items'])) {
+                    foreach ($groupData['items'] as $itemKey => $itemData) {
+                        $akum_current = $groupData['akumulasi_lookup'][$itemKey]['saldo_current'] ?? 0;
+                        $akum_prev = $groupData['akumulasi_lookup'][$itemKey]['saldo_prev'] ?? 0;
+                        $net_current_total_aset_tetap += ($itemData['saldo_current'] + $akum_current);
+                        $net_prev_total_aset_tetap += ($itemData['saldo_prev'] + $akum_prev);
+                    }
+                }
+                $groupData['total_net_current'] = $net_current_total_aset_tetap;
+                $groupData['total_net_prev'] = $net_prev_total_aset_tetap;
+            }
+
+            if (in_array($groupKey, ['ASET_LANCAR', 'ASET_TAK_LANCAR'])) {
+                $grand_total_aset_current += $groupData['total_current'];
+                $grand_total_aset_prev += $groupData['total_prev'];
+            } elseif ($groupKey == 'ASET_TETAP') {
+                $grand_total_aset_current += $groupData['total_net_current'];
+                $grand_total_aset_prev += $groupData['total_net_prev'];
+            } elseif (in_array($groupKey, ['KEWAJIBAN_JANGKA_PENDEK', 'KEWAJIBAN_JANGKA_PANJANG'])) {
+                $grand_total_pasiva_modal_current += $groupData['total_current'];
+                $grand_total_pasiva_modal_prev += $groupData['total_prev'];
+            } elseif ($groupKey == 'EKUITAS') {
+                $grand_total_pasiva_modal_current += $groupData['total_current'];
+                $grand_total_pasiva_modal_current += $laba_rugi_bersih_current; // L/R berjalan ditambahkan ke total Pasiva & Modal
+                $grand_total_pasiva_modal_prev += $groupData['total_prev'];
+            }
+        }
+        unset($groupData);
+
+        return [
+            'laporan' => $laporan,
+            'grand_total_aset_current' => $grand_total_aset_current,
+            'grand_total_aset_prev' => $grand_total_aset_prev,
+            'grand_total_pasiva_modal_current' => $grand_total_pasiva_modal_current,
+            'grand_total_pasiva_modal_prev' => $grand_total_pasiva_modal_prev,
+            'laba_rugi_bersih_current' => $laba_rugi_bersih_current,
+            'prevBulan' => $prevBulan,
+            'prevTahun' => $prevTahun,
+        ];
+    }
     public function neraca()
     {
         if (!$this->neracaModel) {
@@ -1662,259 +1856,165 @@ class BukuBesarController extends BaseController
         return $this->response->download($filePath, null)->setFileName($filename);
     }
 
-    /**
-     * Export Neraca Komparatif ke Excel
-     */
     public function exportNeraca()
     {
-        $bulan = $this->request->getGet('bulan') ?? date('n');
-        $tahun = $this->request->getGet('tahun') ?? date('Y');
+        $bulan_req = $this->request->getGet('bulan');
+        $tahun_req = $this->request->getGet('tahun');
 
-        // Ambil data terstruktur sama seperti di method neraca()
-        // (Copy paste logic dari method neraca() untuk mendapatkan $data)
+        $bulan = !empty($bulan_req) ? (int) $bulan_req : (int) date('n');
+        $tahun = !empty($tahun_req) ? (int) $tahun_req : (int) date('Y');
 
-        // Tentukan periode sebelumnya
-        $currentDate = new \DateTimeImmutable("$tahun-$bulan-01");
-        $prevDate = $currentDate->modify('-1 month');
-        $prevBulan = (int) $prevDate->format('n');
-        $prevTahun = (int) $prevDate->format('Y');
+        $neracaData = $this->_prepareNeracaViewData($tahun, $bulan);
 
-        $mappingData = $this->getNeracaMappingData();
-        $listKodeAkunNeraca = array_keys($mappingData);
-        $neracaRawData = $this->saldoAkunModel->getNeracaComparativeData($listKodeAkunNeraca, $bulan, $tahun, $prevBulan, $prevTahun);
+        $laporan = $neracaData['laporan'];
+        $grandTotalAset_current = $neracaData['grand_total_aset_current'];
+        $grandTotalAset_prev = $neracaData['grand_total_aset_prev'];
+        $grandTotalPasivaModal_current = $neracaData['grand_total_pasiva_modal_current'];
+        $grandTotalPasivaModal_prev = $neracaData['grand_total_pasiva_modal_prev'];
+        // $labaRugiBersihPeriode tidak diperlukan lagi jika SHU sudah dalam item Ekuitas
+        $prevBulan = $neracaData['prevBulan'];
+        $prevTahun = $neracaData['prevTahun'];
 
-        // Olah data mentah (sama persis seperti di method neraca())
-        $laporan = [
-            'ASET_LANCAR' => ['label' => 'I.1 ASET LANCAR', 'urutan' => 1, 'items' => [], 'total_current' => 0, 'total_prev' => 0],
-            'ASET_TAK_LANCAR' => ['label' => 'I.2 ASET TAK LANCAR', 'urutan' => 2, 'items' => [], 'total_current' => 0, 'total_prev' => 0],
-            'ASET_TETAP' => ['label' => 'I.3 ASET TETAP', 'urutan' => 3, 'items' => [], 'total_current' => 0, 'total_prev' => 0, 'akumulasi_lookup' => []],
-            'KEWAJIBAN_PENDEK' => ['label' => 'II.1 KEWAJIBAN JANGKA PENDEK', 'urutan' => 4, 'items' => [], 'total_current' => 0, 'total_prev' => 0],
-            'KEWAJIBAN_PANJANG' => ['label' => 'II.2 KEWAJIBAN JANGKA PANJANG', 'urutan' => 5, 'items' => [], 'total_current' => 0, 'total_prev' => 0],
-            'EKUITAS' => ['label' => 'II.3 EKUITAS (MODAL)', 'urutan' => 6, 'items' => [], 'total_current' => 0, 'total_prev' => 0],
-            'TIDAK_TERPETAKAN' => ['label' => 'Akun Tidak Terpetakan', 'urutan' => 99, 'items' => [], 'total_current' => 0, 'total_prev' => 0],
-        ];
-        $akumulasiLookup = [];
-        foreach ($neracaRawData as $item) { /* ... (logic loop sama persis seperti di neraca()) ... */
-            $kodeAkun = $item['kode_akun'];
-            $mapInfo = $mappingData[$kodeAkun] ?? ['TIDAK_TERPETAKAN', 99, false, null];
-            $kelompok = $mapInfo[0];
-            $isAkumulasi = $mapInfo[2];
-            $parentKode = $mapInfo[3];
-            $dataItem = ['kode' => $kodeAkun, 'nama' => $item['nama_akun'], 'saldo_current' => floatval($item['saldo_current'] ?? 0), 'saldo_prev' => floatval($item['saldo_prev'] ?? 0), 'is_akumulasi' => $isAkumulasi];
-            if (isset($laporan[$kelompok])) {
-                if ($isAkumulasi && $parentKode) {
-                    $akumulasiLookup[$parentKode] = $dataItem;
-                } else {
-                    $laporan[$kelompok]['items'][$kodeAkun] = $dataItem;
-                    $laporan[$kelompok]['total_current'] += $dataItem['saldo_current'];
-                    $laporan[$kelompok]['total_prev'] += $dataItem['saldo_prev'];
-                }
-            } else {
-                $laporan['TIDAK_TERPETAKAN']['items'][$kodeAkun] = $dataItem;
-            }
-        }
-        $laporan['ASET_TETAP']['akumulasi_lookup'] = $akumulasiLookup;
-        foreach ($laporan as $kelompok => &$dataKelompok) {
-            if (!empty($dataKelompok['items'])) {
-                ksort($dataKelompok['items']);
-            }
-        }
-        unset($dataKelompok);
-        uasort($laporan, function ($a, $b) {
-            return $a['urutan'] <=> $b['urutan'];
-        });
-        $totalAkumCurrent = array_sum(array_column($akumulasiLookup, 'saldo_current'));
-        $totalAkumPrev = array_sum(array_column($akumulasiLookup, 'saldo_prev'));
-        $laporan['ASET_TETAP']['total_net_current'] = ($laporan['ASET_TETAP']['total_current'] ?? 0) - $totalAkumCurrent;
-        $laporan['ASET_TETAP']['total_net_prev'] = ($laporan['ASET_TETAP']['total_prev'] ?? 0) - $totalAkumPrev;
-        $labaRugiBersihPeriode = $this->hitungLabaRugiBersih($bulan, $tahun);
-        $grandTotalAset_current = ($laporan['ASET_LANCAR']['total_current'] ?? 0) + ($laporan['ASET_TAK_LANCAR']['total_current'] ?? 0) + ($laporan['ASET_TETAP']['total_net_current'] ?? 0);
-        $grandTotalAset_prev = ($laporan['ASET_LANCAR']['total_prev'] ?? 0) + ($laporan['ASET_TAK_LANCAR']['total_prev'] ?? 0) + ($laporan['ASET_TETAP']['total_net_prev'] ?? 0);
-        $grandTotalPasivaModal_current = ($laporan['KEWAJIBAN_PENDEK']['total_current'] ?? 0) + ($laporan['KEWAJIBAN_PANJANG']['total_current'] ?? 0) + ($laporan['EKUITAS']['total_current'] ?? 0) + $labaRugiBersihPeriode;
-        $grandTotalPasivaModal_prev = ($laporan['KEWAJIBAN_PENDEK']['total_prev'] ?? 0) + ($laporan['KEWAJIBAN_PANJANG']['total_prev'] ?? 0) + ($laporan['EKUITAS']['total_prev'] ?? 0);
-        // Akhir copy paste logic neraca()
-
-
-        // --- Mulai Pembuatan Excel ---
         $spreadsheet = new Spreadsheet();
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Neraca Komparatif');
-        $namaBulanCurrent = $this->bulanNames[$bulan] ?? $bulan;
-        $namaBulanPrev = $this->bulanNames[$prevBulan] ?? $prevBulan;
 
-        // Properties
-        $spreadsheet->getProperties()->setCreator('Sistem Akuntansi')->setTitle("Neraca Komparatif");
+        $namaBulanCurrent = $this->bulanNames[(int) $bulan] ?? (string) $bulan;
+        $namaBulanPrev = $this->bulanNames[(int) $prevBulan] ?? (string) $prevBulan;
 
-        // Judul
+        $spreadsheet->getProperties()->setCreator('Sistem Akuntansi Anda')->setTitle("Neraca Komparatif");
+
         $sheet->mergeCells('A1:D1')->setCellValue('A1', "NERACA KOMPARATIF");
-        $sheet->mergeCells('A2:D2')->setCellValue('A2', "Per " . date('t', strtotime("$tahun-$bulan-01")) . " " . $namaBulanCurrent . " " . $tahun . " dan " . date('t', strtotime("$prevTahun-$prevBulan-01")) . " " . $namaBulanPrev . " " . $prevTahun);
-        $sheet->getStyle('A1:D1')->applyFromArray(['font' => ['bold' => true, 'size' => 14], 'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER]]);
-        $sheet->getStyle('A2:D2')->applyFromArray(['font' => ['bold' => false, 'size' => 11], 'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER]]);
+        $sheet->mergeCells('A2:D2')->setCellValue('A2', "Per " . date('t', mktime(0, 0, 0, $bulan, 1, $tahun)) . " " . $namaBulanCurrent . " " . $tahun . " dan " . date('t', mktime(0, 0, 0, $prevBulan, 1, $prevTahun)) . " " . $namaBulanPrev . " " . $prevTahun);
+        $sheet->getStyle('A1:D1')->applyFromArray(['font' => ['bold' => true, 'size' => 14], 'alignment' => ['horizontal' => PhpSpreadsheetAlignment::HORIZONTAL_CENTER]]);
+        $sheet->getStyle('A2:D2')->applyFromArray(['font' => ['size' => 11], 'alignment' => ['horizontal' => PhpSpreadsheetAlignment::HORIZONTAL_CENTER]]);
 
-        // Header Tabel
         $row = 4;
         $sheet->setCellValue('A' . $row, 'No');
         $sheet->setCellValue('B' . $row, 'Uraian Akun');
         $sheet->setCellValue('C' . $row, $namaBulanCurrent . ', ' . $tahun);
         $sheet->setCellValue('D' . $row, $namaBulanPrev . ', ' . $prevTahun);
+
         $headerStyle = [
             'font' => ['bold' => true],
-            'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D9E1F2']],
-            'borders' => ['allBorders' => ['borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN]],
-            'alignment' => ['horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER, 'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER]
+            'fill' => ['fillType' => ExcelFill::FILL_SOLID, 'startColor' => ['rgb' => 'D9E1F2']],
+            'borders' => ['allBorders' => ['borderStyle' => ExcelBorder::BORDER_THIN]],
+            'alignment' => ['horizontal' => PhpSpreadsheetAlignment::HORIZONTAL_CENTER, 'vertical' => PhpSpreadsheetAlignment::VERTICAL_CENTER]
         ];
         $sheet->getStyle('A' . $row . ':D' . $row)->applyFromArray($headerStyle);
         $sheet->getRowDimension($row)->setRowHeight(20);
 
-        // Format Angka default
-        $numberFormat = '#,##0_);(#,##0)'; // Positif biasa, negatif dalam kurung
+        $numberFormat = '#,##0;(#,##0);0';
+        $row++;
 
-        $row++; // Mulai data dari baris 5
+        $no_induk_aktiva_excel = 0;
+        $no_induk_pasiva_excel = 0;
 
-        // Fungsi helper untuk menulis baris grup
-        $writeGroup = function (string $noInduk, array $groupData, &$currentRow, &$sheet, string $numberFormat) use (&$writeGroup, &$laporan, &$labaRugiBersihPeriode) {
-            // Tulis header grup
-            $sheet->setCellValue('A' . $currentRow, $noInduk);
-            $sheet->setCellValue('B' . $currentRow, $groupData['label']);
-            $sheet->getStyle('A' . $currentRow . ':B' . $currentRow)->getFont()->setBold(true);
-            $currentRow++;
+        foreach ($laporan as $group_key => $groupData) {
+            if ($group_key === 'TIDAK_TERPETAKAN' && (empty($groupData['items']) || !is_array($groupData['items']))) { // Tambah pengecekan is_array
+                continue;
+            }
 
-            $subNo = 1;
-            if (!empty($groupData['items'])) {
+            $isAsetGroup = (isset($groupData['urutan']) && $groupData['urutan'] >= 1 && $groupData['urutan'] <= 3);
+            $isPasivaGroup = (isset($groupData['urutan']) && $groupData['urutan'] >= 4 && $groupData['urutan'] <= 6);
+            $currentNoInduk = '';
+
+            if ($isAsetGroup) {
+                $currentNoInduk = ($groupData['no_induk_prefix'] ?? 'I') . '.' . ($groupData['no_induk_val'] ?? ++$no_induk_aktiva_excel);
+            } else if ($isPasivaGroup) {
+                $currentNoInduk = ($groupData['no_induk_prefix'] ?? 'II') . '.' . ($groupData['no_induk_val'] ?? ++$no_induk_pasiva_excel);
+            }
+
+            if ($group_key !== 'TIDAK_TERPETAKAN') {
+                $sheet->setCellValue('A' . $row, $currentNoInduk);
+                $sheet->setCellValue('B' . $row, $groupData['label']);
+                $sheet->getStyle('A' . $row . ':B' . $row)->getFont()->setBold(true);
+                $row++;
+            } else {
+                $sheet->mergeCells('A' . $row . ':D' . $row)->setCellValue('A' . $row, $groupData['label']);
+                $sheet->getStyle('A' . $row)->getFont()->setBold(true);
+                $row++;
+            }
+
+            $subNo = 0;
+            if (!empty($groupData['items']) && is_array($groupData['items'])) {
                 foreach ($groupData['items'] as $kodeAkun => $item) {
-                    $sheet->setCellValue('A' . $currentRow, '');
-                    $sheet->setCellValue('B' . $currentRow, str_repeat(' ', 4) . $subNo++ . '. ' . $item['nama']); // Indentasi
-                    $sheet->setCellValue('C' . $currentRow, $item['saldo_current']);
-                    $sheet->setCellValue('D' . $currentRow, $item['saldo_prev']);
-                    $sheet->getStyle('C' . $currentRow . ':D' . $currentRow)->getNumberFormat()->setFormatCode($numberFormat);
-                    $currentRow++;
+                    $sheet->setCellValue('A' . $row, '');
+                    $sheet->setCellValue('B' . $row, str_repeat(' ', 4) . ($item['nomor_display_sub'] ?? ++$subNo) . '. ' . ($item['nama'] ?? 'N/A'));
+                    $sheet->setCellValueExplicit('C' . $row, $item['saldo_current'] ?? 0, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+                    $sheet->setCellValueExplicit('D' . $row, $item['saldo_prev'] ?? 0, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+                    $sheet->getStyle('C' . $row . ':D' . $row)->getNumberFormat()->setFormatCode($numberFormat);
+                    $row++;
 
-                    // Khusus Aset Tetap, cek akumulasi
-                    if ($groupData['label'] == 'ASET TETAP' && isset($groupData['akumulasi_lookup'][$kodeAkun])) {
+                    if ($group_key == 'ASET_TETAP' && isset($groupData['akumulasi_lookup'][$kodeAkun]) && is_array($groupData['akumulasi_lookup'][$kodeAkun])) {
                         $akum = $groupData['akumulasi_lookup'][$kodeAkun];
-                        $sheet->setCellValue('B' . $currentRow, str_repeat(' ', 8) . '(Akumulasi Penyusutan)');
-                        // Tampilkan akumulasi sebagai negatif
-                        $sheet->setCellValue('C' . $currentRow, $akum['saldo_current'] > 0 ? -$akum['saldo_current'] : $akum['saldo_current']);
-                        $sheet->setCellValue('D' . $currentRow, $akum['saldo_prev'] > 0 ? -$akum['saldo_prev'] : $akum['saldo_prev']);
-                        $sheet->getStyle('C' . $currentRow . ':D' . $currentRow)->getNumberFormat()->setFormatCode($numberFormat);
-                        $sheet->getStyle('B' . $currentRow . ':D' . $currentRow)->getFont()->setItalic(true);
-                        $currentRow++;
-                        // Subtotal netto per aset
-                        $sheet->setCellValue('B' . $currentRow, str_repeat(' ', 8) . 'Nilai Buku ' . $item['nama']);
-                        $sheet->setCellValue('C' . $currentRow, $item['saldo_current'] - $akum['saldo_current']);
-                        $sheet->setCellValue('D' . $currentRow, $item['saldo_prev'] - $akum['saldo_prev']);
-                        $sheet->getStyle('C' . $currentRow . ':D' . $currentRow)->getNumberFormat()->setFormatCode($numberFormat);
-                        $sheet->getStyle('B' . $currentRow . ':D' . $currentRow)->applyFromArray(['font' => ['italic' => true], 'borders' => ['top' => ['borderStyle' => ExcelBorder::BORDER_THIN]]]);
-                        $currentRow++;
+                        $sheet->setCellValue('B' . $row, str_repeat(' ', 8) . ($akum['nama'] ?? '(Akumulasi Penyusutan)'));
+                        $sheet->setCellValueExplicit('C' . $row, (float) ($akum['saldo_current'] ?? 0), \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+                        $sheet->setCellValueExplicit('D' . $row, (float) ($akum['saldo_prev'] ?? 0), \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+                        $sheet->getStyle('C' . $row . ':D' . $row)->getNumberFormat()->setFormatCode($numberFormat);
+                        $sheet->getStyle('B' . $row . ':D' . $row)->getFont()->setItalic(true);
+                        $row++;
+
+                        $sheet->setCellValue('B' . $row, str_repeat(' ', 8) . 'Nilai Buku ' . ($item['nama'] ?? 'N/A'));
+                        $sheet->setCellValueExplicit('C' . $row, ($item['saldo_current'] ?? 0) + ($akum['saldo_current'] ?? 0), \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+                        $sheet->setCellValueExplicit('D' . $row, ($item['saldo_prev'] ?? 0) + ($akum['saldo_prev'] ?? 0), \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+                        $sheet->getStyle('C' . $row . ':D' . $row)->getNumberFormat()->setFormatCode($numberFormat);
+                        $sheet->getStyle('B' . $row . ':D' . $row)->applyFromArray(['font' => ['italic' => true], 'borders' => ['top' => ['borderStyle' => ExcelBorder::BORDER_THIN]]]);
+                        $row++;
+                        $sheet->getRowDimension($row)->setRowHeight(2);
+                        $row++;
                     }
                 }
             }
 
-            // Tulis Sub Total Grup
-            $sheet->setCellValue('B' . $currentRow, 'SUB TOTAL ' . $groupData['label']);
-            // Untuk Aset Tetap, tampilkan Total Netto
-            $totalCurrentToShow = ($groupData['label'] == 'ASET TETAP') ? ($groupData['total_net_current'] ?? 0) : $groupData['total_current'];
-            $totalPrevToShow = ($groupData['label'] == 'ASET TETAP') ? ($groupData['total_net_prev'] ?? 0) : $groupData['total_prev'];
-            $sheet->setCellValue('C' . $currentRow, $totalCurrentToShow);
-            $sheet->setCellValue('D' . $currentRow, $totalPrevToShow);
-            $sheet->getStyle('A' . $currentRow . ':D' . $currentRow)->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F2F2F2']]]);
-            $sheet->getStyle('C' . $currentRow . ':D' . $currentRow)->getNumberFormat()->setFormatCode($numberFormat);
-            $currentRow++;
-            $sheet->getRowDimension($currentRow)->setRowHeight(5); // Spacer
-            $currentRow++;
-        };
+            // Tidak ada lagi baris L/R Berjalan terpisah untuk Ekuitas di Excel
+            // karena sudah termasuk dalam total item Ekuitas jika SHU_EKUITAS_TAHUN_INI adalah item.
 
-        // --- Tulis Data ke Excel ---
-        $noInduk = 1;
-        // ASET
-        $writeGroup('I.' . $noInduk++, $laporan['ASET_LANCAR'], $row, $sheet, $numberFormat);
-        if (!empty($laporan['ASET_TAK_LANCAR']['items'])) { // Hanya tampilkan jika ada isinya
-            $writeGroup('I.' . $noInduk++, $laporan['ASET_TAK_LANCAR'], $row, $sheet, $numberFormat);
-        }
-        $writeGroup('I.' . $noInduk++, $laporan['ASET_TETAP'], $row, $sheet, $numberFormat);
+            if ($group_key !== 'TIDAK_TERPETAKAN') {
+                $sheet->setCellValue('B' . $row, 'SUB TOTAL ' . $groupData['label'] . ($group_key == 'ASET_TETAP' ? ' (NETTO)' : ''));
+                $totalCurrentToShow = ($group_key == 'ASET_TETAP') ? ($groupData['total_net_current'] ?? 0) : ($groupData['total_current'] ?? 0);
+                $totalPrevToShow = ($group_key == 'ASET_TETAP') ? ($groupData['total_net_prev'] ?? 0) : ($groupData['total_prev'] ?? 0);
 
-        // TOTAL ASET
-        $sheet->setCellValue('B' . $row, 'JUMLAH ASET');
-        $sheet->setCellValue('C' . $row, $grandTotalAset_current);
-        $sheet->setCellValue('D' . $row, $grandTotalAset_prev);
-        $sheet->getStyle('A' . $row . ':D' . $row)->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D9E1F2']]]);
-        $sheet->getStyle('C' . $row . ':D' . $row)->getNumberFormat()->setFormatCode($numberFormat);
-        $row++;
-        $sheet->getRowDimension($row)->setRowHeight(10); // Spacer besar
-        $row++;
-
-        // KEWAJIBAN & EKUITAS
-        $noInduk = 1;
-        $writeGroup('II.' . $noInduk++, $laporan['KEWAJIBAN_PENDEK'], $row, $sheet, $numberFormat);
-        $writeGroup('II.' . $noInduk++, $laporan['KEWAJIBAN_PANJANG'], $row, $sheet, $numberFormat);
-
-        // EKUITAS (MODAL) - Tulis manual karena ada L/R Berjalan
-        $groupEkuitas = $laporan['EKUITAS'];
-        $sheet->setCellValue('A' . $row, 'II.' . $noInduk++);
-        $sheet->setCellValue('B' . $row, $groupEkuitas['label']);
-        $sheet->getStyle('A' . $row . ':B' . $row)->getFont()->setBold(true);
-        $currentRowEkuitas = $row + 1; // Start row untuk item ekuitas
-        $subNoEkuitas = 1;
-        if (!empty($groupEkuitas['items'])) {
-            foreach ($groupEkuitas['items'] as $item) {
-                $sheet->setCellValue('B' . $currentRowEkuitas, str_repeat(' ', 4) . $subNoEkuitas++ . '. ' . $item['nama']);
-                $sheet->setCellValue('C' . $currentRowEkuitas, $item['saldo_current']);
-                $sheet->setCellValue('D' . $currentRowEkuitas, $item['saldo_prev']);
-                $sheet->getStyle('C' . $currentRowEkuitas . ':D' . $currentRowEkuitas)->getNumberFormat()->setFormatCode($numberFormat);
-                $currentRowEkuitas++;
+                // Untuk EKUITAS, total_current dari _prepareNeracaViewData sudah benar
+                $sheet->setCellValueExplicit('C' . $row, $totalCurrentToShow, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+                $sheet->setCellValueExplicit('D' . $row, $totalPrevToShow, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+                $sheet->getStyle('A' . $row . ':D' . $row)->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => ExcelFill::FILL_SOLID, 'startColor' => ['rgb' => 'F2F2F2']]]);
+                $sheet->getStyle('C' . $row . ':D' . $row)->getNumberFormat()->setFormatCode($numberFormat);
+                $row++;
+                $sheet->getRowDimension($row)->setRowHeight(5);
+                $row++;
             }
         }
-        // Laba Rugi Berjalan
-        $sheet->setCellValue('B' . $currentRowEkuitas, str_repeat(' ', 4) . 'Laba (Rugi) Berjalan');
-        $sheet->setCellValue('C' . $currentRowEkuitas, $labaRugiBersihPeriode);
-        $sheet->setCellValue('D' . $currentRowEkuitas, '-'); // Tidak relevan untuk periode lalu
-        $sheet->getStyle('C' . $currentRowEkuitas)->getNumberFormat()->setFormatCode($numberFormat);
-        $currentRowEkuitas++;
-        // Sub Total Ekuitas
-        $sheet->setCellValue('B' . $currentRowEkuitas, 'SUB TOTAL ' . $groupEkuitas['label']);
-        $sheet->setCellValue('C' . $currentRowEkuitas, $groupEkuitas['total_current'] + $labaRugiBersihPeriode);
-        $sheet->setCellValue('D' . $currentRowEkuitas, $groupEkuitas['total_prev']);
-        $sheet->getStyle('A' . $currentRowEkuitas . ':D' . $currentRowEkuitas)->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'F2F2F2']]]);
-        $sheet->getStyle('C' . $currentRowEkuitas . ':D' . $currentRowEkuitas)->getNumberFormat()->setFormatCode($numberFormat);
-        $row = $currentRowEkuitas + 1; // Update row utama
-        $sheet->getRowDimension($row)->setRowHeight(5); // Spacer
+
+        $sheet->setCellValue('B' . $row, 'JUMLAH ASET');
+        $sheet->setCellValueExplicit('C' . $row, $grandTotalAset_current, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+        $sheet->setCellValueExplicit('D' . $row, $grandTotalAset_prev, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+        $sheet->getStyle('A' . $row . ':D' . $row)->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => ExcelFill::FILL_SOLID, 'startColor' => ['rgb' => 'DDEBF7']]]);
+        $sheet->getStyle('C' . $row . ':D' . $row)->getNumberFormat()->setFormatCode($numberFormat);
+        $row++;
+        $sheet->getRowDimension($row)->setRowHeight(10);
         $row++;
 
-
-        // TOTAL KEWAJIBAN & EKUITAS
         $sheet->setCellValue('B' . $row, 'JUMLAH KEWAJIBAN & EKUITAS');
-        $sheet->setCellValue('C' . $row, $grandTotalPasivaModal_current);
-        $sheet->setCellValue('D' . $row, $grandTotalPasivaModal_prev);
-        $sheet->getStyle('A' . $row . ':D' . $row)->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID, 'startColor' => ['rgb' => 'D9E1F2']]]);
+        $sheet->setCellValueExplicit('C' . $row, $grandTotalPasivaModal_current, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+        $sheet->setCellValueExplicit('D' . $row, $grandTotalPasivaModal_prev, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_NUMERIC);
+        $sheet->getStyle('A' . $row . ':D' . $row)->applyFromArray(['font' => ['bold' => true], 'fill' => ['fillType' => ExcelFill::FILL_SOLID, 'startColor' => ['rgb' => 'DDEBF7']]]);
         $sheet->getStyle('C' . $row . ':D' . $row)->getNumberFormat()->setFormatCode($numberFormat);
         $row++;
 
-
-        // --- Akhir Tulis Data ---
-
-        // Auto size columns
         foreach (range('A', 'D') as $col) {
             $sheet->getColumnDimension($col)->setAutoSize(true);
         }
-        // Atur lebar kolom B sedikit lebih lebar jika perlu
-        $sheet->getColumnDimension('B')->setWidth(40);
+        $sheet->getColumnDimension('B')->setWidth(45);
 
-
-        // --- Save & Download ---
         $writer = new Xlsx($spreadsheet);
-        $filename = "Neraca_Komparatif_" . $namaBulanCurrent . "_" . $tahun . ".xlsx";
-        $filePath = WRITEPATH . 'uploads/' . $filename;
-        if (!is_dir(dirname($filePath))) {
-            mkdir(dirname($filePath), 0777, true);
-        }
-        try {
-            $writer->save($filePath);
-        } catch (\PhpOffice\PhpSpreadsheet\Writer\Exception $e) {
-            log_message('error', 'Error saving Excel file: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Gagal menyimpan file Excel.');
-        }
-        return $this->response->download($filePath, null)->setFileName($filename);
+        $filename = "Neraca_Komparatif_" . str_replace(' ', '_', $namaBulanCurrent) . "_" . $tahun . ".xlsx";
 
+        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        header('Content-Disposition: attachment;filename="' . $filename . '"');
+        header('Cache-Control: max-age=0');
+        $writer->save('php://output');
+        exit();
     }
 
 }
