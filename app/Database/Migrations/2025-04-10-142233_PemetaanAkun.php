@@ -43,7 +43,7 @@ class PemetaanAkun extends Migration
             ],
             'prioritas' => [ // Kolom baru
                 'type' => 'INT',
-                'constraint' => 3,
+                'constraint' => 10,
                 'null' => false, // NOT NULL
                 'default' => 0,     // DEFAULT 0
                 'comment' => 'Angka lebih tinggi diproses dulu jika pola sama',

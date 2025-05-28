@@ -11,7 +11,7 @@ class JenisSimpanan extends Migration
         $this->forge->addField([
             'id_jenis_simpanan' => [
                 'type' => 'INT',
-                'constraint' => 4,
+                'constraint' => 10,
                 'unsigned' => true,
                 'auto_increment' => true
             ],

@@ -33,7 +33,7 @@ class Akun extends Migration
             ],
             'saldo_awal' => [
                 'type' => 'DECIMAL',
-                'constraint' => '10,2',
+                'constraint' => '15,2',
                 'default' => 0.00
             ],
             'created_at' => [

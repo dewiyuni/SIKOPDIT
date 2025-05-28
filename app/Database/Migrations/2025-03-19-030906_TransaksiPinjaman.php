@@ -11,13 +11,13 @@ class TransaksiPinjaman extends Migration
         $this->forge->addField([
             'id_pinjaman' => [
                 'type' => 'INT',
-                'constraint' => 5,
+                'constraint' => 10,
                 'unsigned' => true,
                 'auto_increment' => true
             ],
             'id_anggota' => [
                 'type' => 'INT',
-                'constraint' => 5,
+                'constraint' => 10,
                 'unsigned' => true
             ],
             'tanggal_pinjaman' => [
@@ -25,11 +25,11 @@ class TransaksiPinjaman extends Migration
             ],
             'jumlah_pinjaman' => [
                 'type' => 'DECIMAL',
-                'constraint' => '10,2'
+                'constraint' => '15,2'
             ],
             'jangka_waktu' => [
                 'type' => 'INT',
-                'constraint' => 3
+                'constraint' => 10
             ],
             'jaminan' => [
                 'type' => 'VARCHAR',

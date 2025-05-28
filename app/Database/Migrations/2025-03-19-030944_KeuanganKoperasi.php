@@ -11,13 +11,13 @@ class KeuanganKoperasi extends Migration
         $this->forge->addField([
             'id_keuangan' => [
                 'type' => 'INT',
-                'constraint' => 6,
+                'constraint' => 10,
                 'auto_increment' => true,
                 'unsigned' => true,
             ],
             'id_anggota' => [
                 'type' => 'INT',
-                'constraint' => 5,
+                'constraint' => 10,
                 'unsigned' => true,
             ],
             'keterangan' => [
@@ -26,7 +26,7 @@ class KeuanganKoperasi extends Migration
             ],
             'jumlah' => [
                 'type' => 'INT',
-                'constraint' => 11,
+                'constraint' => 10,
             ],
             'jenis' => [
                 'type' => 'ENUM',

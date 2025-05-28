@@ -11,8 +11,8 @@ class SaldoAkun extends Migration
         $this->forge->addField([
             'id' => ['type' => 'INT', 'constraint' => 10, 'unsigned' => true, 'auto_increment' => true],
             'id_akun' => ['type' => 'INT', 'unsigned' => true, 'null' => false],
-            'bulan' => ['type' => 'INT', 'constraint' => 2],
-            'tahun' => ['type' => 'INT', 'constraint' => 4],
+            'bulan' => ['type' => 'INT', 'constraint' => 10],
+            'tahun' => ['type' => 'INT', 'constraint' => 10],
             'saldo_awal' => ['type' => 'DECIMAL', 'constraint' => '15,2', 'default' => 0.00],
             'total_debit' => ['type' => 'DECIMAL', 'constraint' => '15,2', 'default' => 0.00],
             'total_kredit' => ['type' => 'DECIMAL', 'constraint' => '15,2', 'default' => 0.00],

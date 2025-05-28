@@ -11,17 +11,17 @@ class CreateTblNeracaData extends Migration
         $this->forge->addField([
             'id' => [
                 'type' => 'INT',
-                'constraint' => 11,
+                'constraint' => 10,
                 'unsigned' => true,
                 'auto_increment' => true,
             ],
             'periode_tahun' => [
                 'type' => 'INT',
-                'constraint' => 4, // Cukup 4 digit untuk tahun
+                'constraint' => 10, // Cukup 4 digit untuk tahun
             ],
             'periode_bulan' => [
                 'type' => 'INT',
-                'constraint' => 2, // Cukup 2 digit untuk bulan
+                'constraint' => 10, // Cukup 2 digit untuk bulan
             ],
             'kode_akun_internal' => [
                 'type' => 'VARCHAR',
@@ -87,7 +87,7 @@ class CreateTblNeracaData extends Migration
             ],
             'urutan_display' => [
                 'type' => 'INT',
-                'constraint' => 11,
+                'constraint' => 10,
             ],
             'is_editable' => [
                 'type' => 'TINYINT',

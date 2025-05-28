@@ -17,7 +17,7 @@ class Angsuran extends Migration
             ],
             'id_pinjaman' => [
                 'type' => 'INT',
-                'constraint' => 5,
+                'constraint' => 10,
                 'unsigned' => true
             ],
             'tanggal_angsuran' => [

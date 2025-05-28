@@ -11,18 +11,18 @@ class TransaksiSimpanan extends Migration
         $this->forge->addField([
             'id_simpanan' => [
                 'type' => 'INT',
-                'constraint' => 5,
+                'constraint' => 10,
                 'unsigned' => true,
                 'auto_increment' => true
             ],
             'id_anggota' => [
                 'type' => 'INT',
-                'constraint' => 5,
+                'constraint' => 10,
                 'unsigned' => true
             ],
             'id_pinjaman' => [
                 'type' => 'INT',
-                'constraint' => 5,
+                'constraint' => 10,
                 'unsigned' => true,
                 'null' => true
             ],

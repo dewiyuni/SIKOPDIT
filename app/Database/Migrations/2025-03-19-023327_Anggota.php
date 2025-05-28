@@ -11,7 +11,7 @@ class Anggota extends Migration
         $this->forge->addField([
             'id_anggota' => [
                 'type' => 'INT',
-                'constraint' => 5,
+                'constraint' => 10,
                 'unsigned' => true,
                 'auto_increment' => true
             ],

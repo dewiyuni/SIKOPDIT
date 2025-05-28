@@ -11,7 +11,7 @@ class Users extends Migration
         $this->forge->addField([
             'id_user' => [
                 'type' => 'INT',
-                'constraint' => 5,
+                'constraint' => 10,
                 'unsigned' => true,
                 'auto_increment' => true
             ],

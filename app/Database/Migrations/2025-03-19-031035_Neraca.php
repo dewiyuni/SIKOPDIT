@@ -17,7 +17,7 @@ class CreateNeracaTables extends Migration
             ],
             'bulan' => [
                 'type' => 'TINYINT',
-                'constraint' => 2,
+                'constraint' => 3,
             ],
             'tahun' => [
                 'type' => 'YEAR',
