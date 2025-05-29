@@ -595,67 +595,86 @@ class BukuBesarController extends BaseController
         // Ambil dari pemetaan DUK untuk "Pembelian Inventaris..." jika ID tersebut benar-benar akun ASET.
         // Jika tidak, Anda harus tahu ID akun asetnya secara manual.
         // Contoh: ID 148 adalah 'Pembelian Inventaris Komputer' (DUK), asumsikan ini akun asetnya.
-        $kodeInvKomputer = $getKode(148); // Ganti 148 dengan ID akun ASET 'Inventaris Komputer'
-        $kodeInvMebel = $getKode(146);    // Ganti 146 dengan ID akun ASET 'Inventaris Mebel'
-        $kodeInvGedung = $getKode(147);   // Ganti 147 dengan ID akun ASET 'Inventaris Gedung/Bangunan' (atau 138)
-        $kodeInvKendaraan = $getKode(149); // Ganti 149 dengan ID akun ASET 'Inventaris Kendaraan'
+        $kodeInvKomputer = $getKode(15); // Ganti 148 dengan ID akun ASET 'Inventaris Komputer'
+        $kodeInvMebel = $getKode(13);    // Ganti 146 dengan ID akun ASET 'Inventaris Mebel'
+        $kodeInvGedung = $getKode(14);   // Ganti 147 dengan ID akun ASET 'Inventaris Gedung/Bangunan' (atau 138)
+        $kodeInvKendaraan = $getKode(16); // Ganti 149 dengan ID akun ASET 'Inventaris Kendaraan'
 
         return [
             // --- ASET LANCAR (Urutan 1) ---
             $getKode(1) => ['ASET_LANCAR', 1, false, null], // Kas
             $getKode(2) => ['ASET_LANCAR', 1, false, null], // Simpanan di Bank
-            $getKode(52) => ['ASET_LANCAR', 1, false, null], // Pinjaman Anggota (Piutang)
-            $getKode(53) => ['ASET_LANCAR', 1, false, null], // Simpanan Deposito (Aset)
+            $getKode(3) => ['ASET_LANCAR', 1, false, null], // Simpanan Deposito (Aset)
+            $getKode(17) => ['ASET_LANCAR', 1, false, null], // Piutang Biasa
+            $getKode(18) => ['ASET_LANCAR', 1, false, null], // Piutang Khusus
+            $getKode(19) => ['ASET_LANCAR', 1, false, null], // Piutang Ragu-ragu
+            $getKode(20) => ['ASET_LANCAR', 1, false, null], // Penyusutan Piutang Ragu-ragu
+
+            // --- ASET TAK LANCAR (Urutan 2) ---
+            $getKode(21) => ['ASET_TAK_LANCAR', 2, false, null], // SImpanan di BK3D
+            $getKode(22) => ['ASET_TAK_LANCAR', 2, false, null], // Investasi
+            $getKode(23) => ['ASET_TAK_LANCAR', 2, false, null], // Serta Data
 
             // --- ASET TETAP (Urutan 3) ---
-            $kodeInvKomputer => ['ASET_TETAP', 3, false, null],      // Inventaris Komputer
-            $getKode(3) => ['ASET_TETAP', 3, true, $kodeInvKomputer],   // Akum. Peny. Komputer
 
             $kodeInvMebel => ['ASET_TETAP', 3, false, null],      // Inventaris Mebel
-            $getKode(4) => ['ASET_TETAP', 3, true, $kodeInvMebel],      // Akum. Peny. Mebel
+            $getKode(5) => ['ASET_TETAP', 3, true, $kodeInvMebel],      // Akum. Peny. Mebel
 
             $kodeInvGedung => ['ASET_TETAP', 3, false, null],      // Inventaris Gedung
-            $getKode(5) => ['ASET_TETAP', 3, true, $kodeInvGedung],     // Akum. Peny. Gedung
-
-            $kodeInvKendaraan => ['ASET_TETAP', 3, false, null],      // Inventaris Kendaraan
-            $getKode(6) => ['ASET_TETAP', 3, true, $kodeInvKendaraan],  // Akum. Peny. Kendaraan
+            $getKode(6) => ['ASET_TETAP', 3, true, $kodeInvGedung],     // Akum. Peny. Gedung
 
             // $getKode(ID_ASET_TERTANGGUH) => ['ASET_TETAP', 3, false, null], // Jika ada Aset Tertangguh
             // $getKode(40)      => ['ASET_TETAP', 3, true,  $getKode(ID_ASET_TERTANGGUH)], // Akum. Peny. Tertangguh
 
+            $kodeInvKomputer => ['ASET_TETAP', 3, false, null],      // Inventaris Komputer
+            $getKode(4) => ['ASET_TETAP', 3, true, $kodeInvKomputer],   // Akum. Peny. Komputer          
+
+            $kodeInvKendaraan => ['ASET_TETAP', 3, false, null],      // Inventaris Kendaraan
+            $getKode(7) => ['ASET_TETAP', 3, true, $kodeInvKendaraan],  // Akum. Peny. Kendaraan
+
             // --- KEWAJIBAN JANGKA PENDEK (Urutan 4) ---
-            $getKode(17) => ['KEWAJIBAN_PENDEK', 4, false, null], // Simpanan Non-Saham
-            $getKode(20) => ['KEWAJIBAN_PENDEK', 4, false, null], // Simpanan Sukarela (SS)
-            $getKode(24) => ['KEWAJIBAN_PENDEK', 4, false, null], // Titipan Dana Kesejahteraan
-            $getKode(27) => ['KEWAJIBAN_PENDEK', 4, false, null], // Titipan Dana RAT
-            $getKode(28) => ['KEWAJIBAN_PENDEK', 4, false, null], // Titipan Dana Pendampingan
-            $getKode(29) => ['KEWAJIBAN_PENDEK', 4, false, null], // Titipan Penyisihan Pajak SHU
-            $getKode(35) => ['KEWAJIBAN_PENDEK', 4, false, null], // Titipan Pajak Jasa Non Saham
-            $getKode(43) => ['KEWAJIBAN_PENDEK', 4, false, null], // Jaminan PJKR
-            $getKode(50) => ['KEWAJIBAN_PENDEK', 4, false, null], // Titipan Utang Pajak SHU
-            // $getKode(18) => ['KEWAJIBAN_PENDEK', 4, false, null], // Jasa Simpanan Non-Saham (Jika Utang Jasa)
+            $getKode(34) => ['KEWAJIBAN_PENDEK', 4, false, null], // Simpanan Non-Saham
+            $getKode(35) => ['KEWAJIBAN_PENDEK', 4, false, null], // Jasa Simpanan Non-Saham
+            $getKode(37) => ['KEWAJIBAN_PENDEK', 4, false, null], // Simpanan Sukarela (SS)
+            $getKode(162) => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana dana
+            $getKode(163) => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana Pengurus
+            $getKode(164) => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana Pendidikan
+            $getKode(165) => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana Karyawan
+            $getKode(56) => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana PDK
+            $getKode(57) => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana Sosial
+            $getKode(166) => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana Insentif
+            $getKode(167) => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana Supervisi
+            $getKode(168) => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana Beban yang Harus Di bayar
+            $getKode(169) => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana RAT
+            $getKode(171) => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana Kesejahteraan
+            $getKode(171) => ['KEWAJIBAN_PENDEK', 4, false, null], // Dana SHU tahun lalu
+            $getKode(172) => ['KEWAJIBAN_PENDEK', 4, false, null], // Titipan Pemilihan Pengurus
+            $getKode(173) => ['KEWAJIBAN_PENDEK', 4, false, null], // SHU tahun Sekarang
 
             // --- KEWAJIBAN JANGKA PANJANG (Urutan 5) ---
-            $getKode(15) => ['KEWAJIBAN_PANJANG', 5, false, null], // Pinjaman dari BPD
-            $getKode(25) => ['KEWAJIBAN_PANJANG', 5, false, null], // Titipan Tunjangan Pesangon Karyawan
+            $getKode(174) => ['KEWAJIBAN_PANJANG', 5, false, null], // Dana Sehat
+            $getKode(175) => ['KEWAJIBAN_PANJANG', 5, false, null], // Titipan sp/sw
+            $getKode(176) => ['KEWAJIBAN_PANJANG', 5, false, null], // Titipan Dana Dana
+            $getKode(177) => ['KEWAJIBAN_PANJANG', 5, false, null], // Titipan CAP
+            $getKode(42) => ['KEWAJIBAN_PANJANG', 5, false, null], // Titipan Dana RAT
+            $getKode(178) => ['KEWAJIBAN_PANJANG', 5, false, null], // Titipan Biaya Pajak
+            $getKode(43) => ['KEWAJIBAN_PANJANG', 5, false, null], // Titipan Dana Pendampingan
+            $getKode(179) => ['KEWAJIBAN_PANJANG', 5, false, null], // Pemupukan Modal Tetap
+            $getKode(180) => ['KEWAJIBAN_PANJANG', 5, false, null], // Tabungan Pesangon Karyawan
+            $getKode(181) => ['KEWAJIBAN_PANJANG', 5, false, null], // Pinjaman pihak ke 2
 
             // --- EKUITAS (MODAL) (Urutan 6) ---
-            $getKode(26) => ['EKUITAS', 6, false, null], // Uang Pangkal
-            $getKode(19) => ['EKUITAS', 6, false, null], // Simpanan Pokok (SP)
-            $getKode(21) => ['EKUITAS', 6, false, null], // Simpanan Wajib (SW)
-            $getKode(22) => ['EKUITAS', 6, false, null], // Simpanan Wajib Penyertaan (SWP)
-            $getKode(8) => ['EKUITAS', 6, false, null], // Cadangan Aktiva Produktif (CAP)
-            $getKode(14) => ['EKUITAS', 6, false, null], // Penyisihan Dana Pemilihan Pengurus
-            $getKode(49) => ['EKUITAS', 6, false, null], // Modal Tetap
-            $getKode(41) => ['EKUITAS', 6, false, null], // Penyisihan Dana Kesehatan
-            $getKode(42) => ['EKUITAS', 6, false, null], // Tabungan Hari Tua Karyawan
-            $getKode(44) => ['EKUITAS', 6, false, null], // Dana Pendidikan
-            $getKode(45) => ['EKUITAS', 6, false, null], // Dana PDK
-            $getKode(46) => ['EKUITAS', 6, false, null], // Dana Sosial
-            $getKode(47) => ['EKUITAS', 6, false, null], // Simpanan Hasil Usaha
-            $getKode(48) => ['EKUITAS', 6, false, null], // Dana Pengelola
-            $getKode(51) => ['EKUITAS', 6, false, null], // Penyisihan Modal Simpanan Anggota
-            $getKode(76) => ['EKUITAS', 6, false, null], // Dana Cadangan RAT
+            $getKode(36) => ['EKUITAS', 6, false, null], // Simpanan Pokok (SP)
+            $getKode(38) => ['EKUITAS', 6, false, null], // Simpanan Wajib (SW)
+            $getKode(39) => ['EKUITAS', 6, false, null], // Simpanan Wajib Penyertaan (SWP)
+            $getKode(182) => ['EKUITAS', 6, false, null], // Iuran Dana Sehat
+            $getKode(46) => ['EKUITAS', 6, false, null], // Pendapatan Hibah
+            $getKode(183) => ['EKUITAS', 6, false, null], // Cadangan Likuiditas
+            $getKode(184) => ['EKUITAS', 6, false, null], // Cadangan Koperasi
+            $getKode(185) => ['EKUITAS', 6, false, null], // Dana Risiko
+            $getKode(186) => ['EKUITAS', 6, false, null], // PJKR
+            $getKode(187) => ['EKUITAS', 6, false, null], // SHU
+
         ];
     }
     private function getMasterNeracaStructure(): array
