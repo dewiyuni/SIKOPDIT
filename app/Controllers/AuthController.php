@@ -473,20 +473,50 @@ class AuthController extends BaseController
 
     public function karyawanDashboard()
     {
-        $anggotaModel = new \App\Models\AnggotaModel();
-        $totalAnggota = $anggotaModel->countAll(); // Menghitung total anggota
-        $simpananModel = new TransaksiSimpananModel(); // Pastikan model sudah dibuat
-        $totalSimpanan = $simpananModel->getTotalSimpanan(); // Memanggil fungsi total simpanan
-        $pinjamanModel = new TransaksiPinjamanModel(); // Pastikan model sudah dibuat
-        $totalPinjaman = $pinjamanModel->getTotalPinjaman(); // Memanggil fungsi total pinjaman
+        // Total Anggota Aktif
+        $totalAnggota = $this->anggotaModel->where('status', 'aktif')->countAllResults();
 
-        // Kirim data ke view
+        // Total Saldo Simpanan
+        $totalSimpanan = $this->transaksiSimpananModel->getTotalSimpanan();
+
+        // Total Pinjaman Aktif (sisa pokok pinjaman yang belum lunas)
+        $queryTotalPinjamanAktif = $this->db->query("
+            SELECT SUM(tp.jumlah_pinjaman - COALESCE((SELECT SUM(a.jumlah_angsuran) FROM angsuran a WHERE a.id_pinjaman = tp.id_pinjaman), 0)) as total_sisa_pinjaman
+            FROM transaksi_pinjaman tp
+            WHERE tp.status = 'aktif'
+        ");
+        $totalPinjaman = $queryTotalPinjamanAktif->getRow()->total_sisa_pinjaman ?? 0;
+
+        // Total Kas (Saldo Akhir Kas dari Jurnal Kas)
+        // Karyawan mungkin tidak perlu melihat total kas keseluruhan,
+        // atau mungkin perlu melihat kas yang relevan dengan operasional mereka.
+        // Untuk saat ini, kita bisa tampilkan total kas yang sama dengan admin, atau kosongi jika tidak relevan.
+        $queryTotalKas = $this->db->query("
+            SELECT SUM(CASE
+                         WHEN kategori = 'DUM' THEN jumlah
+                         WHEN kategori = 'DUK' THEN -jumlah
+                         ELSE 0
+                       END) as saldo_kas
+            FROM jurnal_kas
+        ");
+        $totalKas = $queryTotalKas->getRow()->saldo_kas ?? 0; // Atau set ke 0 jika tidak relevan untuk karyawan
+
+        // Data untuk Grafik Bulanan (Sama seperti Admin)
+        $grafikSimpananPinjamanData = $this->_getGrafikSimpananPinjamanBulanan(); // Method private yang sama
+        $grafikKasBulananData = $this->_getGrafikKasBulanan(); // Method private yang sama
+
         return view('dashboard_karyawan', [
             'totalAnggota' => $totalAnggota,
             'totalSimpanan' => $totalSimpanan,
-            'totalPinjaman' => $totalPinjaman
+            'totalPinjaman' => $totalPinjaman,
+            'totalKas' => $totalKas, // Kirim data total kas
+            'grafikSimpananPinjamanLabels' => json_encode($grafikSimpananPinjamanData['labels']),
+            'grafikSimpananData' => json_encode($grafikSimpananPinjamanData['simpanan']),
+            'grafikPinjamanData' => json_encode($grafikSimpananPinjamanData['pinjaman']),
+            'grafikKasLabels' => json_encode($grafikKasBulananData['labels']),
+            'grafikKasMasukData' => json_encode($grafikKasBulananData['kas_masuk']),
+            'grafikKasKeluarData' => json_encode($grafikKasBulananData['kas_keluar']),
         ]);
     }
-
 
 }

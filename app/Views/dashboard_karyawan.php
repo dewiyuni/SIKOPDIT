@@ -25,7 +25,7 @@
                         <div class="card-body d-flex justify-content-between align-items-center">
                             <div class="text-container">
                                 <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                                    Total Anggota
+                                    Total Anggota Aktif
                                 </div>
                                 <div class="h5 mb-0 font-weight-bold text-gray-800">
                                     <?= $totalAnggota; ?>
@@ -44,10 +44,10 @@
                         <div class="card-body d-flex justify-content-between align-items-center">
                             <div class="text-container">
                                 <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                                    Total Simpanan
+                                    Total Saldo Simpanan
                                 </div>
                                 <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                    <?= number_format($totalSimpanan, 0, ',', '.') ?>
+                                    Rp <?= number_format($totalSimpanan, 0, ',', '.') ?>
                                 </div>
                             </div>
                             <div class="icon-container">
@@ -57,16 +57,16 @@
                     </div>
                 </div>
 
-                <!-- Total Pinjaman Card -->
+                <!-- Total Pinjaman Aktif Card -->
                 <div class="col-xl-3 col-md-6 mb-4">
-                    <div class="card border-left-warning shadow h-100 py-2">
+                    <div class="card border-left-info shadow h-100 py-2">
                         <div class="card-body d-flex justify-content-between align-items-center">
                             <div class="text-container">
-                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                    Total Pinjaman
+                                <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                                    Total Pinjaman Aktif
                                 </div>
                                 <div class="h5 mb-0 font-weight-bold text-gray-800">
-                                    <?= number_format($totalPinjaman, 0, ',', '.') ?>
+                                    Rp <?= number_format($totalPinjaman, 0, ',', '.') ?>
                                 </div>
                             </div>
                             <div class="icon-container">
@@ -76,18 +76,20 @@
                     </div>
                 </div>
 
+                <!-- Total Kas Card (Sesuaikan jika perlu untuk karyawan) -->
                 <div class="col-xl-3 col-md-6 mb-4">
                     <div class="card border-left-warning shadow h-100 py-2">
-                        <div class="card-body">
-                            <div class="row no-gutters align-items-center">
-                                <div class="col mr-2">
-                                    <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                                        Total Kas</div>
-                                    <div class="h5 mb-0 font-weight-bold text-gray-800"></div>
+                        <div class="card-body d-flex justify-content-between align-items-center">
+                            <div class="text-container">
+                                <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                                    Total Kas
                                 </div>
-                                <div class="col-auto">
-                                    <i class="fas fa-hand-holding-usd fa-2x text-gray-300"></i>
+                                <div class="h5 mb-0 font-weight-bold text-gray-800">
+                                    Rp <?= number_format($totalKas, 0, ',', '.') // Tampilkan total kas ?>
                                 </div>
+                            </div>
+                            <div class="icon-container">
+                                <i class="fas fa-cash-register fa-2x text-gray-300"></i>
                             </div>
                         </div>
                     </div>
@@ -100,41 +102,208 @@
                 <div class="col-xl-8 col-lg-7">
                     <div class="card shadow mb-4">
                         <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                            <h6 class="m-0 font-weight-bold text-primary">Grafik Simpanan dan Pinjaman</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Grafik Simpanan (Setoran) & Pinjaman
+                                (Pencairan) Bulanan</h6>
                         </div>
                         <div class="card-body">
                             <div class="chart-area">
-                                <canvas id="chartSimpananPinjaman"></canvas>
+                                <canvas id="chartSimpananPinjamanKaryawan"></canvas>
+                                <!-- ID BERBEDA JIKA DI SATU HALAMAN YANG SAMA, TAPI INI HALAMAN BERBEDA JADI BISA SAMA -->
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <div class="col-xl-4 col-lg-7">
+                <div class="col-xl-4 col-lg-5">
                     <div class="card shadow mb-4">
                         <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
-                            <h6 class="m-0 font-weight-bold text-primary">Grafik Kas Perbulan</h6>
+                            <h6 class="m-0 font-weight-bold text-primary">Grafik Kas Per Bulan</h6>
                         </div>
                         <div class="card-body">
                             <div class="chart-area">
-                                <canvas id="chartSimpananPinjaman"></canvas>
+                                <canvas id="chartKasBulananKaryawan"></canvas> <!-- ID BERBEDA JIKA PERLU -->
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
+        <!-- /.container-fluid -->
     </div>
+    <!-- End of Main Content -->
 
     <!-- Footer -->
     <footer class="sticky-footer bg-white">
         <div class="container my-auto">
             <div class="copyright text-center my-auto">
-                <span>Copyright &copy; SIkopdit 2025</span>
+                <span>Copyright © SIkopdit 2025</span>
             </div>
         </div>
     </footer>
     <!-- End of Footer -->
 
 </div>
+<!-- End of Content Wrapper -->
+<?= $this->endSection(); ?>
+
+
+<?= $this->section('scripts'); ?>
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Fungsi untuk format angka di tooltip Chart.js
+        function number_format(number, decimals, dec_point, thousands_sep) {
+            number = (number + '').replace(',', '').replace(' ', '');
+            var n = !isFinite(+number) ? 0 : +number,
+                prec = !isFinite(+decimals) ? 0 : Math.abs(decimals),
+                sep = (typeof thousands_sep === 'undefined') ? '.' : thousands_sep,
+                dec = (typeof dec_point === 'undefined') ? ',' : dec_point,
+                s = '',
+                toFixedFix = function (n, prec) {
+                    var k = Math.pow(10, prec);
+                    return '' + Math.round(n * k) / k;
+                };
+            s = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.');
+            if (s[0].length > 3) {
+                s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
+            }
+            if ((s[1] || '').length < prec) {
+                s[1] = s[1] || '';
+                s[1] += new Array(prec - s[1].length + 1).join('0');
+            }
+            return s.join(dec);
+        }
+
+        // Grafik Simpanan dan Pinjaman (Karyawan)
+        // Anda bisa menggunakan ID yang sama yaitu "chartSimpananPinjaman" karena ini file view yang berbeda
+        // Namun, jika Anda ingin ID yang unik, bisa gunakan "chartSimpananPinjamanKaryawan"
+        var ctxSimpananPinjamanKaryawan = document.getElementById("chartSimpananPinjamanKaryawan");
+        if (ctxSimpananPinjamanKaryawan) {
+            try {
+                new Chart(ctxSimpananPinjamanKaryawan, {
+                    type: 'line',
+                    data: {
+                        labels: JSON.parse('<?= $grafikSimpananPinjamanLabels; ?>'),
+                        datasets: [{
+                            label: "Total Setoran Simpanan",
+                            lineTension: 0.3,
+                            backgroundColor: "rgba(78, 115, 223, 0.05)",
+                            borderColor: "rgba(78, 115, 223, 1)",
+                            pointRadius: 3,
+                            pointBackgroundColor: "rgba(78, 115, 223, 1)",
+                            pointBorderColor: "rgba(78, 115, 223, 1)",
+                            pointHoverRadius: 4,
+                            pointHoverBackgroundColor: "rgba(78, 115, 223, 1)",
+                            pointHoverBorderColor: "rgba(78, 115, 223, 1)",
+                            pointHitRadius: 10,
+                            pointBorderWidth: 2,
+                            data: JSON.parse('<?= $grafikSimpananData; ?>'),
+                        }, {
+                            label: "Total Pencairan Pinjaman",
+                            lineTension: 0.3,
+                            backgroundColor: "rgba(28, 200, 138, 0.05)",
+                            borderColor: "rgba(28, 200, 138, 1)",
+                            pointRadius: 3,
+                            pointBackgroundColor: "rgba(28, 200, 138, 1)",
+                            pointBorderColor: "rgba(28, 200, 138, 1)",
+                            pointHoverRadius: 4,
+                            pointHoverBackgroundColor: "rgba(28, 200, 138, 1)",
+                            pointHoverBorderColor: "rgba(28, 200, 138, 1)",
+                            pointHitRadius: 10,
+                            pointBorderWidth: 2,
+                            data: JSON.parse('<?= $grafikPinjamanData; ?>'),
+                        }],
+                    },
+                    options: { // Salin options yang sudah benar dari dashboard admin
+                        maintainAspectRatio: false,
+                        layout: { padding: { left: 10, right: 25, top: 25, bottom: 0 } },
+                        scales: {
+                            x: {
+                                grid: { display: false, drawBorder: false },
+                                ticks: { maxTicksLimit: 7 }
+                            },
+                            y: {
+                                ticks: {
+                                    maxTicksLimit: 5, padding: 10,
+                                    callback: function (value) { return 'Rp ' + number_format(value); }
+                                },
+                                grid: { color: "rgb(234, 236, 244)", drawBorder: false, borderDash: [2] }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: true },
+                            tooltip: {
+                                backgroundColor: "rgb(255,255,255)", bodyColor: "#858796", titleMarginBottom: 10, titleColor: '#6e707e', titleFont: { size: 14 }, borderColor: '#dddfeb', borderWidth: 1, padding: { x: 15, y: 15 }, displayColors: false, intersect: false, mode: 'index', caretPadding: 10,
+                                callbacks: {
+                                    label: function (tooltipItem) {
+                                        var datasetLabel = tooltipItem.dataset.label || '';
+                                        return datasetLabel + ': Rp ' + number_format(tooltipItem.parsed.y);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error("Error saat inisialisasi Chart SimpananPinjaman Karyawan:", e);
+            }
+        }
+
+        // Grafik Kas Bulanan (Karyawan)
+        var ctxKasBulananKaryawan = document.getElementById("chartKasBulananKaryawan");
+        if (ctxKasBulananKaryawan) {
+            try {
+                new Chart(ctxKasBulananKaryawan, {
+                    type: 'bar',
+                    data: {
+                        labels: JSON.parse('<?= $grafikKasLabels; ?>'),
+                        datasets: [{
+                            label: "Kas Masuk",
+                            backgroundColor: "#4e73df",
+                            hoverBackgroundColor: "#2e59d9",
+                            borderColor: "#4e73df",
+                            data: JSON.parse('<?= $grafikKasMasukData; ?>'),
+                        }, {
+                            label: "Kas Keluar",
+                            backgroundColor: "#e74a3b",
+                            hoverBackgroundColor: "#c9302c",
+                            borderColor: "#e74a3b",
+                            data: JSON.parse('<?= $grafikKasKeluarData; ?>'),
+                        }],
+                    },
+                    options: { // Salin options yang sudah benar dari dashboard admin
+                        maintainAspectRatio: false,
+                        layout: { padding: { left: 10, right: 25, top: 25, bottom: 0 } },
+                        scales: {
+                            x: {
+                                grid: { display: false, drawBorder: false },
+                                ticks: { maxTicksLimit: 6 }
+                            },
+                            y: {
+                                ticks: {
+                                    beginAtZero: true, maxTicksLimit: 5, padding: 10,
+                                    callback: function (value) { return 'Rp ' + number_format(value); }
+                                },
+                                grid: { color: "rgb(234, 236, 244)", drawBorder: false, borderDash: [2] }
+                            }
+                        },
+                        plugins: {
+                            legend: { display: true },
+                            tooltip: {
+                                titleMarginBottom: 10, titleColor: '#6e707e', titleFont: { size: 14 }, backgroundColor: "rgb(255,255,255)", bodyColor: "#858796", borderColor: '#dddfeb', borderWidth: 1, padding: { x: 15, y: 15 }, displayColors: false, intersect: false, mode: 'index', caretPadding: 10,
+                                callbacks: {
+                                    label: function (tooltipItem) {
+                                        var datasetLabel = tooltipItem.dataset.label || '';
+                                        return datasetLabel + ': Rp ' + number_format(tooltipItem.parsed.y);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error("Error saat inisialisasi Chart KasBulanan Karyawan:", e);
+            }
+        }
+    });
+</script>
 <?= $this->endSection(); ?>
