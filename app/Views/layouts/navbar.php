@@ -23,9 +23,6 @@
             <li class="nav-item">
                 <a class="nav-link" href="/admin/dashboard">🏠 <span>Dashboard</span></a>
             </li>
-            <!-- <li class="nav-item">
-                <a class="nav-link" href="/admin/jenis_simpanan">💰 <span>Jenis Simpanan</span></a>
-            </li> -->
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="kelolaUserDropdown" role="button" data-bs-toggle="dropdown"
                     aria-expanded="false">
@@ -82,9 +79,6 @@
             <li class="nav-item">
                 <a class="nav-link" href="/karyawan/transaksi_pinjaman">🏦 <span>Transaksi Pinjaman</span></a>
             </li>
-            <!-- <li class="nav-item">
-                <a class="nav-link" href="/karyawan/laporan_transaksi">📄 <span>Laporan Transaksi</span></a>
-            </li> -->
         <?php endif; ?>
     </ul>
 
@@ -100,7 +94,7 @@
 
                 <!-- Sidebar Toggle (Topbar) -->
                 <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
-                    <i class="fas fa-arrow-down"></i>
+                    <i class="fas fa-bars"></i> <!-- Mengganti ikon menjadi bars agar lebih umum -->
                 </button>
                 <!-- Topbar Navbar -->
                 <ul class="navbar-nav ml-auto">
@@ -110,7 +104,7 @@
                         <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
                             data-bs-toggle="dropdown" aria-expanded="false">
                             <span class="mr-2 d-none d-lg-inline text-gray-600 small">
-                                <?= session()->get('role') == 'admin' ? 'Admin' : 'Karyawan'; ?>
+                                <?= ucfirst(session()->get('role')); // Menggunakan ucfirst untuk Kapital di awal ?>
                             </span>
                             <img class="img-profile rounded-circle"
                                 src="<?= base_url('assets/img/undraw_profile_3.svg'); ?>" alt="Profile Image">
@@ -120,8 +114,6 @@
                             <li><a class="dropdown-item" href="<?= base_url('auth/logout') ?>">🔒 Keluar</a></li>
                         </ul>
                     </li>
-
                 </ul>
-
             </nav>
             <!-- End of Topbar -->

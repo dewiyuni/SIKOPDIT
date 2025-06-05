@@ -22,7 +22,37 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/pdfmake.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdfmake/0.1.53/vfs_fonts.js"></script>
     <script src="https://cdn.datatables.net/buttons/2.3.6/js/buttons.html5.min.js"></script>
-    <?= $this->renderSection('styles') // Tempat untuk CSS tambahan per halaman ?>
+
+    <!-- CSS KUSTOM UNTUK MEMPERBESAR DAN MENEBALKAN FONT SIDEBAR -->
+    <style>
+        /* Targetkan span di dalam link utama sidebar */
+        ul.navbar-nav.sidebar .nav-item .nav-link span {
+            font-size: 1rem !important;
+            /* Ukuran font, sesuaikan jika perlu */
+            font-weight: bold !important;
+            /* Tambahkan ini untuk menebalkan */
+        }
+
+        /* Targetkan teks langsung di dalam dropdown item (jika tidak ada span)
+           dan juga span di dalam dropdown item (jika ada) */
+        ul.navbar-nav.sidebar .nav-item .dropdown-menu .dropdown-item,
+        ul.navbar-nav.sidebar .nav-item .dropdown-menu .dropdown-item span {
+            font-size: 0.95rem !important;
+            /* Ukuran font submenu, sesuaikan jika perlu */
+            font-weight: normal !important;
+            /* Atau 'bold' jika submenu juga ingin tebal. 'normal' agar tidak ikut tebal jika parentnya tebal */
+            /* Jika ingin submenu juga tebal, ganti 'normal' menjadi 'bold' */
+        }
+
+        /* Jika ingin spesifik hanya span di dropdown item yang bold (dan ada span-nya) */
+        /* ul.navbar-nav.sidebar .nav-item .dropdown-menu .dropdown-item span {
+            font-weight: bold !important;
+        } */
+    </style>
+    <!-- AKHIR CSS KUSTOM -->
+
+
+    <?= $this->renderSection('styles') ?>
 </head>
 
 
@@ -38,7 +68,7 @@
 
     <!-- SB Admin 2 JS -->
     <script src="<?= base_url('assets/js/sb-admin-2.min.js') ?>"></script>
-    <?= $this->renderSection('scripts') // Tempat untuk JS tambahan per halaman ?>
+    <?= $this->renderSection('scripts') ?>
 </body>
 
 </html>
