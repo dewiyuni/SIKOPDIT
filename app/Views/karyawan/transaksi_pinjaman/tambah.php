@@ -8,10 +8,22 @@
     </div>
 
     <?php if (session()->getFlashdata('message')): ?>
-        <div class="alert alert-success"><?= session()->getFlashdata('message') ?></div>
-    <?php elseif (session()->getFlashdata('error')): ?>
-        <div class="alert alert-danger"><?= session()->getFlashdata('error') ?></div>
+        <div class="alert alert-success"><?= session()->getFlashdata('message') // Pesan sukses biasa, aman di-escape ?>
+        </div>
     <?php endif; ?>
+
+    <?php
+    // Handle pesan error biasa dan error_html
+    $errorMessage = session()->getFlashdata('error');
+    $errorHtmlMessage = session()->getFlashdata('error_html');
+    ?>
+
+    <?php if ($errorHtmlMessage): ?>
+        <div class="alert alert-danger"><?= $errorHtmlMessage // Tampilkan HTML apa adanya ?></div>
+    <?php elseif ($errorMessage): ?>
+        <div class="alert alert-danger"><?= esc($errorMessage) // Pesan error biasa, escape untuk keamanan ?></div>
+    <?php endif; ?>
+
 
     <div class="card p-3">
         <form action="<?= base_url('karyawan/transaksi_pinjaman/simpan') ?>" method="post">
@@ -26,12 +38,12 @@
                             <option value="" disabled selected>-- Pilih Anggota --</option>
                             <?php foreach ($anggota as $a): ?>
                                 <option value="<?= esc($a->id_anggota) ?>" <?= old('id_anggota') == $a->id_anggota ? 'selected' : '' ?>>
-                                    <?= esc($a->nama) ?>
+                                    <?= esc($a->nama) ?> (<?= esc($a->no_ba) ?>)
                                 </option>
                             <?php endforeach; ?>
                         </select>
                         <?php if (session('errors.id_anggota')): ?>
-                            <small class="text-danger"><?= session('errors.id_anggota') ?></small>
+                            <small class="text-danger"><?= esc(session('errors.id_anggota')) ?></small>
                         <?php endif; ?>
                     </div>
 
@@ -40,7 +52,7 @@
                         <input type="date" name="tanggal_pinjaman" class="form-control" required
                             value="<?= old('tanggal_pinjaman', date('Y-m-d')) ?>">
                         <?php if (session('errors.tanggal_pinjaman')): ?>
-                            <small class="text-danger"><?= session('errors.tanggal_pinjaman') ?></small>
+                            <small class="text-danger"><?= esc(session('errors.tanggal_pinjaman')) ?></small>
                         <?php endif; ?>
                     </div>
 
@@ -49,13 +61,16 @@
                         <input type="number" name="jangka_waktu" id="jangka_waktu" class="form-control" required min="1"
                             value="<?= old('jangka_waktu') ?>" onchange="hitungSimulasi();">
                         <?php if (session('errors.jangka_waktu')): ?>
-                            <small class="text-danger"><?= session('errors.jangka_waktu') ?></small>
+                            <small class="text-danger"><?= esc(session('errors.jangka_waktu')) ?></small>
                         <?php endif; ?>
                     </div>
 
                     <div class="form-group mb-3">
                         <label for="jaminan" class="form-label">Jaminan (Opsional) | >2 Juta (Wajib)</label>
                         <input type="text" name="jaminan" class="form-control" value="<?= old('jaminan') ?>">
+                        <?php if (session('errors.jaminan')): ?>
+                            <small class="text-danger"><?= esc(session('errors.jaminan')) ?></small>
+                        <?php endif; ?>
                     </div>
                 </div>
 
@@ -71,12 +86,12 @@
                         <input type="hidden" name="jumlah_pinjaman" id="jumlah_pinjaman_hidden"
                             value="<?= old('jumlah_pinjaman') ?>">
                         <?php if (session('errors.jumlah_pinjaman')): ?>
-                            <small class="text-danger"><?= session('errors.jumlah_pinjaman') ?></small>
+                            <small class="text-danger"><?= esc(session('errors.jumlah_pinjaman')) ?></small>
                         <?php endif; ?>
                     </div>
 
                     <div class="form-group mb-3">
-                        <label for="bunga_simpanan" class="form-label">Potongan Awal (2.5%)</label>
+                        <label for="bunga_simpanan" class="form-label">Potongan Awal (SWP 2.5%)</label>
                         <div class="input-group">
                             <span class="input-group-text">Rp</span>
                             <input type="text" id="bunga_simpanan_display" class="form-control" disabled
@@ -179,12 +194,13 @@
     </div>
 </div>
 
+<!-- ... (script JavaScript Anda tetap sama) ... -->
 <script>
     // Format angka dengan pemisah ribuan
     function formatRibuan(input) {
         let angka = input.value.replace(/\D/g, ""); // Hapus semua non-angka
         input.value = angka.replace(/\B(?=(\d{3})+(?!\d))/g, "."); // Tambah titik pemisah ribuan
-        document.getElementById("jumlah_pinjaman_hidden").value = angka;
+        document.getElementById("jumlah_pinjaman_hidden").value = angka; // Simpan angka bersih tanpa titik
         return angka;
     }
 
@@ -193,7 +209,7 @@
         if (isNaN(number) || number === null || number === undefined) {
             return "0";
         }
-        return number.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        return parseFloat(number).toLocaleString('id-ID'); // Gunakan toLocaleString untuk format
     }
 
     // Hitung semua simulasi
@@ -201,7 +217,7 @@
         const pinjamanInput = document.getElementById("jumlah_pinjaman_hidden").value;
         const jangkaWaktuInput = document.getElementById("jangka_waktu").value;
 
-        const pinjaman = parseInt(pinjamanInput || 0);
+        const pinjaman = parseFloat(pinjamanInput || 0); // Pastikan parse sebagai float
         const jangkaWaktu = parseInt(jangkaWaktuInput || 0);
 
         const labelBungaAngsuran = document.getElementById("label_bunga_angsuran");
@@ -214,7 +230,7 @@
             return;
         }
 
-        // Potongan awal (tetap 2.5% dari pinjaman awal)
+        // Potongan awal SWP (2.5% dari pinjaman awal)
         const bungaSimpananPersen = 2.5;
         const bungaSimpanan = Math.round(pinjaman * (bungaSimpananPersen / 100));
         const jumlahDiterima = pinjaman - bungaSimpanan;
@@ -224,8 +240,6 @@
         document.getElementById("jumlah_diterima").value = formatNumber(jumlahDiterima);
         document.getElementById("jumlah_diterima_hidden").value = jumlahDiterima;
 
-        // Angsuran Pokok Awal (digunakan sebagai basis)
-        // Pembulatan ke atas agar pelunasan terjamin atau sedikit lebih cepat
         const angsuranPokokAwal = Math.ceil(pinjaman / jangkaWaktu);
         document.getElementById("angsuran_pokok_display").value = formatNumber(angsuranPokokAwal);
 
@@ -243,8 +257,8 @@
         if (pinjaman > batasBungaMenurun) {
             labelBungaAngsuran.innerHTML = "<strong>Bunga Per Angsuran (2% dari Sisa):</strong>";
             labelTotalAngsuran.innerHTML = "<strong>Total Angsuran /bulan (Variatif):</strong>";
-            document.getElementById("bunga_angsuran_display").value = "Menurun"; // Indikasi bunga menurun
-            document.getElementById("total_angsuran_display").value = "Variatif"; // Indikasi total variatif
+            document.getElementById("bunga_angsuran_display").value = "Menurun";
+            document.getElementById("total_angsuran_display").value = "Variatif";
         } else {
             labelBungaAngsuran.innerHTML = "<strong>Bunga Per Angsuran (2% Tetap):</strong>";
             labelTotalAngsuran.innerHTML = "<strong>Total Angsuran /bulan (Tetap):</strong>";
@@ -253,46 +267,38 @@
             document.getElementById("total_angsuran_display").value = formatNumber(angsuranPokokAwal + bungaAngsuranTetap);
         }
 
-
         for (let i = 1; i <= jangkaWaktu; i++) {
             let angsuranPokokBulanIni;
             let bungaBulanIni;
 
-            if (pinjaman > batasBungaMenurun) {
-                // Bunga dihitung dari sisa pinjaman saat ini (sebelum pembayaran pokok bulan ini)
+            if (sisaPinjaman <= 0) { // Jika sudah lunas di iterasi sebelumnya
+                angsuranPokokBulanIni = 0;
+                bungaBulanIni = 0;
+            } else if (pinjaman > batasBungaMenurun) {
                 bungaBulanIni = Math.round(sisaPinjaman * (bungaAngsuranPersen / 100));
             } else {
-                // Bunga tetap dihitung dari pinjaman awal
                 bungaBulanIni = Math.round(pinjaman * (bungaAngsuranPersen / 100));
             }
 
-            // Penentuan angsuran pokok bulan ini
             if (i === jangkaWaktu) {
-                // Angsuran terakhir, pokoknya adalah sisa pinjaman agar lunas
-                angsuranPokokBulanIni = sisaPinjaman;
+                angsuranPokokBulanIni = sisaPinjaman; // Lunas di angsuran terakhir
             } else {
-                // Angsuran normal, pastikan tidak melebihi sisa pinjaman (penting jika angsuranPokokAwal dibulatkan)
                 angsuranPokokBulanIni = Math.min(angsuranPokokAwal, sisaPinjaman);
             }
-
-            // Jika karena pembulatan angsuranPokokAwal, total pokok sudah lunas sebelum jangka waktu berakhir
-            if (sisaPinjaman <= 0) {
-                angsuranPokokBulanIni = 0;
-                bungaBulanIni = 0; // Tidak ada bunga jika sudah lunas
+            // Koreksi jika angsuran pokok membuat sisa negatif (karena pembulatan bunga)
+            if (sisaPinjaman - angsuranPokokBulanIni < 0 && i < jangkaWaktu) {
+                angsuranPokokBulanIni = sisaPinjaman;
             }
 
 
             let totalAngsuranBulanIni = angsuranPokokBulanIni + bungaBulanIni;
-
             let sisaPinjamanSetelahBayar = sisaPinjaman - angsuranPokokBulanIni;
 
-            // Akumulasi total
-            if (angsuranPokokBulanIni > 0 || bungaBulanIni > 0) { // Hanya akumulasi jika ada pembayaran
+            if (angsuranPokokBulanIni > 0 || bungaBulanIni > 0) {
                 totalPokokTerbayar += angsuranPokokBulanIni;
                 totalBungaTerbayar += bungaBulanIni;
                 totalPembayaranKeseluruhan += totalAngsuranBulanIni;
             }
-
 
             let row = document.createElement('tr');
             row.innerHTML = `
@@ -304,23 +310,23 @@
             `;
             simulasiBody.appendChild(row);
 
-            sisaPinjaman = sisaPinjamanSetelahBayar; // Update sisa pinjaman untuk iterasi berikutnya
+            sisaPinjaman = sisaPinjamanSetelahBayar;
 
             if (sisaPinjaman <= 0 && i < jangkaWaktu) {
-                // Jika lunas sebelum jangka waktu, hentikan simulasi untuk bulan berikutnya
-                // dan pastikan total footer sudah benar
                 break;
             }
         }
 
-        // Update totals di footer
         document.getElementById("total_pokok_simulasi").innerText = `Rp ${formatNumber(totalPokokTerbayar)}`;
         document.getElementById("total_bunga_simulasi").innerText = `Rp ${formatNumber(totalBungaTerbayar)}`;
         document.getElementById("total_pembayaran_simulasi").innerText = `Rp ${formatNumber(totalPembayaranKeseluruhan)}`;
     }
 
-    // Reset simulasi
     function resetSimulasi() {
+        document.getElementById("jumlah_pinjaman").value = "";
+        document.getElementById("jumlah_pinjaman_hidden").value = "0";
+        // document.getElementById("jangka_waktu").value = ""; // Biarkan jangka waktu jika sudah diisi
+
         document.getElementById("bunga_simpanan_display").value = "0";
         document.getElementById("bunga_simpanan_hidden").value = "0";
         document.getElementById("jumlah_diterima").value = "0";
@@ -335,31 +341,38 @@
         document.getElementById("total_bunga_simulasi").innerText = "Rp 0";
         document.getElementById("total_pembayaran_simulasi").innerText = "Rp 0";
 
-        // Reset label
         document.getElementById("label_bunga_angsuran").innerHTML = "<strong>Bunga Per Angsuran (2%):</strong>";
         document.getElementById("label_total_angsuran").innerHTML = "<strong>Total Angsuran /bulan:</strong>";
     }
 
     document.addEventListener("DOMContentLoaded", function () {
         const oldPinjaman = "<?= old('jumlah_pinjaman') ?>";
+        const oldJangkaWaktu = "<?= old('jangka_waktu') ?>";
+
         if (oldPinjaman) {
-            document.getElementById("jumlah_pinjaman").value = formatNumber(parseInt(oldPinjaman));
             document.getElementById("jumlah_pinjaman_hidden").value = oldPinjaman;
+            // Tampilkan format ribuan di input yang terlihat
+            document.getElementById("jumlah_pinjaman").value = parseFloat(oldPinjaman).toLocaleString('id-ID');
+        }
+        if (oldJangkaWaktu) {
+            document.getElementById("jangka_waktu").value = oldJangkaWaktu;
+        }
+
+
+        if (oldPinjaman || oldJangkaWaktu) {
             hitungSimulasi();
         } else {
             resetSimulasi();
         }
 
-        // Set tanggal default jika tidak ada old value
         const tanggalPinjamanInput = document.querySelector('input[name="tanggal_pinjaman"]');
         if (!tanggalPinjamanInput.value) {
             const today = new Date();
             const yyyy = today.getFullYear();
-            const mm = String(today.getMonth() + 1).padStart(2, '0'); // Months are 0-based
+            const mm = String(today.getMonth() + 1).padStart(2, '0');
             const dd = String(today.getDate()).padStart(2, '0');
             tanggalPinjamanInput.value = `${yyyy}-${mm}-${dd}`;
         }
     });
 </script>
-
 <?= $this->endSection() ?>
