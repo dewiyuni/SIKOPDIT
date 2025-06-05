@@ -45,33 +45,29 @@
                             <div class="card-body">
                                 <div class="row">
                                     <div class="col-md-6">
+
                                         <p class="mb-1"><strong>Tanggal Cair:</strong>
                                             <?= date('d-m-Y', strtotime($pinjaman->tanggal_pinjaman)) ?></p>
                                         <p class="mb-1"><strong>Jangka Waktu:</strong> <?= $pinjaman->jangka_waktu ?>
                                             bulan</p>
-                                        <?php
-                                        // Format the interest rate to remove trailing zeros
-                                        $bungaDisplay = (float) $bungaPerbulan;
-                                        if (floor($bungaDisplay) == $bungaDisplay) {
-                                            // If it's a whole number, show without decimal
-                                            $bungaDisplay = number_format($bungaDisplay, 0);
-                                        } else {
-                                            // If it has decimal part, remove trailing zeros
-                                            $bungaDisplay = rtrim(rtrim(number_format($bungaDisplay, 2), '0'), '.');
-                                        }
-                                        ?>
-                                        <p class="mb-1"><strong>Bunga:</strong> <?= $bungaDisplay ?>% (Rp
-                                            <?= number_format($totalBungaAwal, 0, ',', '.') ?>)
-                                        </p>
                                     </div>
                                     <div class="col-md-6">
                                         <p class="mb-1"><strong>Besar Pinjaman:</strong> Rp
                                             <?= number_format($pinjaman->jumlah_pinjaman, 0, ',', '.') ?>
                                         </p>
-                                        <p class="mb-1"><strong>Jaminan:</strong> <?= esc($pinjaman->jaminan) ?></p>
-                                        <p class="mb-1"><strong>Angsuran/bulan:</strong> Rp
-                                            <?= number_format($angsuranPerBulan + $totalBungaAwal, 0, ',', '.') ?>
+                                        <?php
+                                        // Format the interest rate to remove trailing zeros
+                                        $bungaDisplayInfo = (float) $bungaPerbulan;
+                                        if (floor($bungaDisplayInfo) == $bungaDisplayInfo) {
+                                            $bungaDisplayInfo = number_format($bungaDisplayInfo, 0);
+                                        } else {
+                                            $bungaDisplayInfo = rtrim(rtrim(number_format($bungaDisplayInfo, 2), '0'), '.');
+                                        }
+                                        ?>
+                                        <p class="mb-1"><strong>Bunga:</strong> <?= $bungaDisplayInfo ?>% (Rp
+                                            <?= number_format($totalBungaAwal, 0, ',', '.') ?>)
                                         </p>
+                                        <p class="mb-1"><strong>Jaminan:</strong> <?= esc($pinjaman->jaminan) ?></p>
                                     </div>
                                 </div>
                             </div>
@@ -119,7 +115,8 @@
                                 <div class="progress" style="height: 25px;">
                                     <div class="progress-bar bg-success" role="progressbar"
                                         style="width: <?= $persentaseLunas ?>%;" aria-valuenow="<?= $persentaseLunas ?>"
-                                        aria-valuemin="0" aria-valuemax="100"> <?= $persentaseLunas ?>%
+                                        aria-valuemin="0" aria-valuemax="100">
+                                        <?= number_format($persentaseLunas, 2) ?>%
                                     </div>
                                 </div>
                             </div>
@@ -133,8 +130,8 @@
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="mb-0">Riwayat Angsuran</h4>
                     <?php if ($angsuran): ?>
-                        <button class="btn btn-outline-primary" onclick="printTable()">
-                            <i class="fas fa-print"></i> Cetak
+                        <button class="btn btn-outline-primary" onclick="printRiwayatAngsuran()">
+                            <i class="fas fa-print"></i> Cetak Riwayat
                         </button>
                     <?php endif; ?>
                 </div>
@@ -146,44 +143,44 @@
                                 <th>No</th>
                                 <th>Tanggal</th>
                                 <th>Saldo Awal</th>
-                                <th>Angsuran</th>
+                                <th>Angsuran Pokok</th>
                                 <th>Bunga (%)</th>
                                 <th>Jumlah Bunga</th>
                                 <th>Total Bayar</th>
                                 <th>Saldo Akhir</th>
-                                <th>Aksi</th>
+                                <th class="no-print">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php if (!empty($angsuran)): ?>
                                 <?php $no = 1;
-                                $saldo_awal = $pinjaman->jumlah_pinjaman; ?>
+                                $saldo_awal_iterasi = $pinjaman->jumlah_pinjaman;
+                                ?>
                                 <?php foreach ($angsuran as $row): ?>
                                     <?php
-                                    // Calculate interest amount based on the loan amount (not the installment amount)
-                                    // KODE KALKULASI TETAP SAMA
+                                    // Bunga dihitung dari pokok pinjaman awal
                                     $jumlah_bunga = ($row->bunga / 100) * $pinjaman->jumlah_pinjaman;
                                     $total_bayar = $row->jumlah_angsuran + $jumlah_bunga;
-                                    $saldo_akhir = $saldo_awal - $row->jumlah_angsuran;
+                                    $saldo_akhir_iterasi = $saldo_awal_iterasi - $row->jumlah_angsuran;
 
                                     // Format the interest rate to remove trailing zeros
-                                    $bungaDisplay = (float) $row->bunga;
-                                    if (floor($bungaDisplay) == $bungaDisplay) {
-                                        $bungaDisplay = number_format($bungaDisplay, 0);
+                                    $bungaDisplayRow = (float) $row->bunga;
+                                    if (floor($bungaDisplayRow) == $bungaDisplayRow) {
+                                        $bungaDisplayRow = number_format($bungaDisplayRow, 0);
                                     } else {
-                                        $bungaDisplay = rtrim(rtrim(number_format($bungaDisplay, 2), '0'), '.');
+                                        $bungaDisplayRow = rtrim(rtrim(number_format($bungaDisplayRow, 2), '0'), '.');
                                     }
                                     ?>
                                     <tr>
                                         <td><?= $no++ ?></td>
                                         <td><?= date('d M Y', strtotime($row->tanggal_angsuran)) ?></td>
-                                        <td>Rp <?= number_format($saldo_awal, 0, ',', '.') ?></td>
+                                        <td>Rp <?= number_format($saldo_awal_iterasi, 0, ',', '.') ?></td>
                                         <td>Rp <?= number_format($row->jumlah_angsuran, 0, ',', '.') ?></td>
-                                        <td><?= $bungaDisplay ?>%</td>
+                                        <td><?= $bungaDisplayRow ?>%</td>
                                         <td>Rp <?= number_format($jumlah_bunga, 0, ',', '.') ?></td>
                                         <td>Rp <?= number_format($total_bayar, 0, ',', '.') ?></td>
-                                        <td>Rp <?= number_format($saldo_akhir, 0, ',', '.') ?></td>
-                                        <td>
+                                        <td>Rp <?= number_format($saldo_akhir_iterasi, 0, ',', '.') ?></td>
+                                        <td class="no-print">
                                             <div class="btn-group">
                                                 <a href="<?= base_url('karyawan/transaksi_pinjaman/edit/' . $row->id_angsuran) ?>"
                                                     class="btn btn-warning btn-sm">
@@ -198,15 +195,13 @@
                                             </div>
                                         </td>
                                     </tr>
-                                    <?php $saldo_awal = $saldo_akhir; ?>
+                                    <?php $saldo_awal_iterasi = $saldo_akhir_iterasi; ?>
                                 <?php endforeach; ?>
+                            <?php else: ?>
+                                <tr>
+                                    <td colspan="9" class="text-center">Belum ada riwayat angsuran.</td>
+                                </tr>
                             <?php endif; ?>
-                            <!-- HAPUS BAGIAN ELSE INI -->
-                            <?php /* else: ?>
-<tr>
-  <td colspan="9" class="text-center">Belum ada angsuran</td>
-</tr>
-<?php endif; */ ?>
                         </tbody>
                     </table>
                 </div>
@@ -244,33 +239,153 @@
             $('#confirmDeleteBtn').attr('href', deleteUrl);
             $('#deleteConfirmModal').modal('show');
         });
-    });
 
-    $(document).ready(function () {
+        // Initialize DataTable
         $('#tabelAngsuran').DataTable({
             "responsive": true,
             "ordering": false,
             "info": false,
             "paging": false,
-            "searching": false
+            "searching": false,
+            "columnDefs": [
+                { "targets": 'no-print', "visible": true, "searchable": false }
+            ]
         });
     });
 
-    function printTable() {
-        var printContents = document.getElementById("tabelAngsuran").outerHTML;
-        var originalContents = document.body.innerHTML;
+    function printRiwayatAngsuran() {
+        // Data untuk header cetakan
+        const namaKoperasi = "KOPERASI SIDOMANUNGGAL";
+        const alamatKoperasi = "Sedan, Sidorejo, Lendah, Kulon Progo, D.I.Yogyakarta";
+        const telpKoperasi = ""; // Isi jika ada, atau biarkan kosong.
 
-        var printHeader = `
-        <div style="text-align: center; margin-bottom: 20px;">
-            <h2>Riwayat Angsuran Pinjaman</h2>
-            <h3>${<?= json_encode($pinjaman->nama) ?>}</h3>
-            <p>No BA: ${<?= json_encode($pinjaman->no_ba) ?>} | Tanggal Cetak: ${new Date().toLocaleDateString()}</p>
-        </div>
-    `;
+        const namaAnggota = <?= json_encode(esc($pinjaman->nama)) ?>;
+        const noBa = <?= json_encode(esc($pinjaman->no_ba)) ?>;
+        const nik = <?= json_encode(esc($pinjaman->nik)) ?>;
+        // const idPinjaman = <?= json_encode(esc($pinjaman->id_pinjaman)) ?>; // DIHAPUS/DIKOMENTARI
+        const tglPinjaman = <?= json_encode(date('d-m-Y', strtotime($pinjaman->tanggal_pinjaman))) ?>;
+        const jumlahPinjaman = <?= json_encode(number_format($pinjaman->jumlah_pinjaman, 0, ',', '.')) ?>;
+        const jangkaWaktu = <?= json_encode($pinjaman->jangka_waktu . ' bulan') ?>;
 
-        document.body.innerHTML = printHeader + printContents;
-        window.print();
-        document.body.innerHTML = originalContents;
+        let tableHtml = document.getElementById("tabelAngsuran").outerHTML;
+        let tempDiv = document.createElement('div');
+        tempDiv.innerHTML = tableHtml;
+
+        let thAksi = tempDiv.querySelector('th.no-print');
+        if (thAksi) thAksi.remove();
+
+        let tdAksi = tempDiv.querySelectorAll('td.no-print');
+        tdAksi.forEach(td => td.remove());
+
+        let emptyRow = tempDiv.querySelector('td[colspan="9"]');
+        if (emptyRow) emptyRow.setAttribute('colspan', '8');
+
+        tableHtml = tempDiv.innerHTML;
+
+
+        const styles = `
+            <style>
+                body { font-family: 'Arial', sans-serif; font-size: 10pt; margin: 0; padding:0; }
+                .print-container { margin: 20px; }
+                .header-print { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #000; padding-bottom: 10px; }
+                .header-print h2 { margin: 0 0 5px 0; font-size: 16pt; }
+                .header-print h3 { margin: 0 0 5px 0; font-size: 14pt; }
+                .header-print p { margin: 0; font-size: 9pt; }
+                .info-section { margin-bottom: 15px; font-size: 10pt; }
+                .info-section table { width: 100%; border-collapse: collapse; }
+                .info-section td { padding: 3px 0px; vertical-align: top;}
+                .info-section td:nth-child(1) { width: 120px; font-weight: bold; }
+                .info-section td:nth-child(3) { width: 120px; font-weight: bold; }
+
+
+                table.table-print { width: 100%; border-collapse: collapse; margin-top: 15px; }
+                table.table-print th, table.table-print td {
+                    border: 1px solid #333;
+                    padding: 6px;
+                    text-align: left;
+                    font-size: 9pt;
+                }
+                table.table-print th { background-color: #f2f2f2; font-weight: bold; text-align: center; }
+                table.table-print td:nth-child(1) { text-align: center; } /* No */
+                table.table-print td:nth-child(3), /* Saldo Awal */
+                table.table-print td:nth-child(4), /* Angsuran Pokok */
+                table.table-print td:nth-child(6), /* Jumlah Bunga */
+                table.table-print td:nth-child(7), /* Total Bayar */
+                table.table-print td:nth-child(8)  /* Saldo Akhir */
+                { text-align: right; }
+                table.table-print td:nth-child(5) { text-align: center; } /* Bunga % */
+
+                .footer-print { text-align: right; margin-top: 30px; font-size: 9pt; padding-top:10px; border-top: 1px solid #ccc;}
+                .footer-print p { margin: 0; }
+
+                @media print {
+                    body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+                    .no-print { display: none !important; }
+                    .print-container { margin: 0.5in; }
+                }
+            </style>
+        `;
+
+        const printWindow = window.open('', '_blank', 'width=1000,height=700,scrollbars=yes,resizable=yes');
+        if (!printWindow) {
+            alert('Gagal membuka jendela cetak. Pastikan pop-up blocker tidak aktif.');
+            return;
+        }
+        printWindow.document.write('<html><head><title>Cetak Riwayat Angsuran</title>');
+        printWindow.document.write(styles);
+        printWindow.document.write('</head><body>');
+        printWindow.document.write('<div class="print-container">');
+
+        printWindow.document.write(`
+            <div class="header-print">
+                <h2>${namaKoperasi}</h2>
+                <p>${alamatKoperasi}</p>
+                ${telpKoperasi ? `<p>${telpKoperasi}</p>` : ''}
+                <h3>Riwayat Angsuran Pinjaman</h3>
+            </div>
+        `);
+
+        // Modifikasi di sini untuk menghapus ID Pinjaman dan mengatur ulang tata letak jika perlu
+        printWindow.document.write(`
+            <div class="info-section">
+                <table>
+                    <tr>
+                        <td>Nama Anggota</td><td>: ${namaAnggota}</td>
+                        <td>Tgl Pinjaman</td><td>: ${tglPinjaman}</td>
+                    </tr>
+                    <tr>
+                        <td>No. BA</td><td>: ${noBa}</td>
+                        <td>Jumlah Pinjaman</td><td>: Rp ${jumlahPinjaman}</td>
+                    </tr>
+                    <tr>
+                        <td>NIK</td><td>: ${nik}</td>
+                        <td>Jangka Waktu</td><td>: ${jangkaWaktu}</td>
+                    </tr>
+                </table>
+            </div>
+        `);
+
+        let styledTableHtml = tableHtml.replace('<table class="table table-bordered table-hover dataTable no-footer"', '<table class="table-print"');
+        styledTableHtml = styledTableHtml.replace('id="tabelAngsuran"', '');
+        styledTableHtml = styledTableHtml.replace('<thead class="table-light">', '<thead>');
+
+        printWindow.document.write(styledTableHtml);
+
+        const tglCetak = new Date().toLocaleDateString('id-ID', { day: '2-digit', month: 'long', year: 'numeric' });
+        printWindow.document.write(`
+            <div class="footer-print">
+                <p>Dicetak pada: ${tglCetak}</p>
+            </div>
+        `);
+
+        printWindow.document.write('</div>');
+        printWindow.document.write('</body></html>');
+        printWindow.document.close();
+
+        printWindow.onload = function () {
+            printWindow.focus();
+            printWindow.print();
+        };
     }
 </script>
 <?= $this->endSection() ?>
