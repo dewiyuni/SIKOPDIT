@@ -33,6 +33,16 @@
                     <li><a class="dropdown-item" href="/admin/kelola_pengguna">📋 Kelola Karyawan</a></li>
                 </ul>
             </li>
+
+            <!-- Transaksi untuk Admin -->
+            <li class="nav-item">
+                <a class="nav-link" href="/karyawan/transaksi_simpanan">💰 <span>Transaksi Simpanan</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="/karyawan/transaksi_pinjaman">🏦 <span>Transaksi Pinjaman</span></a>
+            </li>
+            <!-- AKHIR Transaksi untuk Admin -->
+
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="jurnalKasDropdown" role="button" data-bs-toggle="dropdown"
                     aria-expanded="false">
@@ -43,7 +53,6 @@
                     <li><a class="dropdown-item" href="/admin/jurnal/monthly">📅 Jurnal Bulan</a></li>
                 </ul>
             </li>
-            <!-- Nav Item - Buku Besar -->
             <li class="nav-item dropdown">
                 <a class="nav-link dropdown-toggle" href="#" id="bukuBesarDropdown" role="button" data-bs-toggle="dropdown"
                     aria-expanded="false">
@@ -94,7 +103,7 @@
 
                 <!-- Sidebar Toggle (Topbar) -->
                 <button id="sidebarToggleTop" class="btn btn-link d-md-none rounded-circle mr-3">
-                    <i class="fas fa-bars"></i> <!-- Mengganti ikon menjadi bars agar lebih umum -->
+                    <i class="fas fa-bars"></i>
                 </button>
                 <!-- Topbar Navbar -->
                 <ul class="navbar-nav ml-auto">
@@ -104,7 +113,7 @@
                         <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
                             data-bs-toggle="dropdown" aria-expanded="false">
                             <span class="mr-2 d-none d-lg-inline text-gray-600 small">
-                                <?= ucfirst(session()->get('role')); // Menggunakan ucfirst untuk Kapital di awal ?>
+                                <?= ucfirst(session()->get('role')); ?>
                             </span>
                             <img class="img-profile rounded-circle"
                                 src="<?= base_url('assets/img/undraw_profile_3.svg'); ?>" alt="Profile Image">
