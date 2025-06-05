@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\AuthModel;
 use App\Models\AnggotaModel;
 use App\Controllers\BaseController;
+use App\Models\JurnalKasModel;
 use App\Models\TransaksiPinjamanModel;
 use App\Models\TransaksiSimpananModel;
 
@@ -12,10 +13,19 @@ use App\Models\TransaksiSimpananModel;
 class AuthController extends BaseController
 {
     protected $authModel;
-
+    protected $jurnalKasModel;
+    protected $anggotaModel;
+    protected $transaksiSimpananModel;
+    protected $transaksiPinjamanModel;
+    protected $db;
     public function __construct()
     {
         $this->authModel = new AuthModel();
+        $this->jurnalKasModel = new JurnalKasModel();
+        $this->anggotaModel = new AnggotaModel();
+        $this->transaksiSimpananModel = new TransaksiSimpananModel();
+        $this->transaksiPinjamanModel = new TransaksiPinjamanModel();
+        $this->db = \Config\Database::connect();
     }
     public function login()
     {
@@ -275,21 +285,146 @@ class AuthController extends BaseController
     // ================= Dashboard ============================================
     public function adminDashboard()
     {
-        $anggotaModel = new \App\Models\AnggotaModel();
-        $totalAnggota = $anggotaModel->countAll(); // Menghitung total anggota
-        $simpananModel = new TransaksiSimpananModel(); // Pastikan model sudah dibuat
-        $totalSimpanan = $simpananModel->getTotalSimpanan(); // Memanggil fungsi total simpanan
-        $pinjamanModel = new TransaksiPinjamanModel(); // Pastikan model sudah dibuat
-        $totalPinjaman = $pinjamanModel->getTotalPinjaman(); // Memanggil fungsi total pinjaman
+        // Total Anggota Aktif
+        $totalAnggota = $this->anggotaModel->where('status', 'aktif')->countAllResults();
 
-        // Kirim data ke view
+        // Total Saldo Simpanan (menggunakan method dari model)
+        $totalSimpanan = $this->transaksiSimpananModel->getTotalSimpanan();
+
+        // Total Pinjaman Aktif (sisa pokok pinjaman yang belum lunas)
+        $queryTotalPinjamanAktif = $this->db->query("
+            SELECT SUM(tp.jumlah_pinjaman - COALESCE((SELECT SUM(a.jumlah_angsuran) FROM angsuran a WHERE a.id_pinjaman = tp.id_pinjaman), 0)) as total_sisa_pinjaman
+            FROM transaksi_pinjaman tp
+            WHERE tp.status = 'aktif'
+        ");
+        $totalPinjaman = $queryTotalPinjamanAktif->getRow()->total_sisa_pinjaman ?? 0;
+
+        // Total Kas (Saldo Akhir Kas dari Jurnal Kas)
+        // Asumsi DUM adalah pemasukan, DUK adalah pengeluaran
+        $queryTotalKas = $this->db->query("
+            SELECT SUM(CASE
+                         WHEN kategori = 'DUM' THEN jumlah
+                         WHEN kategori = 'DUK' THEN -jumlah
+                         ELSE 0
+                       END) as saldo_kas
+            FROM jurnal_kas
+        ");
+        $totalKas = $queryTotalKas->getRow()->saldo_kas ?? 0;
+
+        // Data untuk Grafik Bulanan
+        $grafikSimpananPinjamanData = $this->_getGrafikSimpananPinjamanBulanan();
+        $grafikKasBulananData = $this->_getGrafikKasBulanan();
+
+        $dataDebug = [
+            'grafikSimpananPinjamanLabels' => $grafikSimpananPinjamanData['labels'],
+            'grafikSimpananData' => $grafikSimpananPinjamanData['simpanan'],
+            'grafikPinjamanData' => $grafikSimpananPinjamanData['pinjaman'],
+            'grafikKasLabels' => $grafikKasBulananData['labels'],
+            'grafikKasMasukData' => $grafikKasBulananData['kas_masuk'],
+            'grafikKasKeluarData' => $grafikKasBulananData['kas_keluar'],
+        ];
+        // dd($dataDebug); // UNCOMMENT BARIS INI UNTUK DEBUGGING
         return view('dashboard_admin', [
             'totalAnggota' => $totalAnggota,
             'totalSimpanan' => $totalSimpanan,
-            'totalPinjaman' => $totalPinjaman
+            'totalPinjaman' => $totalPinjaman,
+            'totalKas' => $totalKas,
+            'grafikSimpananPinjamanLabels' => json_encode($grafikSimpananPinjamanData['labels']),
+            'grafikSimpananData' => json_encode($grafikSimpananPinjamanData['simpanan']),
+            'grafikPinjamanData' => json_encode($grafikSimpananPinjamanData['pinjaman']),
+            'grafikKasLabels' => json_encode($grafikKasBulananData['labels']),
+            'grafikKasMasukData' => json_encode($grafikKasBulananData['kas_masuk']),
+            'grafikKasKeluarData' => json_encode($grafikKasBulananData['kas_keluar']),
         ]);
-
     }
+
+    private function _getGrafikSimpananPinjamanBulanan($limitBulan = 12)
+    {
+        // Data Simpanan Bulanan (Total Setoran)
+        // Menggunakan kolom 'tanggal' dari tabel 'transaksi_simpanan'
+        $simpananBulananQuery = $this->db->table('transaksi_simpanan')
+            ->select("DATE_FORMAT(tanggal, '%Y-%m') as bulan, 
+                      SUM(setor_sw + setor_swp + setor_ss + setor_sp) as total_setoran")
+            ->groupBy('bulan')
+            ->orderBy('bulan', 'ASC') // Urutkan ASC untuk data historis
+            // ->limit($limitBulan) // Batasi jika datanya banyak, mungkin lebih baik filter berdasarkan tahun
+            ->get()->getResultArray();
+
+        // Data Pinjaman Bulanan (Total Pencairan)
+        $pinjamanBulananQuery = $this->db->table('transaksi_pinjaman')
+            ->select("DATE_FORMAT(tanggal_pinjaman, '%Y-%m') as bulan, 
+                      SUM(jumlah_pinjaman) as total_pinjaman")
+            ->groupBy('bulan')
+            ->orderBy('bulan', 'ASC')
+            // ->limit($limitBulan)
+            ->get()->getResultArray();
+
+        // Gabungkan label bulan dari kedua query dan buat unik
+        $bulanMap = [];
+        foreach ($simpananBulananQuery as $s) {
+            $bulanMap[$s['bulan']] = ['simpanan' => (float) $s['total_setoran'], 'pinjaman' => 0];
+        }
+        foreach ($pinjamanBulananQuery as $p) {
+            if (isset($bulanMap[$p['bulan']])) {
+                $bulanMap[$p['bulan']]['pinjaman'] = (float) $p['total_pinjaman'];
+            } else {
+                $bulanMap[$p['bulan']] = ['simpanan' => 0, 'pinjaman' => (float) $p['total_pinjaman']];
+            }
+        }
+        ksort($bulanMap); // Urutkan berdasarkan key (bulan)
+
+        // Ambil $limitBulan terakhir jika data lebih banyak
+        if (count($bulanMap) > $limitBulan) {
+            $bulanMap = array_slice($bulanMap, -$limitBulan, $limitBulan, true);
+        }
+
+        $labels = array_keys($bulanMap);
+        $dataSimpanan = array_column($bulanMap, 'simpanan');
+        $dataPinjaman = array_column($bulanMap, 'pinjaman');
+
+        return [
+            'labels' => $labels,
+            'simpanan' => $dataSimpanan,
+            'pinjaman' => $dataPinjaman,
+        ];
+    }
+
+    private function _getGrafikKasBulanan($limitBulan = 12)
+    {
+        // Data Kas Bulanan
+        // Asumsi: 'DUM' = Pemasukan, 'DUK' = Pengeluaran
+        // Menggunakan kolom 'tanggal' dari tabel 'jurnal_kas'
+        $kasBulananQuery = $this->db->table('jurnal_kas')
+            ->select("DATE_FORMAT(tanggal, '%Y-%m') as bulan,
+                      SUM(CASE WHEN kategori = 'DUM' THEN jumlah ELSE 0 END) as total_masuk,
+                      SUM(CASE WHEN kategori = 'DUK' THEN jumlah ELSE 0 END) as total_keluar")
+            ->groupBy('bulan')
+            ->orderBy('bulan', 'ASC') // Urutkan ASC
+            // ->limit($limitBulan)
+            ->get()->getResultArray();
+
+        // Ambil $limitBulan terakhir jika data lebih banyak
+        if (count($kasBulananQuery) > $limitBulan) {
+            $kasBulananQuery = array_slice($kasBulananQuery, -$limitBulan, $limitBulan);
+        }
+
+        $labels = [];
+        $kasMasukData = [];
+        $kasKeluarData = [];
+
+        foreach ($kasBulananQuery as $item) {
+            $labels[] = $item['bulan'];
+            $kasMasukData[] = (float) $item['total_masuk'];
+            $kasKeluarData[] = (float) $item['total_keluar'];
+        }
+
+        return [
+            'labels' => $labels,
+            'kas_masuk' => $kasMasukData,
+            'kas_keluar' => $kasKeluarData
+        ];
+    }
+
 
     public function chartData()
     {
