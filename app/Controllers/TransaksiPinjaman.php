@@ -227,54 +227,88 @@ class TransaksiPinjaman extends BaseController
         return view('karyawan/transaksi_pinjaman/edit', $data);
     }
 
+    // app/Controllers/TransaksiPinjaman.php
+
     public function update($id_angsuran)
     {
-        $angsuranModel = new AngsuranModel();
+        // Gunakan model yang sudah diinisialisasi di constructor jika ada
+        $angsuranModel = new \App\Models\AngsuranModel();
 
-        // Pastikan id_angsuran valid
+        // 1. Validasi keberadaan data angsuran
         $angsuran = $angsuranModel->find($id_angsuran);
         if (!$angsuran) {
-            return redirect()->back()->with('error', 'Angsuran tidak ditemukan.');
+            return redirect()->back()->with('error', 'Data angsuran tidak ditemukan.');
         }
 
-        // Ambil data dari form
-        $data = [
-            'tanggal_angsuran' => $this->request->getPost('tanggal_angsuran'),
-            'jumlah_angsuran' => $this->request->getPost('jumlah_angsuran'),
-            'bunga' => str_replace(',', '.', $this->request->getPost('bunga')) // Ensure correct decimal format
+        // 2. Ambil data mentah dari form
+        $jumlah_angsuran_raw = $this->request->getPost('jumlah_angsuran'); // Misal: "100.000"
+        $bunga_raw = $this->request->getPost('bunga'); // Misal: "2,5"
+        $tanggal_angsuran = $this->request->getPost('tanggal_angsuran');
+
+        // 3. Validasi input dasar
+        $validationRules = [
+            'tanggal_angsuran' => 'required|valid_date',
+            'jumlah_angsuran' => 'required',
+            'bunga' => 'required'
         ];
 
-        // Update hanya jika data tidak kosong
-        if (!empty($data['tanggal_angsuran']) && !empty($data['jumlah_angsuran'])) {
-            $angsuranModel->update($id_angsuran, $data);
+        if (!$this->validate($validationRules)) {
+            return redirect()->back()->withInput()->with('errors', $this->validator->getErrors());
+        }
+
+        // 4. Bersihkan data untuk disimpan ke database
+        //    - Hapus titik dari jumlah angsuran
+        //    - Ganti koma dengan titik untuk bunga
+        $data = [
+            'tanggal_angsuran' => $tanggal_angsuran,
+            'jumlah_angsuran' => (float) str_replace('.', '', $jumlah_angsuran_raw), // -> 100000.0
+            'bunga' => (float) str_replace(',', '.', $bunga_raw) // -> 2.5
+        ];
+
+        // 5. Lakukan update ke database
+        if ($angsuranModel->update($id_angsuran, $data)) {
+            // Jika berhasil, kembali ke halaman detail dengan pesan sukses
             return redirect()->to('/karyawan/transaksi_pinjaman/detail/' . $angsuran->id_pinjaman)
                 ->with('success', 'Data angsuran berhasil diperbarui.');
         } else {
-            return redirect()->back()->with('error', 'Data tidak valid atau kosong.');
+            // Jika gagal, kembali ke form dengan pesan error
+            return redirect()->back()->withInput()->with('error', 'Gagal memperbarui data angsuran.');
         }
     }
 
-
-    public function delete($id_angsuran)
+    public function delete($id_angsuran = null)
     {
-        $id_angsuran = (int) $id_angsuran; // Convert to integer
+        // Pastikan id adalah integer dan tidak null
+        if (!is_numeric($id_angsuran)) {
+            return redirect()->back()->with('error', 'ID Angsuran tidak valid.');
+        }
 
-        // Check if the installment exists in the database
-        $angsuran = $this->angsuranModel->find($id_angsuran);
+        // Gunakan model yang sudah diinisialisasi di constructor
+        $angsuranModel = new AngsuranModel(); // Atau $this->angsuranModel jika sudah didefinisikan
+
+        // 1. Cari data angsuran yang akan dihapus
+        $angsuran = $angsuranModel->find($id_angsuran);
+
+        // 2. Jika data tidak ditemukan, kembali dengan pesan error
         if (!$angsuran) {
             return redirect()->to('karyawan/transaksi_pinjaman')->with('error', 'Data angsuran tidak ditemukan.');
         }
 
-        // Get the related loan ID
+        // 3. Simpan id_pinjaman untuk redirect kembali ke halaman detail yang benar
         $id_pinjaman = $angsuran->id_pinjaman;
 
-        // Delete the installment data
-        $this->angsuranModel->delete($id_angsuran);
-
-        // Redirect to the loan detail page after deletion
-        return redirect()->to('karyawan/transaksi_pinjaman/detail/' . $id_pinjaman)
-            ->with('success', 'Angsuran berhasil dihapus.');
+        // 4. Lakukan proses hapus dan cek hasilnya
+        if ($angsuranModel->delete($id_angsuran)) {
+            // Jika berhasil, redirect ke halaman detail pinjaman dengan pesan sukses
+            return redirect()->to('karyawan/transaksi_pinjaman/detail/' . $id_pinjaman)
+                ->with('success', 'Angsuran berhasil dihapus.');
+        } else {
+            // Jika gagal, redirect ke halaman detail pinjaman dengan pesan error
+            return redirect()->to('karyawan/transaksi_pinjaman/detail/' . $id_pinjaman)
+                ->with('error', 'Gagal menghapus angsuran.');
+        }
     }
+
     public function detail($id)
     {
         // Initialize models
@@ -301,6 +335,7 @@ class TransaksiPinjaman extends BaseController
         // Calculate loan statistics
         $totalAngsuran = 0;
         $totalBunga = 0;
+        $totalDenda = 0; // <-- TAMBAHKAN INI
 
         foreach ($angsuran as $row) {
             $totalAngsuran += $row->jumlah_angsuran;
@@ -309,6 +344,9 @@ class TransaksiPinjaman extends BaseController
             // Interest is calculated as a percentage of the total loan amount
             $jumlahBunga = ($row->bunga / 100) * $pinjaman->jumlah_pinjaman;
             $totalBunga += $jumlahBunga;
+
+            // Sum up the fines from each installment
+            $totalDenda += $row->denda; // <-- TAMBAHKAN INI (Asumsi kolom 'denda' ada di tabel angsuran)
         }
 
         // Calculate remaining balance
@@ -341,6 +379,7 @@ class TransaksiPinjaman extends BaseController
             'angsuran' => $angsuran,
             'totalAngsuran' => $totalAngsuran,
             'totalBunga' => $totalBunga,
+            'totalDenda' => $totalDenda, // <-- TAMBAHKAN INI
             'sisaPinjaman' => $sisaPinjaman,
             'persentaseLunas' => $persentaseLunas,
             'bungaPerbulan' => $bungaPerbulan,
@@ -389,22 +428,23 @@ class TransaksiPinjaman extends BaseController
     {
         $id_pinjaman = $this->request->getPost('id_pinjaman');
         $tanggal_angsuran = $this->request->getPost('tanggal_angsuran');
-        $jumlah_angsuran = str_replace('.', '', $this->request->getPost('jumlah_angsuran')); // Hilangkan pemisah ribuan
+        $jumlah_angsuran = str_replace('.', '', $this->request->getPost('jumlah_angsuran'));
+        $ada_denda = $this->request->getPost('ada_denda');
+        $denda = 0;
+        if ($this->request->getPost('ada_denda') === 'on') {
+            $denda_input = $this->request->getPost('denda');
+            $denda = str_replace('.', '', $denda_input);
+        }
 
-        // Process the bunga value correctly
-        $bunga = $this->request->getPost('bunga');
-        // Remove any % sign if present and replace comma with dot for decimal
-        $bunga = str_replace(['%', ','], ['', '.'], $bunga);
-        // Convert to float to ensure proper decimal handling
-        $bunga = (float) $bunga;
+        $bunga_persen_input = $this->request->getPost('bunga');
+        $bunga_persen_input = str_replace(['%', ','], ['', '.'], $bunga_persen_input);
+        $bunga_persen = (float) $bunga_persen_input;
 
-        // Ambil data pinjaman berdasarkan ID
         $pinjaman = $this->transaksiPinjamanModel->where('id_pinjaman', $id_pinjaman)->first();
         if (!$pinjaman) {
             return redirect()->back()->with('error', 'Pinjaman tidak ditemukan.');
         }
 
-        // Hitung total angsuran sebelumnya
         $totalAngsuran = $this->angsuranModel
             ->where('id_pinjaman', $id_pinjaman)
             ->selectSum('jumlah_angsuran')
@@ -412,30 +452,35 @@ class TransaksiPinjaman extends BaseController
             ->getRow()
             ->jumlah_angsuran ?? 0;
 
-        // Hitung sisa pinjaman setelah angsuran baru
+        // Hitung jumlah bunga awal
+        $jumlah_bunga_awal = round($pinjaman->jumlah_pinjaman * ($bunga_persen / 100));
+
+        // Sisa pinjaman setelah angsuran baru
         $sisa_pinjaman = $pinjaman->jumlah_pinjaman - $totalAngsuran - $jumlah_angsuran;
 
         // Tentukan status pinjaman
         $status = ($sisa_pinjaman <= 0) ? 'lunas' : 'belum lunas';
 
-        // Simpan angsuran ke database (termasuk sisa pinjaman & bunga)
-        $this->angsuranModel->insert([
+        // Simpan angsuran ke database, termasuk nilai denda ke kolom 'denda'
+        $data_angsuran = [
             'id_pinjaman' => $id_pinjaman,
             'tanggal_angsuran' => $tanggal_angsuran,
             'jumlah_angsuran' => $jumlah_angsuran,
-            'bunga' => $bunga, // Now properly formatted for decimal storage
-            'sisa_pinjaman' => max(0, $sisa_pinjaman), // Jangan sampai negatif
+            'bunga' => $bunga_persen, // Menyimpan persentase bunga
+            'denda' => $denda, // Menyimpan nilai denda
+            'jumlah_bunga' => $jumlah_bunga_awal, // Menyimpan nilai bunga awal (opsional, untuk referensi)
+            'sisa_pinjaman' => max(0, $sisa_pinjaman),
             'status' => $status,
             'created_at' => date('Y-m-d H:i:s'),
             'updated_at' => date('Y-m-d H:i:s')
-        ]);
+        ];
 
-        // Update status pinjaman jika lunas
+        $this->angsuranModel->insert($data_angsuran);
+
         if ($status == 'lunas') {
             $this->transaksiPinjamanModel->update($id_pinjaman, ['status' => 'lunas']);
         }
 
-        // Redirect back to the detail page with a success message
         return redirect()->to('karyawan/transaksi_pinjaman/detail/' . $id_pinjaman)->with('message', 'Angsuran berhasil ditambahkan.');
     }
 

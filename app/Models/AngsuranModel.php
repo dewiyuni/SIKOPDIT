@@ -16,6 +16,7 @@ class AngsuranModel extends Model
         'id_pinjaman',
         'tanggal_angsuran',
         'bunga',
+        'denda',
         'jumlah_angsuran',
         'sisa_pinjaman',
         'status',

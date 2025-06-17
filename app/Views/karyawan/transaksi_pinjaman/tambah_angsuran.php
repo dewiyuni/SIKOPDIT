@@ -63,11 +63,25 @@
                         <input type="text" id="jumlah_bunga" class="form-control" readonly>
                     </div>
 
+
+
                     <div class="form-group mb-3">
                         <label for="total_bayar">Total Bayar</label>
                         <input type="text" id="total_bayar" class="form-control" readonly>
                         <input type="hidden" name="total_bayar" id="total_bayar_hidden">
                     </div>
+                    <div class="form-check mb-3">
+                        <input type="checkbox" class="form-check-input" id="ada_denda" name="ada_denda">
+                        <label class="form-check-label" for="ada_denda">Ada Denda</label>
+                    </div>
+                    <div class="form-group mb-3" id="form_denda" style="display: none;">
+                        <label for="denda">Nilai Denda</label>
+                        <input type="text" id="denda" class="form-control"
+                            oninput="formatRibuan(this, 'denda_hidden'); hitungTotalBayar();" value="0"
+                            autocomplete="off" name="denda" onfocus="if (this.value === '0') this.value = '';">
+                        <input type="hidden" name="denda_hidden" id="denda_hidden" value="0">
+                    </div>
+
                 </div>
             </div>
 
@@ -82,60 +96,55 @@
 
 <script>
     function formatRibuan(input, hiddenFieldId) {
-        let angka = input.value.replace(/\D/g, ""); // Hapus semua non-angka
-        input.value = angka.replace(/\B(?=(\d{3})+(?!\d))/g, "."); // Tambah titik pemisah ribuan
-        document.getElementById(hiddenFieldId).value = angka; // Simpan tanpa titik
+        let angka = input.value.replace(/\D/g, "");
+        input.value = angka.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        document.getElementById(hiddenFieldId).value = angka;
         return angka;
     }
 
     function formatBunga(input) {
-        // Hanya izinkan angka dan titik desimal
         let nilai = input.value.replace(/[^\d.]/g, "");
-
-        // Pastikan hanya ada satu titik desimal
         let parts = nilai.split('.');
         if (parts.length > 2) {
             nilai = parts[0] + '.' + parts.slice(1).join('');
         }
-
-        // Batasi hingga 2 digit desimal
         if (parts.length > 1 && parts[1].length > 2) {
             nilai = parts[0] + '.' + parts[1].substring(0, 2);
         }
-
         input.value = nilai;
         document.getElementById("bunga_hidden").value = nilai;
         return nilai;
     }
 
     function hitungTotalBayar() {
-        // Ambil nilai jumlah angsuran dan jumlah pinjaman
         const jumlahAngsuran = parseInt(document.getElementById("jumlah_angsuran_hidden").value || 0);
         const jumlahPinjaman = parseInt(document.getElementById("jumlah_pinjaman_hidden").value || 0);
-
-        // Ambil nilai bunga (dalam persen)
         const bungaPersen = parseFloat(document.getElementById("bunga_hidden").value || 0);
-
-        // Hitung jumlah bunga berdasarkan jumlah pinjaman
         const jumlahBunga = Math.round(jumlahPinjaman * (bungaPersen / 100));
+        let denda = 0;
+        if (document.getElementById("ada_denda").checked) {
+            denda = parseInt(document.getElementById("denda_hidden").value || 0);
+        }
 
-        // Tampilkan jumlah bunga dengan format ribuan
         document.getElementById("jumlah_bunga").value = jumlahBunga.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 
-        // Hitung total bayar = jumlah angsuran + jumlah bunga
-        const totalBayar = jumlahAngsuran + jumlahBunga;
-
-        // Tampilkan total bayar dengan format ribuan
+        const totalBayar = jumlahAngsuran + jumlahBunga + denda;
         document.getElementById("total_bayar").value = totalBayar.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
         document.getElementById("total_bayar_hidden").value = totalBayar;
     }
 
-    // Inisialisasi perhitungan saat halaman dimuat
     document.addEventListener("DOMContentLoaded", function () {
-        // Set nilai default untuk bunga (2%)
+        const adaDendaCheckbox = document.getElementById("ada_denda");
+        const formDenda = document.getElementById("form_denda");
+
+        adaDendaCheckbox.addEventListener("change", function () {
+            formDenda.style.display = this.checked ? "block" : "none";
+            hitungTotalBayar();
+        });
+
+        // Set nilai default untuk bunga
         document.getElementById("bunga").value = "2";
         document.getElementById("bunga_hidden").value = "2";
-
         hitungTotalBayar();
     });
 </script>

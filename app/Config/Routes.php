@@ -70,6 +70,9 @@ $routes->post('karyawan/transaksi_pinjaman/simpan', 'TransaksiPinjaman::simpan')
 $routes->get('karyawan/transaksi_pinjaman/edit/(:num)', 'TransaksiPinjaman::edit/$1');
 $routes->post('karyawan/transaksi_pinjaman/update/(:num)', 'TransaksiPinjaman::update/$1');
 $routes->get('karyawan/transaksi_pinjaman/delete/(:num)', 'TransaksiPinjaman::delete/$1');
+
+$routes->delete('karyawan/transaksi_pinjaman/delete/(:num)', 'TransaksiPinjaman::delete/$1');
+
 $routes->get('karyawan/transaksi_pinjaman/detail/(:num)', 'TransaksiPinjaman::detail/$1');
 $routes->get('karyawan/transaksi_pinjaman/tambahAngsuran/(:segment)', 'TransaksiPinjaman::tambahAngsuran/$1');
 $routes->post('karyawan/transaksi_pinjaman/simpan_angsuran', 'TransaksiPinjaman::simpanAngsuran');
