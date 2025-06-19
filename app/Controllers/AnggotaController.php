@@ -221,6 +221,8 @@ class AnggotaController extends Controller
         }
     }
 
+
+
     public function importExcelAnggota()
     {
         $file = $this->request->getFile('file_excel_anggota');
@@ -238,285 +240,111 @@ class AnggotaController extends Controller
             $highestRow = $sheet->getHighestRow();
             $highestColumnLetter = $sheet->getHighestColumn();
 
-            if ($highestRow <= 1) {
-                return redirect()->back()->with('error', 'File Excel kosong atau hanya berisi header.');
-            }
-
             $headerRow = $sheet->rangeToArray('A1:' . $highestColumnLetter . '1', null, true, true, true)[1];
             $header = array_map('strtolower', array_map('trim', $headerRow));
 
             $columnMap = [
-                'nama' => ['nama', 'nama lengkap'],
-                'nik' => ['nik', 'nomor nik'],
-                'no_ba' => ['no ba', 'no. ba', 'no_ba', 'nomor ba'],
+                'nama' => ['nama'],
+                'nik' => ['nik'],
+                'no_ba' => ['no ba', 'no_ba'],
                 'dusun' => ['dusun'],
-                'alamat' => ['alamat', 'alamat lengkap'],
+                'alamat' => ['alamat'],
                 'pekerjaan' => ['pekerjaan'],
-                'tgl_lahir' => ['tanggal lahir', 'tgl lahir', 'tgl_lahir', 'birth date'],
-                'nama_pasangan' => ['nama pasangan', 'pasangan'],
-                'status' => ['status', 'status keanggotaan']
+                'tgl_lahir' => ['tanggal lahir', 'tgl lahir'],
+                'nama_pasangan' => ['nama pasangan'],
+                'status' => ['status'],
+                'saldo_sw' => ['saldo sw', 'saldo_sw'],
+                'saldo_swp' => ['saldo swp', 'saldo_swp'],
+                'saldo_ss' => ['saldo ss', 'saldo_ss'],
+                'saldo_sp' => ['saldo sp', 'saldo_sp']
             ];
 
-            $fieldKeys = []; // Akan berisi [dbField => ExcelColumnLetter]
-            $missingHeaders = [];
-            $foundHeaders = [];
-
+            $fieldKeys = [];
             foreach ($columnMap as $dbField => $excelHeaders) {
-                $found = false;
                 foreach ($excelHeaders as $excelHeader) {
-                    $colKey = array_search($excelHeader, $header); // $colKey akan 'A', 'B', dst.
-                    if ($colKey !== false) {
-                        $fieldKeys[$dbField] = $colKey;
-                        $foundHeaders[] = $header[$colKey]; // Simpan header asli yang ditemukan
-                        $found = true;
+                    $key = array_search($excelHeader, $header);
+                    if ($key !== false) {
+                        $fieldKeys[$dbField] = $key;
                         break;
                     }
                 }
-                if (!$found) {
-                    $missingHeaders[] = ucfirst(str_replace('_', ' ', $dbField)) . " (alternatif: " . implode("/", $excelHeaders) . ")";
+            }
+
+            $required = ['nama', 'nik', 'no_ba', 'dusun', 'alamat', 'pekerjaan', 'tgl_lahir', 'nama_pasangan', 'status'];
+            foreach ($required as $field) {
+                if (!isset($fieldKeys[$field])) {
+                    return redirect()->back()->with('error', "Kolom $field tidak ditemukan di file Excel.");
                 }
             }
 
-            $requiredDbFields = ['nama', 'nik', 'no_ba', 'dusun', 'alamat', 'pekerjaan', 'tgl_lahir', 'nama_pasangan', 'status'];
-            $actualMissing = [];
-            foreach ($requiredDbFields as $reqField) {
-                if (!isset($fieldKeys[$reqField])) {
-                    $actualMissing[] = ucfirst(str_replace('_', ' ', $reqField)) . " (alternatif: " . implode("/", $columnMap[$reqField]) . ")";
-                }
-            }
-
-            if (!empty($actualMissing)) {
-                return redirect()->back()->with('error', 'Header kolom wajib berikut tidak ditemukan: ' . implode(', ', $actualMissing) . '.<br>Header yang terdeteksi di file Anda: ' . implode(', ', $header) . '.');
-            }
-
-            $anggotaToInsert = [];
-            $rowErrors = []; // Menyimpan error per baris: ['row_num' => x, 'errors' => []]
-            $excelDataRows = $sheet->rangeToArray('A2:' . $highestColumnLetter . $highestRow, null, true, true, true);
-
-            $tempNiksInExcel = [];
-            $tempNoBasInExcel = [];
-
-            // Iterasi pertama: Kumpulkan data dan lakukan validasi dasar + cek duplikasi internal Excel
+            $dataInsert = [];
             for ($r = 2; $r <= $highestRow; $r++) {
-                $rowDataFromSheet = $excelDataRows[$r] ?? null;
-                if ($rowDataFromSheet === null)
-                    continue; // Baris kosong
-
-                $data = [];
-                $currentLineErrors = [];
-                $excelRowNum = $r; // Baris aktual di Excel
-
-                // Ambil data berdasarkan fieldKeys
-                foreach ($fieldKeys as $dbField => $excelColKey) {
-                    $data[$dbField] = isset($rowDataFromSheet[$excelColKey]) ? trim((string) $rowDataFromSheet[$excelColKey]) : null;
-                }
-
-                // Cek apakah baris ini kosong (semua kolom penting null/kosong)
-                $isEmptyRow = true;
-                foreach ($requiredDbFields as $reqField) {
-                    if (!empty($data[$reqField])) {
-                        $isEmptyRow = false;
-                        break;
-                    }
-                }
-                if ($isEmptyRow) {
-                    // Bisa jadi baris kosong di akhir file, abaikan atau catat jika perlu
+                $row = $sheet->rangeToArray('A' . $r . ':' . $highestColumnLetter . $r, null, true, true, true)[$r];
+                if (!$row || empty($row[$fieldKeys['nama']]))
                     continue;
-                }
 
+                $tglLahir = $this->parseExcelDate($row[$fieldKeys['tgl_lahir']]);
 
-                // --- Validasi per baris ---
-                if (empty($data['nama']))
-                    $currentLineErrors['nama'] = "Nama wajib diisi.";
-
-                if (empty($data['nik'])) {
-                    $currentLineErrors['nik'] = "NIK wajib diisi.";
-                } else if (!preg_match('/^\d{16}$/', $data['nik'])) {
-                    $currentLineErrors['nik'] = "NIK '{$data['nik']}' tidak valid (harus 16 digit angka).";
-                } else {
-                    if (isset($tempNiksInExcel[$data['nik']])) {
-                        $currentLineErrors['nik'] = "NIK '{$data['nik']}' duplikat dengan baris ke-{$tempNiksInExcel[$data['nik']]} dalam file Excel ini.";
-                    } else {
-                        $tempNiksInExcel[$data['nik']] = $excelRowNum;
-                    }
-                }
-
-                if (empty($data['no_ba'])) {
-                    $currentLineErrors['no_ba'] = "No BA wajib diisi.";
-                } else {
-                    if (isset($tempNoBasInExcel[$data['no_ba']])) {
-                        $currentLineErrors['no_ba'] = "No BA '{$data['no_ba']}' duplikat dengan baris ke-{$tempNoBasInExcel[$data['no_ba']]} dalam file Excel ini.";
-                    } else {
-                        $tempNoBasInExcel[$data['no_ba']] = $excelRowNum;
-                    }
-                }
-
-                if (empty($data['dusun']))
-                    $currentLineErrors['dusun'] = "Dusun wajib diisi.";
-                if (empty($data['alamat']))
-                    $currentLineErrors['alamat'] = "Alamat wajib diisi.";
-                if (empty($data['pekerjaan']))
-                    $currentLineErrors['pekerjaan'] = "Pekerjaan wajib diisi.";
-                if (empty($data['nama_pasangan']))
-                    $currentLineErrors['nama_pasangan'] = "Nama Pasangan wajib diisi.";
-
-                $parsedTglLahir = $this->parseExcelDate($data['tgl_lahir']);
-                if (!$parsedTglLahir && !empty($data['tgl_lahir'])) { // Hanya error jika tgl_lahir diisi tapi formatnya salah
-                    $currentLineErrors['tgl_lahir'] = "Format Tanggal Lahir '{$data['tgl_lahir']}' tidak valid. Gunakan format dd/mm/yyyy atau yyyy-mm-dd.";
-                } else if (empty($data['tgl_lahir'])) {
-                    $currentLineErrors['tgl_lahir'] = "Tanggal Lahir wajib diisi.";
-                } else {
-                    $data['tgl_lahir'] = $parsedTglLahir;
-                }
-
-                $data['status'] = strtolower($data['status'] ?? '');
-                if (!in_array($data['status'], ['aktif', 'nonaktif', 'keluar'])) {
-                    $currentLineErrors['status'] = "Status '{$data['status']}' tidak valid (harus aktif, nonaktif, atau keluar).";
-                }
-                if (empty($data['status']))
-                    $currentLineErrors['status'] = "Status wajib diisi.";
-
-
-                // Cek keunikan NIK dan No BA di database (jika tidak ada error sebelumnya di NIK/NoBA)
-                if (empty($currentLineErrors['nik'])) {
-                    if ($this->anggotaModel->where('nik', $data['nik'])->first()) {
-                        $currentLineErrors['nik_db'] = "NIK '{$data['nik']}' sudah terdaftar di sistem.";
-                    }
-                }
-                if (empty($currentLineErrors['no_ba'])) {
-                    if ($this->anggotaModel->where('no_ba', $data['no_ba'])->first()) {
-                        $currentLineErrors['no_ba_db'] = "No BA '{$data['no_ba']}' sudah terdaftar di sistem.";
-                    }
-                }
-
-                if (!empty($currentLineErrors)) {
-                    $rowErrors[] = ['row_num' => $excelRowNum, 'nama' => $data['nama'] ?? 'N/A', 'errors' => $currentLineErrors];
-                } else {
-                    $anggotaToInsert[] = $data; // Kumpulkan data yang valid
-                }
-            } // End for loop row
-
-            if (!empty($rowErrors)) {
-                $errorMessagesHtml = "Ditemukan error pada data Excel:<br><ul style='text-align:left;'>";
-                foreach ($rowErrors as $err) {
-                    $errorMessagesHtml .= "<li><b>Baris {$err['row_num']} (Nama: {$err['nama']}):</b><ul>";
-                    foreach ($err['errors'] as $field => $msg) {
-                        $errorMessagesHtml .= "<li>" . ucfirst(str_replace('_', ' ', $field)) . ": {$msg}</li>";
-                    }
-                    $errorMessagesHtml .= "</ul></li>";
-                }
-                $errorMessagesHtml .= "</ul>";
-                if (count($rowErrors) > 20) {
-                    $errorMessagesHtml = "Ditemukan lebih dari 20 baris error. Berikut adalah 20 error pertama:<br><ul style='text-align:left;'>";
-                    $limitedErrors = array_slice($rowErrors, 0, 20);
-                    foreach ($limitedErrors as $err) {
-                        $errorMessagesHtml .= "<li><b>Baris {$err['row_num']} (Nama: {$err['nama']}):</b><ul>";
-                        foreach ($err['errors'] as $field => $msg) {
-                            $errorMessagesHtml .= "<li>" . ucfirst(str_replace('_', ' ', $field)) . ": {$msg}</li>";
-                        }
-                        $errorMessagesHtml .= "</ul></li>";
-                    }
-                    $errorMessagesHtml .= "</ul>... dan lainnya.";
-                }
-                return redirect()->back()->with('error_html', $errorMessagesHtml); // Gunakan 'error_html' jika view Anda bisa render HTML
+                $dataInsert[] = [
+                    'nama' => trim($row[$fieldKeys['nama']]),
+                    'nik' => trim($row[$fieldKeys['nik']]),
+                    'no_ba' => trim($row[$fieldKeys['no_ba']]),
+                    'dusun' => trim($row[$fieldKeys['dusun']]),
+                    'alamat' => trim($row[$fieldKeys['alamat']]),
+                    'pekerjaan' => trim($row[$fieldKeys['pekerjaan']]),
+                    'tgl_lahir' => $tglLahir ?: null,
+                    'nama_pasangan' => trim($row[$fieldKeys['nama_pasangan']]),
+                    'status' => strtolower(trim($row[$fieldKeys['status']])),
+                    'saldo_sw' => isset($fieldKeys['saldo_sw']) ? (float) $row[$fieldKeys['saldo_sw']] : 0,
+                    'saldo_swp' => isset($fieldKeys['saldo_swp']) ? (float) $row[$fieldKeys['saldo_swp']] : 0,
+                    'saldo_ss' => isset($fieldKeys['saldo_ss']) ? (float) $row[$fieldKeys['saldo_ss']] : 0,
+                    'saldo_sp' => isset($fieldKeys['saldo_sp']) ? (float) $row[$fieldKeys['saldo_sp']] : 0,
+                ];
             }
 
-            if (empty($anggotaToInsert)) {
-                return redirect()->back()->with('error', 'Tidak ada data anggota yang valid untuk diimpor setelah validasi.');
-            }
-
-            // --- Proses Batch Insert dan Transaksi Awal ---
             $db = \Config\Database::connect();
             $db->transStart();
-            $successCount = 0;
-            $failedInserts = [];
 
-            try {
-                foreach ($anggotaToInsert as $dataAnggota) {
-                    // Pastikan semua field yang dibutuhkan model ada dan tidak null jika required di DB
-                    $insertData = [
-                        'nama' => $dataAnggota['nama'],
-                        'nik' => $dataAnggota['nik'],
-                        'no_ba' => $dataAnggota['no_ba'],
-                        'dusun' => $dataAnggota['dusun'],
-                        'alamat' => $dataAnggota['alamat'],
-                        'pekerjaan' => $dataAnggota['pekerjaan'],
-                        'tgl_lahir' => $dataAnggota['tgl_lahir'],
-                        'nama_pasangan' => $dataAnggota['nama_pasangan'],
-                        'status' => $dataAnggota['status'],
-                    ];
+            foreach ($dataInsert as $data) {
+                $anggotaData = [
+                    'nama' => $data['nama'],
+                    'nik' => $data['nik'],
+                    'no_ba' => $data['no_ba'],
+                    'dusun' => $data['dusun'],
+                    'alamat' => $data['alamat'],
+                    'pekerjaan' => $data['pekerjaan'],
+                    'tgl_lahir' => $data['tgl_lahir'],
+                    'nama_pasangan' => $data['nama_pasangan'],
+                    'status' => $data['status'],
+                ];
+                $this->anggotaModel->insert($anggotaData);
+                $idAnggota = $this->anggotaModel->insertID();
 
-                    if ($this->anggotaModel->insert($insertData)) {
-                        $id_anggota = $this->anggotaModel->insertID();
-                        $successCount++;
-
-                        // Otomatis buat transaksi simpanan awal
-                        $saldo_total_awal_import = (self::SETOR_SW_AWAL + self::SETOR_SWP_AWAL + self::SETOR_SS_AWAL + self::SETOR_SP_TRANSAKSI_AWAL);
-
-                        $this->transaksiModel->insert([
-                            'id_anggota' => $id_anggota,
-                            'tanggal' => date('Y-m-d'),
-                            'setor_sw' => self::SETOR_SW_AWAL,
-                            'setor_swp' => self::SETOR_SWP_AWAL,
-                            'setor_ss' => self::SETOR_SS_AWAL,
-                            'setor_sp' => self::SETOR_SP_TRANSAKSI_AWAL, // Menggunakan konstanta yang konsisten
-                            'tarik_sw' => 0,
-                            'tarik_swp' => 0,
-                            'tarik_ss' => 0,
-                            'tarik_sp' => 0,
-                            'saldo_total' => $saldo_total_awal_import,
-                            'keterangan' => 'Pendaftaran Anggota via Impor Excel'
-                        ]);
-
-                        $this->keuanganModel->insert([
-                            'id_anggota' => $id_anggota,
-                            'keterangan' => 'Pembayaran Uang Pangkal an. ' . $dataAnggota['nama'],
-                            'jumlah' => self::UANG_PANGKAL,
-                            'jenis' => 'penerimaan',
-                            'tanggal' => date('Y-m-d H:i:s')
-                        ]);
-                        $this->keuanganModel->insert([
-                            'id_anggota' => $id_anggota,
-                            'keterangan' => 'Setoran Simpanan Pokok Awal an. ' . $dataAnggota['nama'],
-                            'jumlah' => self::SIMPANAN_POKOK_AWAL,
-                            'jenis' => 'penerimaan',
-                            'tanggal' => date('Y-m-d H:i:s')
-                        ]);
-                    } else {
-                        // Seharusnya tidak terjadi jika validasi di atas sudah benar, tapi sebagai fallback
-                        $failedInserts[] = "Gagal menyimpan data anggota: " . ($dataAnggota['nama'] ?? 'N/A') . ". Error DB: " . json_encode($this->anggotaModel->errors());
-                    }
-                }
-
-                if (!empty($failedInserts)) {
-                    // Jika ada kegagalan insert, seluruh transaksi dibatalkan
-                    throw new \Exception("Beberapa data gagal diinsert ke database: " . implode(", ", $failedInserts));
-                }
-
-                $db->transComplete();
-
-                if ($db->transStatus() === FALSE) {
-                    $db->transRollback(); // CI4 otomatis rollback jika transComplete mendeteksi kegagalan
-                    return redirect()->back()->with('error', 'Gagal melakukan transaksi impor anggota. Tidak ada data yang disimpan. Error: ' . ($db->error()['message'] ?? 'Unknown DB error'));
-                }
-
-                $finalMessage = "Berhasil mengimpor {$successCount} data anggota.";
-                return redirect()->to('admin/anggota')->with('success', $finalMessage);
-
-            } catch (\Exception $e) {
-                $db->transRollback();
-                log_message('error', '[importExcelAnggota - Transaksi] ' . $e->getMessage() . "\nTrace: " . $e->getTraceAsString());
-                return redirect()->back()->with('error', 'Terjadi kesalahan sistem saat impor dalam transaksi: ' . $e->getMessage());
+                $saldoTotal = $data['saldo_sw'] + $data['saldo_swp'] + $data['saldo_ss'] + $data['saldo_sp'];
+                $this->transaksiModel->insert([
+                    'id_anggota' => $idAnggota,
+                    'tanggal' => date('Y-m-d'),
+                    'setor_sw' => $data['saldo_sw'],
+                    'setor_swp' => $data['saldo_swp'],
+                    'setor_ss' => $data['saldo_ss'],
+                    'setor_sp' => $data['saldo_sp'],
+                    'tarik_sw' => 0,
+                    'tarik_swp' => 0,
+                    'tarik_ss' => 0,
+                    'tarik_sp' => 0,
+                    'saldo_total' => $saldoTotal,
+                    'keterangan' => 'Impor saldo awal dari Excel'
+                ]);
             }
 
-        } catch (\PhpOffice\PhpSpreadsheet\Exception $e) {
-            log_message('error', '[importExcelAnggota - PhpSpreadsheet] ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Gagal memproses file Excel (Library Error): ' . $e->getMessage());
-        } catch (\Exception $e) {
-            log_message('error', '[importExcelAnggota - General] ' . $e->getMessage() . "\nTrace: " . $e->getTraceAsString());
-            return redirect()->back()->with('error', 'Gagal memproses file Excel: ' . $e->getMessage());
+            $db->transComplete();
+
+            return redirect()->to('admin/anggota')->with('success', 'Data anggota berhasil diimpor.');
+        } catch (\Throwable $e) {
+            return redirect()->back()->with('error', 'Gagal mengimpor: ' . $e->getMessage());
         }
     }
+
 
     // Helper function untuk parsing tanggal dari Excel (bisa string atau serial number)
     private function parseExcelDate($dateValue)
