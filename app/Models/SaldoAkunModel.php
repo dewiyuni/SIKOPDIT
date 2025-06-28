@@ -71,31 +71,22 @@ class SaldoAkunModel extends Model
      */
     public function getLaporanLabaRugi($bulan, $tahun)
     {
-        $db = \Config\Database::connect();
-
-        // Kategori disesuaikan dengan yang ada di tabel 'akun' Anda
-        // dan dengan asumsi Anda sudah melakukan penyesuaian di tabel 'akun'
-        // untuk akun-akun biaya (yang tadinya 'LAIN-LAIN' menjadi 'BEBAN')
-        // dan Anda sudah punya akun BEBAN PENYUSUTAN.
-        $kategoriPendapatan = ['PENDAPATAN']; // Sesuai tabel 'akun' Anda
-        $kategoriBeban = [
-            'BEBAN',             // Untuk beban operasional umum (termasuk yang diubah dari 'LAIN-LAIN')
-            'BEBAN PENYUSUTAN',  // Jika Anda membuat kategori spesifik ini untuk akun beban penyusutan
-            // 'BEBAN PAJAK',    // Jika Anda punya akun beban pajak dengan kategori ini
+        // --- PERBAIKAN UTAMA DI SINI ---
+        // Definisikan semua kategori yang relevan untuk Laba Rugi berdasarkan tabel 'akun' Anda.
+        $kategoriLabaRugi = [
+            'PENDAPATAN',
+            'BEBAN',
+            'BEBAN PENYUSUTAN', // Tetap sertakan untuk jaga-jaga jika ada
+            'LAIN-LAIN'         // Ini yang paling penting untuk disertakan
         ];
-        // Jika akun beban penyusutan Anda juga menggunakan kategori 'BEBAN',
-        // maka cukup 'BEBAN' saja di atas. Jika berbeda, tambahkan.
 
-        $kategoriLabaRugi = array_merge($kategoriPendapatan, $kategoriBeban);
-
-        if (empty($kategoriLabaRugi)) {
-            log_message('warning', '[SaldoAkunModel::getLaporanLabaRugi] Tidak ada kategori L/R yang didefinisikan.');
-            return [];
-        }
-
+        // Buat placeholder '?' sejumlah kategori untuk query IN (...)
         $placeholders = implode(',', array_fill(0, count($kategoriLabaRugi), '?'));
+
+        // Gabungkan parameter untuk query
         $bindings = array_merge([$bulan, $tahun], $kategoriLabaRugi);
 
+        // Query yang lebih sederhana dan aman
         $sql = "SELECT
                     a.id, a.kode_akun, a.nama_akun, a.kategori, a.jenis,
                     COALESCE(sa.total_debit, 0) as total_debit_periode,
@@ -103,40 +94,27 @@ class SaldoAkunModel extends Model
                 FROM akun a
                 LEFT JOIN saldo_akun sa ON a.id = sa.id_akun AND sa.bulan = ? AND sa.tahun = ?
                 WHERE a.kategori IN ($placeholders)
-                ORDER BY CASE a.kategori ";
+                ORDER BY 
+                    CASE 
+                        WHEN a.kategori = 'PENDAPATAN' THEN 1
+                        WHEN a.kategori = 'BEBAN' THEN 2
+                        WHEN a.kategori = 'LAIN-LAIN' THEN 3 -- Urutkan setelah BEBAN
+                        WHEN a.kategori = 'BEBAN PENYUSUTAN' THEN 4
+                        ELSE 99 
+                    END, 
+                    a.kode_akun ASC";
 
-        $caseOrder = "";
-        $orderIndex = 1;
-        // Urutkan pendapatan dulu, baru beban
-        $tempKategoriPendapatan = array_intersect($kategoriLabaRugi, $kategoriPendapatan);
-        $tempKategoriBeban = array_intersect($kategoriLabaRugi, $kategoriBeban);
-
-        foreach ($tempKategoriPendapatan as $kat) {
-            $caseOrder .= " WHEN " . $db->escape($kat) . " THEN " . $orderIndex++;
-        }
-        foreach ($tempKategoriBeban as $kat) {
-            $caseOrder .= " WHEN " . $db->escape($kat) . " THEN " . $orderIndex++;
-        }
-        // Jika ada kategori lain yang tidak masuk $kategoriPendapatan atau $kategoriBeban tapi ada di $kategoriLabaRugi
-        $remainingCategories = array_diff($kategoriLabaRugi, $tempKategoriPendapatan, $tempKategoriBeban);
-        foreach ($remainingCategories as $kat) {
-            $caseOrder .= " WHEN " . $db->escape($kat) . " THEN " . $orderIndex++;
-        }
-
-        $sql .= $caseOrder . " ELSE 99 END, a.kode_akun ASC";
-
-        log_message('debug', '[SaldoAkunModel::getLaporanLabaRugi] SQL Query: ' . $sql);
-        log_message('debug', '[SaldoAkunModel::getLaporanLabaRugi] Bindings: ' . json_encode($bindings));
-
+        $db = \Config\Database::connect();
         $query = $db->query($sql, $bindings);
         $results = $query->getResultArray();
 
+        // Jika tidak ada hasil, kembalikan array kosong
         if (empty($results)) {
-            log_message('info', '[SaldoAkunModel::getLaporanLabaRugi] Tidak ada data akun L/R ditemukan untuk periode ' . $bulan . '/' . $tahun . ' dengan kategori: ' . implode(', ', $kategoriLabaRugi));
-        } else {
-            log_message('info', '[SaldoAkunModel::getLaporanLabaRugi] Ditemukan ' . count($results) . ' akun L/R untuk periode ' . $bulan . '/' . $tahun . '. Data mentah: ' . json_encode($results));
+            return [];
         }
 
+        // --- Proses hasil untuk menghitung 'saldo' ---
+        // Logika ini sudah ada dan sudah benar, kita pertahankan.
         $processedResults = [];
         foreach ($results as $row) {
             $saldoPeriode = 0;
@@ -144,12 +122,13 @@ class SaldoAkunModel extends Model
                 $saldoPeriode = floatval($row['total_kredit_periode']) - floatval($row['total_debit_periode']);
             } elseif (strtoupper($row['jenis']) == 'DEBIT') { // Akun Beban
                 $saldoPeriode = floatval($row['total_debit_periode']) - floatval($row['total_kredit_periode']);
-            } else {
-                log_message('warning', "[SaldoAkunModel::getLaporanLabaRugi] Akun ID {$row['id']} ('{$row['nama_akun']}') kategori '{$row['kategori']}' memiliki jenis akun '{$row['jenis']}' yang tidak standar untuk L/R. Saldo mungkin tidak akurat.");
             }
-            $row['saldo'] = $saldoPeriode; // Ini adalah saldo mutasi periode
+
+            // Tambahkan key 'saldo' ke setiap baris data
+            $row['saldo'] = $saldoPeriode;
             $processedResults[] = $row;
         }
+
         return $processedResults;
     }
 

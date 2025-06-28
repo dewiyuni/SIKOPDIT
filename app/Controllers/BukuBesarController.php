@@ -545,50 +545,50 @@ class BukuBesarController extends BaseController
         $bulan = $this->request->getGet('bulan') ?? date('n');
         $tahun = $this->request->getGet('tahun') ?? date('Y');
 
+        // Panggil model. Model akan mengambil data berdasarkan kategori yang kita definisikan nanti.
         $laporanData = $this->saldoAkunModel->getLaporanLabaRugi($bulan, $tahun);
-
-        // DEBUGGING: Cek apa yang dikembalikan model dan bagaimana controller memprosesnya
-        // echo "<pre>Laporan Data dari Model untuk {$bulan}-{$tahun}:\n";
-        // print_r($laporanData);
-        // echo "</pre>";
-        // // die; // Aktifkan untuk berhenti di sini saat debugging
 
         $pendapatanItems = [];
         $bebanItems = [];
         $totalPendapatan = 0;
         $totalBeban = 0;
 
-        // Kategori disesuaikan dengan yang ada di Model (dan di tabel 'akun')
+        // Kategori Pendapatan sudah benar.
         $kategoriPendapatanActual = ['PENDAPATAN'];
-        $kategoriBebanActual = [
-            'BEBAN',
-            'BEBAN PENYUSUTAN', // Harus sama dengan di Model
-            // 'BEBAN PAJAK',   // Harus sama dengan di Model
-        ];
+
+        // --- INI BAGIAN YANG DIPERBAIKI ---
+        // Kita tambahkan 'LAIN-LAIN' ke dalam daftar kategori beban sesuai struktur tabel akun Anda.
+        $kategoriBebanActual = ['BEBAN', 'BEBAN PENYUSUTAN', 'LAIN-LAIN'];
 
         if (!empty($laporanData)) {
             foreach ($laporanData as $item) {
-                // 'saldo' dari model adalah saldo mutasi periode
-                $saldo = floatval($item['saldo'] ?? 0);
+                // Perhitungan saldo sudah benar dari langkah sebelumnya
+                $debit = floatval($item['total_debit_periode'] ?? 0);
+                $kredit = floatval($item['total_kredit_periode'] ?? 0);
+                $saldo = 0;
+
+                if ($item['jenis'] === 'Kredit') {
+                    $saldo = $kredit - $debit;
+                } else {
+                    $saldo = $debit - $kredit;
+                }
+
+                $item['saldo'] = $saldo;
 
                 if (isset($item['kategori'])) {
-                    if (in_array($item['kategori'], $kategoriPendapatanActual)) {
+                    // Cek apakah akun ini masuk ke kelompok Pendapatan
+                    if (in_array(strtoupper($item['kategori']), $kategoriPendapatanActual)) {
                         $totalPendapatan += $saldo;
                         $pendapatanItems[] = $item;
-                    } elseif (in_array($item['kategori'], $kategoriBebanActual)) {
+                    }
+                    // Cek apakah akun ini masuk ke kelompok Beban (termasuk LAIN-LAIN)
+                    elseif (in_array(strtoupper($item['kategori']), $kategoriBebanActual)) {
                         $totalBeban += $saldo;
                         $bebanItems[] = $item;
-                    } else {
-                        log_message('debug', "[Controller::labaRugi] Akun '{$item['nama_akun']}' (Kategori: '{$item['kategori']}') tidak termasuk dalam definisi L/R saat ini.");
                     }
                 }
             }
         }
-        // echo "<pre>Pendapatan Items:\n"; print_r($pendapatanItems); echo "</pre>";
-        // echo "<pre>Beban Items:\n"; print_r($bebanItems); echo "</pre>";
-        // echo "<pre>Total Pendapatan: $totalPendapatan, Total Beban: $totalBeban</pre>";
-        // // die; // Aktifkan untuk berhenti di sini saat debugging
-
 
         $labaRugiBersih = $totalPendapatan - $totalBeban;
 
@@ -604,7 +604,7 @@ class BukuBesarController extends BaseController
             'bulanNames' => $this->bulanNames,
         ];
 
-        return view('admin/buku_besar/laba_rugi', $data); // Sesuaikan path view jika perlu
+        return view('admin/buku_besar/laba_rugi', $data);
     }
 
     /**
@@ -1606,33 +1606,39 @@ class BukuBesarController extends BaseController
     {
         $bulan = $this->request->getGet('bulan') ?? date('n');
         $tahun = $this->request->getGet('tahun') ?? date('Y');
-        // Gunakan nama bulan dari property class
         $namaBulan = $this->bulanNames[$bulan] ?? $bulan;
 
-        // 1. Ambil data dari Model (sudah menggunakan kategori aktual)
         $laporanData = $this->saldoAkunModel->getLaporanLabaRugi($bulan, $tahun);
 
-        // 2. Proses data menggunakan KATEGORI AKTUAL (sama seperti di fungsi labaRugi view)
         $pendapatanItems = [];
         $bebanItems = [];
         $totalPendapatan = 0;
         $totalBeban = 0;
-        $kategoriPendapatanActual = ['PEMASUKAN']; // Sesuaikan jika perlu
-        $kategoriBebanActual = [
-            'BIAYA BIAYA',
-            'BIAYA PAJAK',
-            'PENYISIHAN BEBAN DANA',
-            'PENYUSUTAN PENYUSUTAN'
-        ]; // Sesuaikan jika perlu
+
+        $kategoriPendapatanActual = ['PENDAPATAN'];
+
+        // --- INI BAGIAN YANG DIPERBAIKI ---
+        $kategoriBebanActual = ['BEBAN', 'BEBAN PENYUSUTAN', 'LAIN-LAIN'];
 
         if (!empty($laporanData)) {
             foreach ($laporanData as $item) {
-                $saldo = floatval($item['saldo'] ?? 0);
+                $debit = floatval($item['total_debit_periode'] ?? 0);
+                $kredit = floatval($item['total_kredit_periode'] ?? 0);
+                $saldo = 0;
+
+                if ($item['jenis'] === 'Kredit') {
+                    $saldo = $kredit - $debit;
+                } else {
+                    $saldo = $debit - $kredit;
+                }
+
+                $item['saldo'] = $saldo;
+
                 if (isset($item['kategori'])) {
-                    if (in_array($item['kategori'], $kategoriPendapatanActual)) {
+                    if (in_array(strtoupper($item['kategori']), $kategoriPendapatanActual)) {
                         $totalPendapatan += $saldo;
                         $pendapatanItems[] = $item;
-                    } elseif (in_array($item['kategori'], $kategoriBebanActual)) {
+                    } elseif (in_array(strtoupper($item['kategori']), $kategoriBebanActual)) {
                         $totalBeban += $saldo;
                         $bebanItems[] = $item;
                     }
