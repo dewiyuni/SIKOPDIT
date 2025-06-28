@@ -71,15 +71,7 @@ class AkunModel extends Model
                 COALESCE(sa.saldo_awal, a.saldo_awal) as saldo_bulan_ini,
                 COALESCE(sa.total_debit, 0) as total_debit,
                 COALESCE(sa.total_kredit, 0) as total_kredit,
-                -- Hitung ulang saldo akhir berdasarkan jenis akun
-                CASE
-                    WHEN LOWER(a.jenis) = 'debit' THEN
-                        (COALESCE(sa.saldo_awal, a.saldo_awal) + COALESCE(sa.total_debit, 0) - COALESCE(sa.total_kredit, 0))
-                    WHEN LOWER(a.jenis) = 'kredit' THEN
-                        (COALESCE(sa.saldo_awal, a.saldo_awal) - COALESCE(sa.total_debit, 0) + COALESCE(sa.total_kredit, 0))
-                    ELSE -- Default jika jenis tidak 'Debit' atau 'Kredit' (sebaiknya dihindari)
-                        (COALESCE(sa.saldo_awal, a.saldo_awal) + COALESCE(sa.total_debit, 0) - COALESCE(sa.total_kredit, 0))
-                END AS saldo_akhir
+                (COALESCE(sa.saldo_awal, a.saldo_awal) + COALESCE(sa.total_debit, 0) - COALESCE(sa.total_kredit, 0)) AS saldo_akhir
             FROM
                 akun a
             LEFT JOIN
@@ -176,4 +168,5 @@ class AkunModel extends Model
             return $saldoAwal;
         }
     }
+
 }

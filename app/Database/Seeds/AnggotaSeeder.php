@@ -38,7 +38,33 @@ class AnggotaSeeder extends Seeder
                 'status' => 'aktif',
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
-            ]
+            ],
+            [
+                'no_ba' => '12',
+                'nama' => 'Hasan wisnu',
+                'nik' => '3847264759685100',
+                'dusun' => 'Sapon',
+                'alamat' => 'sapon sidorejo, lendah, kulon progo',
+                'pekerjaan' => 'Petani',
+                'tgl_lahir' => '1990-05-10',
+                'nama_pasangan' => 'Aisyah Tiara',
+                'status' => 'aktif',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ],
+            [
+                'no_ba' => '8',
+                'nama' => 'Cahyo wirawan',
+                'nik' => '9867543265403120',
+                'dusun' => 'Sedan',
+                'alamat' => 'sedan sidorejo, lendah, kulon progo',
+                'pekerjaan' => 'pengusaha',
+                'tgl_lahir' => '1990-05-10',
+                'nama_pasangan' => 'Cahyaninggsih',
+                'status' => 'aktif',
+                'created_at' => date('Y-m-d H:i:s'),
+                'updated_at' => date('Y-m-d H:i:s')
+            ],
         ];
 
         foreach ($dataAnggota as $anggota) {

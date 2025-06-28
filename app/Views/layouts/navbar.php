@@ -6,8 +6,8 @@
 
         <!-- Sidebar - Brand -->
         <a class="sidebar-brand d-flex align-items-center justify-content-center" href="/admin/dashboard">
-            <div class="sidebar-brand-icon rotate-n-15">
-                <i class="bi bi-emoji-wink"></i>
+            <div class="sidebar-brand-icon">
+                <img src="<?= base_url('assets/logo.png') ?>" alt="Logo" style="width: 40px; height: 40px;">
             </div>
             <div class="sidebar-brand-text mx-3">SIKOPDIT</div>
         </a>

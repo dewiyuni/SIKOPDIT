@@ -6,9 +6,10 @@ use App\Models\AkunModel;
 use App\Models\BukuBesarModel;
 use App\Models\JurnalKasModel;
 use App\Models\SaldoAkunModel;
-use App\Models\PemetaanAkunModel;
 use App\Models\NeracaDataModel;
+use App\Models\PemetaanAkunModel;
 use App\Controllers\BaseController;
+use App\Models\MappingAkunNeracaModel;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use PhpOffice\PhpSpreadsheet\Style\Alignment;
@@ -25,6 +26,7 @@ class BukuBesarController extends BaseController
     protected $saldoAkunModel;
     protected $jurnalKasModel;
     protected $neracaModel;
+    protected $MappingModel;
     protected $bulanNames;
 
 
@@ -35,6 +37,7 @@ class BukuBesarController extends BaseController
         $this->pemetaanModel = new PemetaanAkunModel();
         $this->saldoAkunModel = new SaldoAkunModel();
         $this->jurnalKasModel = new JurnalKasModel();
+        $this->MappingModel = new MappingAkunNeracaModel();
         $this->neracaModel = new NeracaDataModel();
         helper('number');
         $this->bulanNames = [
@@ -141,6 +144,37 @@ class BukuBesarController extends BaseController
             }
 
             if ($result) {
+                $bulanBerikutnya = $bulan == 12 ? 1 : $bulan + 1;
+                $tahunBerikutnya = $bulan == 12 ? $tahun + 1 : $tahun;
+
+                $dataAkun = $this->akunModel->getAkunWithSaldo($bulan, $tahun); // Ambil saldo akhir
+
+                $db = \Config\Database::connect();
+                foreach ($dataAkun as $akun) {
+                    $idAkun = $akun['id'];
+                    $saldoAkhir = $akun['saldo_akhir'];
+
+                    // Cek apakah sudah ada entri untuk bulan berikutnya
+                    $cek = $db->table('saldo_akun')
+                        ->where([
+                            'id_akun' => $idAkun,
+                            'bulan' => $bulanBerikutnya,
+                            'tahun' => $tahunBerikutnya
+                        ])->get()->getRow();
+
+                    if (!$cek) {
+                        // Masukkan saldo akhir ke saldo_awal bulan berikutnya
+                        $db->table('saldo_akun')->insert([
+                            'id_akun' => $idAkun,
+                            'bulan' => $bulanBerikutnya,
+                            'tahun' => $tahunBerikutnya,
+                            'saldo_awal' => $saldoAkhir,
+                            'total_debit' => 0,
+                            'total_kredit' => 0,
+                            'created_at' => date('Y-m-d H:i:s'),
+                        ]);
+                    }
+                }
                 $session->setFlashdata('success', 'Jurnal berhasil diproses ke Buku Besar menggunakan pemetaan.');
                 return redirect()->to(base_url('admin/buku_besar?bulan=' . $bulan . '&tahun=' . $tahun));
             } else {
@@ -986,218 +1020,82 @@ class BukuBesarController extends BaseController
     }
     public function neraca()
     {
-        if (!$this->neracaModel) {
-            log_message('error', 'NeracaDataModel tidak terinisialisasi di BukuBesarController::neraca().');
-            // Anda bisa menampilkan halaman error atau pesan yang lebih baik di sini
-            return "Error: Model data neraca tidak tersedia. Silakan hubungi administrator.";
+        $bulan = $this->request->getGet('bulan') ?? date('n');
+        $tahun = $this->request->getGet('tahun') ?? date('Y');
+        $prevBulan = $bulan - 1;
+        $prevTahun = $tahun;
+        if ($bulan == 1) {
+            $prevBulan = 12;
+            $prevTahun = $tahun - 1;
         }
 
-        $bulan_req = $this->request->getGet('bulan');
-        $tahun_req = $this->request->getGet('tahun');
+        $startDate = "$tahun-$bulan-01";
+        $endDate = date("Y-m-t", strtotime($startDate));
 
-        // Gunakan integer untuk bulan, default ke bulan saat ini jika tidak ada request
-        $bulan = !empty($bulan_req) ? (int) $bulan_req : (int) date('n');
-        $tahun = !empty($tahun_req) ? (int) $tahun_req : (int) date('Y');
+        $isBulanPertama = (int) $bulan === 1;
 
-        $currentDate = new \DateTime();
-        $currentDate->setDate($tahun, $bulan, 1);
-
-        $prevDate = (clone $currentDate)->modify('-1 month');
-        $prevBulan = (int) $prevDate->format('n'); // 'n' untuk bulan tanpa leading zero (1-12)
-        $prevTahun = (int) $prevDate->format('Y');
-
-        // 1. Inisialisasi $laporan dari Master Structure
-        $masterStructure = $this->getMasterNeracaStructure();
+        $mapping = $this->MappingModel->orderBy('urutan', 'ASC')->findAll();
         $laporan = [];
 
-        foreach ($masterStructure as $groupKey => $groupDetails) {
-            $laporan[$groupKey] = [
-                'label' => $groupDetails['label'],
-                'urutan' => $groupDetails['urutan'],
-                'no_induk_prefix' => $groupDetails['no_induk_prefix'],
-                'no_induk_val' => $groupDetails['no_induk_val'],
-                'items' => [],
-                'akumulasi_lookup' => [],
-                'total_current' => 0,
-                'total_prev' => 0,
-                'total_net_current' => 0,
-                'total_net_prev' => 0,
+        foreach ($mapping as $row) {
+            $jenis = $row['jenis']; // ambil jenis dari mapping
+
+            // SALDO BULAN INI
+            $utama = $this->saldoAkunModel->getSaldoAkhir($row['id_akun_utama'], $endDate, $jenis);
+            $pengurang = $this->saldoAkunModel->getSaldoAkhir($row['id_akun_pengurang'], $endDate, $jenis);
+
+            $saldoPengurangNow = (!empty($row['id_akun_pengurang']) && $pengurang) ? $pengurang->saldo : 0;
+            $saldoAkhir = ($utama->saldo ?? 0) - abs($saldoPengurangNow);
+
+            // SALDO BULAN SEBELUMNYA
+            $prevStart = "$prevTahun-$prevBulan-01";
+            $prevEnd = date("Y-m-t", strtotime($prevStart));
+
+            $prevUtama = $this->saldoAkunModel->getSaldoAkhir($row['id_akun_utama'], $prevEnd, $jenis);
+            $prevPengurang = $this->saldoAkunModel->getSaldoAkhir($row['id_akun_pengurang'], $prevEnd, $jenis);
+
+            $saldoPengurangPrev = (!empty($row['id_akun_pengurang']) && $prevPengurang) ? $prevPengurang->saldo : 0;
+            $saldoAkhirPrev = ($prevUtama->saldo ?? 0) - $saldoPengurangPrev;
+
+            $laporan[] = [
+                'nama' => $row['nama_laporan'],
+                'jenis' => $jenis,
+                'urutan' => $row['urutan'],
+                'saldo_now' => $saldoAkhir,
+                'saldo_prev' => $saldoAkhirPrev
             ];
 
-            if (isset($groupDetails['items_template'])) {
-                foreach ($groupDetails['items_template'] as $itemKey => $itemDetails) {
-                    $laporan[$groupKey]['items'][$itemKey] = [
-                        'id' => null,
-                        'nama' => $itemDetails['nama'],
-                        'nomor_display_sub' => $itemDetails['nomor_display_sub'],
-                        'is_editable' => $itemDetails['is_editable'],
-                        'saldo_current' => 0,
-                        'saldo_prev' => 0
-                    ];
-                }
-            }
-            if ($groupKey === 'ASET_TETAP' && isset($groupDetails['akumulasi_template'])) {
-                foreach ($groupDetails['akumulasi_template'] as $itemKeyParent => $akumDetails) {
-                    $laporan[$groupKey]['akumulasi_lookup'][$itemKeyParent] = [
-                        'id' => null,
-                        'nama' => $akumDetails['uraian_akun'],
-                        'is_editable' => $akumDetails['is_editable'],
-                        'saldo_current' => 0,
-                        'saldo_prev' => 0
-                    ];
-                }
-            }
         }
 
-        // 2. Fetch Data dari DB
-        $itemsCurrentPeriod = $this->neracaModel
-            ->where('periode_tahun', $tahun)
-            ->where('periode_bulan', $bulan) // DB menyimpan bulan sebagai integer
-            ->findAll();
+        // Filter & urutkan
+        // Kelompokkan ke dalam 2 array utama: aktiva & pasiva
+        $aktiva = array_filter($laporan, fn($item) => $item['jenis'] === 'AKTIVA');
 
-        $itemsPrevPeriod = $this->neracaModel
-            ->where('periode_tahun', $prevTahun)
-            ->where('periode_bulan', $prevBulan) // DB menyimpan bulan sebagai integer
-            ->findAll();
+        // PASIVA berisi beberapa jenis
+        $jenisPasiva = ['KEWAJIBAN JANGKA PENDEK', 'KEWAJIBAN JANGKA PANJANG', 'EKUITAS'];
+        $pasiva = [];
 
-        // 3. Merge Data DB ke $laporan
-        $dbCurrentMap = [];
-        foreach ($itemsCurrentPeriod as $dbItem) {
-            $dbCurrentMap[$dbItem['kode_akun_internal']] = $dbItem;
-        }
-        $dbPrevMap = [];
-        foreach ($itemsPrevPeriod as $dbItem) {
-            $dbPrevMap[$dbItem['kode_akun_internal']] = $dbItem;
+        foreach ($jenisPasiva as $jenis) {
+            $group = array_filter($laporan, fn($item) => trim($item['jenis']) === $jenis);
+            usort($group, fn($a, $b) => $a['urutan'] <=> $b['urutan']);
+            $pasiva[$jenis] = $group;
         }
 
-        foreach ($laporan as $groupKey => &$groupData) {
-            if (isset($groupData['items'])) {
-                foreach ($groupData['items'] as $itemKey => &$itemData) {
-                    if (isset($dbCurrentMap[$itemKey])) {
-                        $dbItemCurrent = $dbCurrentMap[$itemKey];
-                        if (!$dbItemCurrent['is_akumulasi']) {
-                            $itemData['id'] = $dbItemCurrent['id'];
-                            $itemData['saldo_current'] = (float) $dbItemCurrent['nilai'];
-                        }
-                    }
-                    if (isset($dbPrevMap[$itemKey])) {
-                        $dbItemPrev = $dbPrevMap[$itemKey];
-                        if (!$dbItemPrev['is_akumulasi']) {
-                            $itemData['saldo_prev'] = (float) $dbItemPrev['nilai'];
-                        }
-                    }
-                }
-                unset($itemData);
-            }
+        usort($aktiva, fn($a, $b) => $a['urutan'] <=> $b['urutan']);
 
-            if ($groupKey === 'ASET_TETAP' && isset($groupData['akumulasi_lookup'])) {
-                foreach ($groupData['akumulasi_lookup'] as $itemKeyParent => &$akumData) {
-                    $akumKodeInternal = 'AKUM_' . $itemKeyParent;
-                    if (isset($dbCurrentMap[$akumKodeInternal])) {
-                        $dbAkumCurrent = $dbCurrentMap[$akumKodeInternal];
-                        if ($dbAkumCurrent['is_akumulasi'] && $dbAkumCurrent['parent_kode_akun_internal'] == $itemKeyParent) {
-                            $akumData['id'] = $dbAkumCurrent['id'];
-                            $akumData['saldo_current'] = (float) $dbAkumCurrent['nilai'];
-                        }
-                    }
-                    if (isset($dbPrevMap[$akumKodeInternal])) {
-                        $dbAkumPrev = $dbPrevMap[$akumKodeInternal];
-                        if ($dbAkumPrev['is_akumulasi'] && $dbAkumPrev['parent_kode_akun_internal'] == $itemKeyParent) {
-                            $akumData['saldo_prev'] = (float) $dbAkumPrev['nilai'];
-                        }
-                    }
-                }
-                unset($akumData);
-            }
-        }
-        unset($groupData);
-
-        // 4. Hitung Laba Rugi Bersih Current
-        $laba_rugi_bersih_current = 0;
-        // Asumsi SHU yang ada di Ekuitas adalah L/R yang sudah pasti untuk periode itu,
-        // atau L/R berjalan diambil dari perhitungan lain.
-        // Untuk neraca, L/R berjalan biasanya menambah Ekuitas.
-        if (isset($laporan['EKUITAS']['items']['SHU_EKUITAS_TAHUN_INI']['saldo_current'])) {
-            $laba_rugi_bersih_current = (float) $laporan['EKUITAS']['items']['SHU_EKUITAS_TAHUN_INI']['saldo_current'];
-            // Jika SHU_EKUITAS_TAHUN_INI adalah L/R berjalan, maka tidak perlu ada di 'items' ekuitas untuk perhitungan subtotal
-            // karena akan ditambahkan secara eksplisit. Alternatifnya, biarkan di items dan jangan tambahkan lagi.
-            // Untuk konsistensi dengan view, kita akan menambahkannya saat menghitung subtotal ekuitas
-        }
-        // Anda mungkin perlu mengambil $laba_rugi_bersih_current dari sumber lain jika tidak disimpan sebagai item neraca
-        // Misalnya dari tabel laba_rugi atau perhitungan dinamis.
-
-
-        // 5. Hitung Ulang Semua Total
-        $grand_total_aset_current = 0;
-        $grand_total_aset_prev = 0;
-        $grand_total_pasiva_modal_current = 0;
-        $grand_total_pasiva_modal_prev = 0;
-
-        foreach ($laporan as $groupKey => &$groupData) {
-            $current_group_total = 0;
-            $prev_group_total = 0;
-
-            if (isset($groupData['items'])) {
-                foreach ($groupData['items'] as $itemKey => $itemData) {
-                    // Jangan tambahkan SHU_EKUITAS_TAHUN_INI ke total item jika akan ditambahkan sebagai L/R Berjalan terpisah
-                    if (!($groupKey === 'EKUITAS' && $itemKey === 'SHU_EKUITAS_TAHUN_INI')) {
-                        $current_group_total += $itemData['saldo_current'];
-                    }
-                    $prev_group_total += $itemData['saldo_prev']; // SHU periode lalu sudah masuk sebagai item biasa
-                }
-            }
-            $groupData['total_current'] = $current_group_total;
-            $groupData['total_prev'] = $prev_group_total;
-
-
-            if ($groupKey === 'ASET_TETAP') {
-                $groupData['total_net_current'] = 0;
-                $groupData['total_net_prev'] = 0;
-                if (isset($groupData['items'])) {
-                    foreach ($groupData['items'] as $itemKey => $itemData) {
-                        $akum_current = $groupData['akumulasi_lookup'][$itemKey]['saldo_current'] ?? 0;
-                        $akum_prev = $groupData['akumulasi_lookup'][$itemKey]['saldo_prev'] ?? 0;
-                        $groupData['total_net_current'] += ($itemData['saldo_current'] + $akum_current);
-                        $groupData['total_net_prev'] += ($itemData['saldo_prev'] + $akum_prev);
-                    }
-                }
-            }
-
-            // Akumulasi Grand Total
-            if (in_array($groupKey, ['ASET_LANCAR', 'ASET_TAK_LANCAR'])) {
-                $grand_total_aset_current += $groupData['total_current'];
-                $grand_total_aset_prev += $groupData['total_prev'];
-            } elseif ($groupKey == 'ASET_TETAP') {
-                $grand_total_aset_current += $groupData['total_net_current'];
-                $grand_total_aset_prev += $groupData['total_net_prev'];
-            } elseif (in_array($groupKey, ['KEWAJIBAN_JANGKA_PENDEK', 'KEWAJIBAN_JANGKA_PANJANG'])) {
-                $grand_total_pasiva_modal_current += $groupData['total_current'];
-                $grand_total_pasiva_modal_prev += $groupData['total_prev'];
-            } elseif ($groupKey == 'EKUITAS') {
-                $grand_total_pasiva_modal_current += $groupData['total_current']; // Total item ekuitas (tanpa L/R berjalan jika dipisah)
-                $grand_total_pasiva_modal_current += $laba_rugi_bersih_current; // Tambahkan L/R Berjalan ke grand total
-                $grand_total_pasiva_modal_prev += $groupData['total_prev']; // SHU periode lalu sudah termasuk
-            }
-        }
-        unset($groupData);
-
-
-        $viewData = [
-            'laporan' => $laporan,
-            'grand_total_aset_current' => $grand_total_aset_current,
-            'grand_total_aset_prev' => $grand_total_aset_prev,
-            'grand_total_pasiva_modal_current' => $grand_total_pasiva_modal_current,
-            'grand_total_pasiva_modal_prev' => $grand_total_pasiva_modal_prev,
-            'laba_rugi_bersih_current' => $laba_rugi_bersih_current,
-            'bulan' => $bulan, // integer
+        return view('admin/buku_besar/neraca', [
+            'aktiva' => $aktiva,
+            'pasiva' => $pasiva,
+            'namaBulanCurrent' => $this->bulanNames[(int) $bulan] ?? 'Bulan Tidak Diketahui',
             'tahun' => $tahun,
-            'prevBulan' => $prevBulan, // integer
+            'bulan' => $bulan,
+            'prevBulan' => $prevBulan,
             'prevTahun' => $prevTahun,
-            'bulanNames' => $this->bulanNames
-        ];
+            'bulanNames' => $this->bulanNames,
+        ]);
 
-        return view('admin/buku_besar/neraca', $viewData);
     }
+
     public function updateNeracaItem()
     {
         if (!$this->neracaModel) {

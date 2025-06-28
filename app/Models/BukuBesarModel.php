@@ -172,6 +172,49 @@ class BukuBesarModel extends Model
                 return false;
             }
             log_message('info', "[prosesJurnalMapping] Update saldo akhir selesai untuk $bulan/$tahun.");
+            // --- Simpan saldo akhir ke tabel saldo_akun ---
+            $akunModel = new \App\Models\AkunModel();
+            $saldoAkunModel = new \App\Models\SaldoAkunModel();
+
+            $daftarAkun = $akunModel->findAll();
+
+            foreach ($daftarAkun as $akun) {
+                $idAkun = $akun['id'];
+                $saldoAwal = $this->getSaldoAwalAkun($idAkun, $bulan, $tahun);
+
+                $transaksi = $this->getBukuBesarByAkun($idAkun, $bulan, $tahun);
+
+                $totalDebit = 0;
+                $totalKredit = 0;
+
+                foreach ($transaksi as $t) {
+                    $totalDebit += floatval($t['debit']);
+                    $totalKredit += floatval($t['kredit']);
+                }
+
+                $saldoAkhir = $saldoAwal + ($totalDebit - $totalKredit);
+
+                // Simpan atau update ke saldo_akun
+                $existing = $saldoAkunModel
+                    ->where('id_akun', $idAkun)
+                    ->where('bulan', $bulan)
+                    ->where('tahun', $tahun)
+                    ->first();
+
+                if ($existing) {
+                    $saldoAkunModel->update($existing['id'], ['saldo_akhir' => $saldoAkhir]);
+                } else {
+                    $saldoAkunModel->insert([
+                        'id_akun' => $idAkun,
+                        'bulan' => $bulan,
+                        'tahun' => $tahun,
+                        'saldo_akhir' => $saldoAkhir
+                    ]);
+                }
+
+                log_message('debug', "[PROSES] Saldo akhir akun {$akun['nama_akun']} ($idAkun) bulan $bulan/$tahun: $saldoAkhir");
+            }
+
         } else {
             log_message('critical', "[prosesJurnalMapping] Fungsi updateAllSaldos tidak ditemukan di BukuBesarModel. Saldo tidak akan terupdate!");
             $logErrors[] = "Fungsi update saldo tidak ditemukan.";
@@ -225,40 +268,44 @@ class BukuBesarModel extends Model
     public function getSaldoAwalAkun($idAkun, $bulan, $tahun)
     {
         try {
-            $saldoAkunModel = new SaldoAkunModel();
+            $saldoAkunModel = new \App\Models\SaldoAkunModel();
+            $akunModel = new \App\Models\AkunModel();
 
-            $bulanSebelumnya = $bulan - 1;
-            $tahunSebelumnya = $tahun;
-            if ($bulanSebelumnya == 0) {
+            // Hitung bulan & tahun sebelumnya
+            if ($bulan == 1) {
                 $bulanSebelumnya = 12;
                 $tahunSebelumnya = $tahun - 1;
-            }
-
-            // Cari saldo akhir bulan sebelumnya di tabel saldo_akun
-            $saldoAkhirSebelumnya = $saldoAkunModel
-                ->where('id_akun', $idAkun)
-                ->where('bulan', $bulanSebelumnya)
-                ->where('tahun', $tahunSebelumnya)
-                ->first();
-
-            if ($saldoAkhirSebelumnya) {
-                log_message('debug', "[getSaldoAwalAkun] Saldo awal (dari saldo_akun bln lalu) Akun $idAkun ($bulan/$tahun): " . $saldoAkhirSebelumnya['saldo_akhir']);
-                return floatval($saldoAkhirSebelumnya['saldo_akhir']);
             } else {
-                // Jika tidak ada, ambil saldo awal dari master akun
-                $akunModel = new AkunModel();
-                $akun = $akunModel->find($idAkun);
-                $saldoAwalMaster = $akun ? floatval($akun['saldo_awal']) : 0;
-                log_message('debug', "[getSaldoAwalAkun] Saldo awal (dari master akun) Akun $idAkun ($bulan/$tahun): " . $saldoAwalMaster);
-                // Mungkin perlu perhitungan tambahan jika ada transaksi sebelum master saldo awal
-                // Tapi untuk simple case, ini cukup
-                return $saldoAwalMaster;
+                $bulanSebelumnya = $bulan - 1;
+                $tahunSebelumnya = $tahun;
             }
-        } catch (\Exception $e) {
-            log_message('error', "[BukuBesarModel::getSaldoAwalAkun] Error for Akun $idAkun ($bulan/$tahun): " . $e->getMessage());
+
+            // 1. Cari saldo akhir bulan sebelumnya
+            $saldoAkhir = $saldoAkunModel->where([
+                'id_akun' => $idAkun,
+                'bulan' => $bulanSebelumnya,
+                'tahun' => $tahunSebelumnya
+            ])->first();
+
+            if ($saldoAkhir && isset($saldoAkhir['saldo_akhir'])) {
+                log_message('debug', "[getSaldoAwalAkun] Akun $idAkun ($bulan/$tahun): pakai saldo akhir bulan sebelumnya = {$saldoAkhir['saldo_akhir']}");
+                return (float) $saldoAkhir['saldo_akhir'];
+            }
+
+            // 2. Jika tidak ada saldo bulan lalu, ambil dari master akun
+            $akun = $akunModel->find($idAkun);
+            $saldoAwal = $akun ? (float) $akun['saldo_awal'] : 0;
+
+            log_message('debug', "[getSaldoAwalAkun] Akun $idAkun ($bulan/$tahun): pakai saldo_awal dari master akun = $saldoAwal");
+
+            return $saldoAwal;
+
+        } catch (\Throwable $e) {
+            log_message('error', "[getSaldoAwalAkun] Error akun $idAkun ($bulan/$tahun): " . $e->getMessage());
             return 0;
         }
     }
+
 
     /**
      * Mengupdate ringkasan saldo (awal, D/K, akhir) untuk suatu akun

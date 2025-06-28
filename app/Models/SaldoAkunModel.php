@@ -197,5 +197,96 @@ class SaldoAkunModel extends Model
         log_message('debug', '[SaldoAkunModel::getNeracaComparativeData] Result Count: ' . count($result));
         return $result;
     }
+    public function getSaldoByAkunAndPeriode($idAkun, $startDate, $endDate)
+    {
+        return $this->db->table('buku_besar')
+            ->select('SUM(debit) AS debit, SUM(kredit) AS kredit')
+            ->where('id_akun', $idAkun)
+            ->where('tanggal >=', $startDate)
+            ->where('tanggal <=', $endDate)
+            ->get()
+            ->getRow(); // Hasil berupa objek: ->debit, ->kredit
+    }
+    public function getSaldoAkhir($idAkun, $endDate, $jenis = 'AKTIVA')
+    {
+        $tahun = date('Y', strtotime($endDate));
+        $bulan = date('n', strtotime($endDate));
+        $startOfMonth = date('Y-m-01', strtotime($endDate));
+
+        $saldoAwal = $this->db->table('saldo_akun')
+            ->select('saldo_awal')
+            ->where('id_akun', $idAkun)
+            ->where('tahun', $tahun)
+            ->get()
+            ->getRow();
+
+        if (!$saldoAwal) {
+            $saldoAwal = $this->db->table('saldo_akun')
+                ->select('saldo_awal')
+                ->where('id_akun', $idAkun)
+                ->orderBy('tahun', 'DESC')
+                ->limit(1)
+                ->get()
+                ->getRow();
+        }
+
+        // Tentukan rumus sesuai jenis akun
+        $mutasiSelect = ($jenis === 'AKTIVA') ? 'SUM(debit - kredit) as saldo' : 'SUM(kredit - debit) as saldo';
+
+        // Kalau bulan Januari
+        if ((int) $bulan === 1) {
+            $mutasi = $this->db->table('buku_besar')
+                ->select($mutasiSelect)
+                ->where('id_akun', $idAkun)
+                ->where('tanggal >=', $startOfMonth)
+                ->where('tanggal <=', $endDate)
+                ->get()
+                ->getRow();
+
+            return (object) [
+                'saldo' => ($saldoAwal->saldo_awal ?? 0) + ($mutasi->saldo ?? 0)
+            ];
+        }
+
+        // Selain Januari: hitung dari saldo bulan lalu
+        $prevEndDate = date('Y-m-t', strtotime("-1 month", strtotime($startOfMonth)));
+        $saldoBulanLalu = $this->getSaldoAkhir($idAkun, $prevEndDate, $jenis);
+
+        $mutasi = $this->db->table('buku_besar')
+            ->select($mutasiSelect)
+            ->where('id_akun', $idAkun)
+            ->where('tanggal >=', $startOfMonth)
+            ->where('tanggal <=', $endDate)
+            ->get()
+            ->getRow();
+
+        return (object) [
+            'saldo' => ($saldoBulanLalu->saldo ?? 0) + ($mutasi->saldo ?? 0)
+        ];
+    }
+
+
+    public function getSaldoDenganSaldoAwal($idAkun, $startDate, $endDate)
+    {
+        // Ambil saldo awal dari tabel khusus
+        $saldoAwal = $this->db->table('saldo_akun')
+            ->select('saldo_awal')
+            ->where('id_akun', $idAkun)
+            ->get()
+            ->getRow();
+
+        // Transaksi dari buku besar
+        $transaksi = $this->db->table('buku_besar')
+            ->select('SUM(debit - kredit) as saldo')
+            ->where('id_akun', $idAkun)
+            ->where('tanggal >=', $startDate)
+            ->where('tanggal <=', $endDate)
+            ->get()
+            ->getRow();
+        // Hitung saldo akhir
+
+        $totalSaldo = ($saldoAwal->saldo ?? 0) + ($transaksi->saldo ?? 0);
+        return (object) ['saldo' => $totalSaldo];
+    }
 
 } // End Class

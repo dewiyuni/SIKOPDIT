@@ -96,4 +96,6 @@ class JurnalKasModel extends Model
 
         return $query->getRow() ? $query->getRow()->jumlah : 0;
     }
+
+
 }
