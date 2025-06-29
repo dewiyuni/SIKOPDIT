@@ -64,28 +64,64 @@ class AkunModel extends Model
     {
         $db = \Config\Database::connect();
 
-        // Bangun query SQL dengan perhitungan saldo akhir dinamis
-        $sql = "
-            SELECT
-                a.id, a.kode_akun, a.nama_akun, a.kategori, a.jenis, a.saldo_awal,
-                COALESCE(sa.saldo_awal, a.saldo_awal) as saldo_bulan_ini,
-                COALESCE(sa.total_debit, 0) as total_debit,
-                COALESCE(sa.total_kredit, 0) as total_kredit,
-                (COALESCE(sa.saldo_awal, a.saldo_awal) + COALESCE(sa.total_debit, 0) - COALESCE(sa.total_kredit, 0)) AS saldo_akhir
-            FROM
-                akun a
-            LEFT JOIN
-                saldo_akun sa ON a.id = sa.id_akun AND sa.bulan = ? AND sa.tahun = ?
-            WHERE
-                a.kategori = ?
-            ORDER BY
-                a.kode_akun ASC
-        ";
+        // Ambil semua akun dalam kategori
+        $akunList = $db->table('akun')
+            ->where('kategori', $kategori)
+            ->orderBy('kode_akun', 'ASC')
+            ->get()
+            ->getResultArray();
 
-        $query = $db->query($sql, [$bulan, $tahun, $kategori]);
+        $result = [];
 
-        return $query->getResultArray();
+        foreach ($akunList as $akun) {
+            $idAkun = $akun['id'];
+
+            // Ambil saldo bulan ini jika ada
+            $saldo = $db->table('saldo_akun')
+                ->where(['id_akun' => $idAkun, 'bulan' => $bulan, 'tahun' => $tahun])
+                ->get()
+                ->getRowArray();
+
+            // Tentukan saldo_awal
+            if ((int) $bulan === 1) {
+                // Januari: pakai saldo_awal dari tabel akun
+                $saldo_awal = $akun['saldo_awal'];
+            } else {
+                // Ambil saldo_akhir bulan sebelumnya
+                $prevBulan = (int) $bulan - 1;
+                $prevTahun = $tahun;
+                if ($bulan == 1) {
+                    $prevBulan = 12;
+                    $prevTahun = $tahun - 1;
+                }
+
+                $saldo_prev = $db->table('saldo_akun')
+                    ->where(['id_akun' => $idAkun, 'bulan' => $prevBulan, 'tahun' => $prevTahun])
+                    ->get()
+                    ->getRowArray();
+
+                $saldo_awal = $saldo_prev['saldo_akhir'] ?? 0;
+            }
+
+            // Siapkan data akhir
+            $total_debit = $saldo['total_debit'] ?? 0;
+            $total_kredit = $saldo['total_kredit'] ?? 0;
+            $saldo_akhir = $saldo_awal + $total_debit - $total_kredit;
+
+            $result[] = [
+                'kode_akun' => $akun['kode_akun'],
+                'nama_akun' => $akun['nama_akun'],
+                'jenis' => $akun['jenis'],
+                'saldo_bulan_ini' => $saldo_awal,
+                'total_debit' => $total_debit,
+                'total_kredit' => $total_kredit,
+                'saldo_akhir' => $saldo_akhir,
+            ];
+        }
+
+        return $result;
     }
+
 
     // Fungsi getAkunWithSaldo bisa diupdate serupa jika digunakan di tempat lain
     public function getAkunWithSaldo($bulan, $tahun)

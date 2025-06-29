@@ -144,37 +144,6 @@ class BukuBesarController extends BaseController
             }
 
             if ($result) {
-                $bulanBerikutnya = $bulan == 12 ? 1 : $bulan + 1;
-                $tahunBerikutnya = $bulan == 12 ? $tahun + 1 : $tahun;
-
-                $dataAkun = $this->akunModel->getAkunWithSaldo($bulan, $tahun); // Ambil saldo akhir
-
-                $db = \Config\Database::connect();
-                foreach ($dataAkun as $akun) {
-                    $idAkun = $akun['id'];
-                    $saldoAkhir = $akun['saldo_akhir'];
-
-                    // Cek apakah sudah ada entri untuk bulan berikutnya
-                    $cek = $db->table('saldo_akun')
-                        ->where([
-                            'id_akun' => $idAkun,
-                            'bulan' => $bulanBerikutnya,
-                            'tahun' => $tahunBerikutnya
-                        ])->get()->getRow();
-
-                    if (!$cek) {
-                        // Masukkan saldo akhir ke saldo_awal bulan berikutnya
-                        $db->table('saldo_akun')->insert([
-                            'id_akun' => $idAkun,
-                            'bulan' => $bulanBerikutnya,
-                            'tahun' => $tahunBerikutnya,
-                            'saldo_awal' => $saldoAkhir,
-                            'total_debit' => 0,
-                            'total_kredit' => 0,
-                            'created_at' => date('Y-m-d H:i:s'),
-                        ]);
-                    }
-                }
                 $session->setFlashdata('success', 'Jurnal berhasil diproses ke Buku Besar menggunakan pemetaan.');
                 return redirect()->to(base_url('admin/buku_besar?bulan=' . $bulan . '&tahun=' . $tahun));
             } else {
@@ -1020,6 +989,8 @@ class BukuBesarController extends BaseController
     }
     public function neraca()
     {
+        $db = \Config\Database::connect();
+
         $bulan = $this->request->getGet('bulan') ?? date('n');
         $tahun = $this->request->getGet('tahun') ?? date('Y');
         $prevBulan = $bulan - 1;
@@ -1036,16 +1007,29 @@ class BukuBesarController extends BaseController
 
         $mapping = $this->MappingModel->orderBy('urutan', 'ASC')->findAll();
         $laporan = [];
+        $startOfMonth = "$tahun-$bulan-01";
+        $endOfMonth = date("Y-m-t", strtotime($startOfMonth));
+
+        // CEK APAKAH ADA TRANSAKSI DI BULAN INI SECARA GLOBAL
+        $adaTransaksiBulanIni = $db->table('buku_besar')
+            ->where('tanggal >=', $startOfMonth)
+            ->where('tanggal <=', $endOfMonth)
+            ->countAllResults() > 0;
 
         foreach ($mapping as $row) {
             $jenis = $row['jenis']; // ambil jenis dari mapping
 
             // SALDO BULAN INI
-            $utama = $this->saldoAkunModel->getSaldoAkhir($row['id_akun_utama'], $endDate, $jenis);
-            $pengurang = $this->saldoAkunModel->getSaldoAkhir($row['id_akun_pengurang'], $endDate, $jenis);
+            if ($adaTransaksiBulanIni) {
+                $utama = $this->saldoAkunModel->getSaldoAkhir($row['id_akun_utama'], $endDate, $jenis);
+                $pengurang = $this->saldoAkunModel->getSaldoAkhir($row['id_akun_pengurang'], $endDate, $jenis);
 
-            $saldoPengurangNow = (!empty($row['id_akun_pengurang']) && $pengurang) ? $pengurang->saldo : 0;
-            $saldoAkhir = ($utama->saldo ?? 0) - abs($saldoPengurangNow);
+                $saldoPengurangNow = (!empty($row['id_akun_pengurang']) && $pengurang) ? $pengurang->saldo : 0;
+                $saldoAkhir = ($utama->saldo ?? 0) - abs($saldoPengurangNow);
+            } else {
+                // Tidak ada transaksi bulan ini → saldo = 0
+                $saldoAkhir = 0;
+            }
 
             // SALDO BULAN SEBELUMNYA
             $prevStart = "$prevTahun-$prevBulan-01";
