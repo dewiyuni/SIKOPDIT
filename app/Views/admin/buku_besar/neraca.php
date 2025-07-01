@@ -63,29 +63,67 @@ $namaBulanPrev = $bulanNames[$prevBulan] ?? "Bulan_" . $prevBulan;
                         <tbody>
                             <?php
                             $no = 1;
-                            $grand_total_aset_current = 0;
-                            $grand_total_aset_prev = 0;
+                            $total_aktiva_now = 0;
+                            $total_aktiva_prev = 0;
                             ?>
-                            <?php foreach ($aktiva as $a): ?>
+
+                            <?php foreach ($aktiva as $kategori => $kelompok): ?>
+                                <tr class="table-secondary fw-bold">
+                                    <td colspan="4"><?= esc($kategori) ?></td>
+                                </tr>
+
                                 <?php
-                                $grand_total_aset_current += $a['saldo_now'] ?? 0;
-                                $grand_total_aset_prev += $a['saldo_prev'] ?? 0;
+                                $sub_total_now = 0;
+                                $sub_total_prev = 0;
                                 ?>
-                                <tr>
-                                    <td class="text-center"><?= $no++ ?></td>
-                                    <td><?= esc($a['nama']) ?></td>
-                                    <td class="text-end"><?= formatNumber($a['saldo_now'] ?? 0) ?></td>
-                                    <td class="text-end"><?= formatNumber($a['saldo_prev'] ?? 0) ?></td>
+
+                                <?php foreach ($kelompok as $p): ?>
+                                    <?php
+                                    $isSub = ($p['tipe'] ?? 'normal') === 'sub';
+
+                                    // Untuk ASET TETAP, hanya jumlahkan tipe sub
+                                    if ($kategori === 'ASET TETAP') {
+                                        if ($isSub) {
+                                            $total_aktiva_now += $p['saldo_now'] ?? 0;
+                                            $total_aktiva_prev += $p['saldo_prev'] ?? 0;
+
+                                            $sub_total_now += $p['saldo_now'] ?? 0;
+                                            $sub_total_prev += $p['saldo_prev'] ?? 0;
+                                        }
+                                    } else {
+                                        // ASET LANCAR dan TAK LANCAR: jumlahkan semua
+                                        $total_aktiva_now += $p['saldo_now'] ?? 0;
+                                        $total_aktiva_prev += $p['saldo_prev'] ?? 0;
+
+                                        $sub_total_now += $p['saldo_now'] ?? 0;
+                                        $sub_total_prev += $p['saldo_prev'] ?? 0;
+                                    }
+                                    ?>
+                                    <tr>
+                                        <td class="text-center"><?= $no++ ?></td>
+                                        <td><?= esc($p['nama']) ?></td>
+                                        <td class="text-end"><?= formatNumber($p['saldo_now'] ?? 0) ?></td>
+                                        <td class="text-end"><?= formatNumber($p['saldo_prev'] ?? 0) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+
+                                <!-- Subtotal -->
+                                <tr class="fw-bold text-primary">
+                                    <td colspan="2" class="text-end">Subtotal <?= esc($kategori) ?></td>
+                                    <td class="text-end"><?= formatNumber($sub_total_now) ?></td>
+                                    <td class="text-end"><?= formatNumber($sub_total_prev) ?></td>
                                 </tr>
                             <?php endforeach; ?>
+
                             <tr class="fw-bold">
-                                <td colspan="2" class="text-center">Total AKTIVA</td>
-                                <td class="text-end"><?= formatNumber($grand_total_aset_current) ?></td>
-                                <td class="text-end"><?= formatNumber($grand_total_aset_prev) ?></td>
+                                <td colspan="2" class="text-center">Total aktiva</td>
+                                <td class="text-end"><?= formatNumber($total_aktiva_now) ?></td>
+                                <td class="text-end"><?= formatNumber($total_aktiva_prev) ?></td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
+                <!-- PASSIVA -->
                 <div class="col-md-6">
                     <h5 class="text-primary">PASIVA</h5>
                     <table class="table table-bordered table-sm">
@@ -108,10 +146,19 @@ $namaBulanPrev = $bulanNames[$prevBulan] ?? "Bulan_" . $prevBulan;
                                 <tr class="table-secondary fw-bold">
                                     <td colspan="4"><?= esc($jenis) ?></td>
                                 </tr>
+
+                                <?php
+                                $sub_total_now = 0;
+                                $sub_total_prev = 0;
+                                ?>
+
                                 <?php foreach ($kelompok as $p): ?>
                                     <?php
                                     $total_pasiva_now += $p['saldo_now'] ?? 0;
                                     $total_pasiva_prev += $p['saldo_prev'] ?? 0;
+
+                                    $sub_total_now += $p['saldo_now'] ?? 0;
+                                    $sub_total_prev += $p['saldo_prev'] ?? 0;
                                     ?>
                                     <tr>
                                         <td class="text-center"><?= $no++ ?></td>
@@ -119,8 +166,16 @@ $namaBulanPrev = $bulanNames[$prevBulan] ?? "Bulan_" . $prevBulan;
                                         <td class="text-end"><?= formatNumber($p['saldo_now'] ?? 0) ?></td>
                                         <td class="text-end"><?= formatNumber($p['saldo_prev'] ?? 0) ?></td>
                                     </tr>
-                                <?php endforeach ?>
-                            <?php endforeach ?>
+                                <?php endforeach; ?>
+
+                                <!-- ⬇️ Subtotal per kategori PASIVA -->
+                                <tr class="fw-bold text-primary">
+                                    <td colspan="2" class="text-end">Subtotal <?= esc($jenis) ?></td>
+                                    <td class="text-end"><?= formatNumber($sub_total_now) ?></td>
+                                    <td class="text-end"><?= formatNumber($sub_total_prev) ?></td>
+                                </tr>
+
+                            <?php endforeach; ?>
 
                             <tr class="fw-bold">
                                 <td colspan="2" class="text-center">Total PASIVA</td>

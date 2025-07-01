@@ -16,7 +16,7 @@ class MappingAkunNeraca extends Migration
             ],
             'nama_laporan' => [
                 'type' => 'VARCHAR',
-                'constraint' => 100
+                'constraint' => 50
             ],
             'id_akun_utama' => [
                 'type' => 'INT',
@@ -27,10 +27,23 @@ class MappingAkunNeraca extends Migration
                 'unsigned' => true,
                 'null' => true
             ],
+            'tipe' => [
+                'type' => 'ENUM',
+                'constraint' => ['normal', 'sub'],
+                'default' => 'normal',
+                'null' => false,
+            ],
             'jenis' => [
                 'type' => 'ENUM',
-                'constraint' => ['AKTIVA', 'KEWAJIBAN JANGKA PENDEK', 'KEWAJIBAN JANGKA PANJANG', 'EKUITAS']
+                'constraint' => ['AKTIVA', 'PASIVA']
             ],
+            'kategori_jenis' => [
+                'type' => 'ENUM',
+                'constraint' => ['ASET LANCAR', 'ASET TAK LANCAR', 'ASET TETAP', 'KEWAJIBAN JANGKA PENDEK', 'KEWAJIBAN JANGKA PANJANG', 'EKUITAS'],
+                'default' => 'ASET LANCAR',
+                'null' => false
+            ],
+
             'urutan' => [
                 'type' => 'INT',
                 'default' => 0

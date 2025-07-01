@@ -57,7 +57,7 @@ class AkunSeeder extends Seeder
             ['kode_akun' => 'PND008', 'nama_akun' => 'Jasa Piutang', 'kategori' => 'PENDAPATAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'DAC002', 'nama_akun' => 'Penyisihan Dana Pemilihan Pengurus', 'kategori' => 'MODAL', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'PIN002', 'nama_akun' => 'Pinjaman dari Bank Pembangunan Daerah (BPD)', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
-            ['kode_akun' => 'RIS001', 'nama_akun' => 'Risiko (Re) 0,5%', 'kategori' => 'BEBAN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
+            ['kode_akun' => 'RIS001', 'nama_akun' => 'Risiko (Re) 0,5%', 'kategori' => 'BEBAN', 'jenis' => 'Debit', 'saldo_awal' => 200845475, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'SIM001', 'nama_akun' => 'Simpanan Non-Saham', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 584981000, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'SIM006', 'nama_akun' => 'Jasa Simpanan Non-Saham', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 102580000, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'SIM002', 'nama_akun' => 'Simpanan Pokok (SP)', 'kategori' => 'MODAL', 'jenis' => 'Kredit', 'saldo_awal' => 10070000, 'created_at' => $now, 'updated_at' => $now],
@@ -67,10 +67,10 @@ class AkunSeeder extends Seeder
             ['kode_akun' => 'TDP001', 'nama_akun' => 'Titipan Dana Kesejahteraan', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 68551000.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'TDP002', 'nama_akun' => 'Titipan Tunjangan Pesangon Karyawan', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'TDP003', 'nama_akun' => 'Titipan Dana RAT', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
-            ['kode_akun' => 'TDP004', 'nama_akun' => 'Titipan Dana Pendampingan', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
+            ['kode_akun' => 'TDP004', 'nama_akun' => 'Titipan Dana Pendampingan', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 4550000, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'TDP005', 'nama_akun' => 'Titipan Penyisihan Pajak SHU', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'PND004', 'nama_akun' => 'Pendapatan Lain-lain', 'kategori' => 'PENDAPATAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
-            ['kode_akun' => 'PND005', 'nama_akun' => 'Pendapatan Hibah', 'kategori' => 'PENDAPATAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
+            ['kode_akun' => 'PND005', 'nama_akun' => 'Pendapatan Hibah', 'kategori' => 'PENDAPATAN', 'jenis' => 'Kredit', 'saldo_awal' => 35171455, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'PND006', 'nama_akun' => 'Pendapatan Jasa Simpanan Bank', 'kategori' => 'PENDAPATAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'PND007', 'nama_akun' => 'Pendapatan Jasa Deposito', 'kategori' => 'PENDAPATAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'TDP006', 'nama_akun' => 'Titipan Pajak Jasa Non Saham', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
@@ -150,9 +150,9 @@ class AkunSeeder extends Seeder
             ['kode_akun' => 'AUTO060', 'nama_akun' => 'Denda Pajak', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'AUTO061', 'nama_akun' => 'Biaya Pemilihan Pengawas/Pengurus', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'AUTO062', 'nama_akun' => 'Biaya BPJS', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
-            ['kode_akun' => 'AUTO063', 'nama_akun' => 'Penyisihan Tunjangan Pensiun Karyawan', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
+            ['kode_akun' => 'AUTO063', 'nama_akun' => 'Penyisihan Tunjangan Pensiun Karyawan', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 6600000, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'AUTO064', 'nama_akun' => 'Cadangan Aktiva Produktif (CAP)', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
-            ['kode_akun' => 'AUTO065', 'nama_akun' => 'Penyisihan Dana Rapat Tahunan (RAT)', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Kredit', 'saldo_awal' => 11125000, 'created_at' => $now, 'updated_at' => $now],
+            ['kode_akun' => 'AUTO065', 'nama_akun' => 'Penyisihan Dana Rapat Tahunan (RAT)', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 11125000, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'AUTO066', 'nama_akun' => 'Penyisihan Dana Kesejahteraan', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'AUTO067', 'nama_akun' => 'Penyertaan Modal Tetap', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'AUTO069', 'nama_akun' => 'Proyektor', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
@@ -209,7 +209,7 @@ class AkunSeeder extends Seeder
             ['kode_akun' => 'KJP004', 'nama_akun' => 'Titipan CAP', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'KJP005', 'nama_akun' => 'Titipan Biaya Pajak', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 42368900, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'KJP007', 'nama_akun' => 'Pemupukan Modal Tetap', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 127500000, 'created_at' => $now, 'updated_at' => $now],
-            ['kode_akun' => 'KJP008', 'nama_akun' => 'Tabungan Pesangon Karyawan', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 6600000, 'created_at' => $now, 'updated_at' => $now],
+            ['kode_akun' => 'KJP008', 'nama_akun' => 'Tabungan Pesangon Karyawan', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'KJP009', 'nama_akun' => 'Pinjaman Pihak Ke 2', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 20300815, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'ML001', 'nama_akun' => 'Iuran Dana Sehat', 'kategori' => 'MODAL', 'jenis' => 'Kredit', 'saldo_awal' => 329550, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'ML002', 'nama_akun' => 'Cadangan Likuiditas', 'kategori' => 'MODAL', 'jenis' => 'Kredit', 'saldo_awal' => 74000000, 'created_at' => $now, 'updated_at' => $now],
@@ -217,6 +217,10 @@ class AkunSeeder extends Seeder
             ['kode_akun' => 'ML004', 'nama_akun' => 'Dana Risiko', 'kategori' => 'MODAL', 'jenis' => 'Kredit', 'saldo_awal' => 200845475, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'ML005', 'nama_akun' => 'PJKR', 'kategori' => 'MODAL', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'ML006', 'nama_akun' => 'SHU', 'kategori' => 'MODAL', 'jenis' => 'Kredit', 'saldo_awal' => 70962636, 'created_at' => $now, 'updated_at' => $now],
+
+            ['kode_akun' => 'AUTO091', 'nama_akun' => 'Biaya Penyusutan Inventaris Tanah', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 17000000, 'created_at' => $now, 'updated_at' => $now],
+            ['kode_akun' => 'AST006', 'nama_akun' => 'Akumulasi Penyusutan Inventaris Tanah', 'kategori' => 'ASSET', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
+
         ];
 
         // Menggunakan Query Builder untuk insert batch

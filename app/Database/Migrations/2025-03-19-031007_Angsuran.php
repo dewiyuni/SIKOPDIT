@@ -25,13 +25,13 @@ class Angsuran extends Migration
             ],
             'bunga' => [
                 'type' => 'DECIMAL',
-                'constraint' => '10,2',
+                'constraint' => '5,2',
                 'default' => 2,
                 'null' => false,
             ],
             'denda' => [
                 'type' => 'DECIMAL',
-                'constraint' => '10,2',
+                'constraint' => '5,2',
                 'default' => 1,
                 'null' => false,
             ],

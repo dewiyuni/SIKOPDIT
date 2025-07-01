@@ -1044,32 +1044,66 @@ class BukuBesarController extends BaseController
             $laporan[] = [
                 'nama' => $row['nama_laporan'],
                 'jenis' => $jenis,
+                'kategori_jenis' => $row['kategori_jenis'] ?? null,
+                'tipe' => $row['tipe'] ?? 'normal',
                 'urutan' => $row['urutan'],
                 'saldo_now' => $saldoAkhir,
                 'saldo_prev' => $saldoAkhirPrev
             ];
 
+
         }
 
         // Filter & urutkan
         // Kelompokkan ke dalam 2 array utama: aktiva & pasiva
-        $aktiva = array_filter($laporan, fn($item) => $item['jenis'] === 'AKTIVA');
+        $aktiva = [];
+        $kategoriAktiva = ['ASET LANCAR', 'ASET TAK LANCAR', 'ASET TETAP'];
 
-        // PASIVA berisi beberapa jenis
-        $jenisPasiva = ['KEWAJIBAN JANGKA PENDEK', 'KEWAJIBAN JANGKA PANJANG', 'EKUITAS'];
-        $pasiva = [];
-
-        foreach ($jenisPasiva as $jenis) {
-            $group = array_filter($laporan, fn($item) => trim($item['jenis']) === $jenis);
+        foreach ($kategoriAktiva as $kategoriA) {
+            $group = array_filter(
+                $laporan,
+                fn($item) =>
+                $item['jenis'] === 'AKTIVA' && $item['kategori_jenis'] === $kategoriA
+            );
             usort($group, fn($a, $b) => $a['urutan'] <=> $b['urutan']);
-            $pasiva[$jenis] = $group;
+            $aktiva[$kategoriA] = $group;
         }
 
-        usort($aktiva, fn($a, $b) => $a['urutan'] <=> $b['urutan']);
+        // PASIVA berisi beberapa jenis
+        $pasiva = [];
+        $kategoriPasiva = ['KEWAJIBAN JANGKA PENDEK', 'KEWAJIBAN JANGKA PANJANG', 'EKUITAS'];
+
+        foreach ($kategoriPasiva as $kategoriP) {
+            $group = array_filter($laporan, fn($item) => trim($item['jenis']) === 'PASIVA' && $item['kategori_jenis'] === $kategoriP);
+            usort($group, fn($a, $b) => $a['urutan'] <=> $b['urutan']);
+            $pasiva[$kategoriP] = $group;
+        }
+
+        $grand_total_aset_current = 0;
+        $grand_total_aset_prev = 0;
+        foreach ($aktiva as $list) {
+            foreach ($list as $row) {
+                $grand_total_aset_current += $row['saldo_now'];
+                $grand_total_aset_prev += $row['saldo_prev'];
+            }
+        }
+
+        $grand_total_pasiva_current = 0;
+        $grand_total_pasiva_prev = 0;
+        foreach ($pasiva as $list) {
+            foreach ($list as $row) {
+                $grand_total_pasiva_current += $row['saldo_now'];
+                $grand_total_pasiva_prev += $row['saldo_prev'];
+            }
+        }
 
         return view('admin/buku_besar/neraca', [
             'aktiva' => $aktiva,
             'pasiva' => $pasiva,
+            'grand_total_aset_current' => $grand_total_aset_current,
+            'grand_total_aset_prev' => $grand_total_aset_prev,
+            'grand_total_pasiva_current' => $grand_total_pasiva_current,
+            'grand_total_pasiva_prev' => $grand_total_pasiva_prev,
             'namaBulanCurrent' => $this->bulanNames[(int) $bulan] ?? 'Bulan Tidak Diketahui',
             'tahun' => $tahun,
             'bulan' => $bulan,

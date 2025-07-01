@@ -30,10 +30,10 @@ class PemetaanSeeder extends Seeder
             ['pola_uraian' => 'Titipan Dana Kesejahteraan%', 'kategori_jurnal' => 'DUM', 'id_akun_debit' => 1, 'id_akun_kredit' => 40, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
             ['pola_uraian' => 'Titipan Tunjangan Pesangon Karyawan%', 'kategori_jurnal' => 'DUM', 'id_akun_debit' => 1, 'id_akun_kredit' => 41, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
             ['pola_uraian' => 'Uang Pangkal%', 'kategori_jurnal' => 'DUM', 'id_akun_debit' => 1, 'id_akun_kredit' => 10, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
-            ['pola_uraian' => 'Akumulasi Penyusutan Inventaris Komputer%', 'kategori_jurnal' => 'DUM', 'id_akun_debit' => 1, 'id_akun_kredit' => 4, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
-            ['pola_uraian' => 'Akumulasi Penyusutan Inventaris Mebel%', 'kategori_jurnal' => 'DUM', 'id_akun_debit' => 1, 'id_akun_kredit' => 5, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
-            ['pola_uraian' => 'Akumulasi Penyusutan Inventaris Kendaraan%', 'kategori_jurnal' => 'DUM', 'id_akun_debit' => 1, 'id_akun_kredit' => 7, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
-            ['pola_uraian' => 'Akumulasi Penyusutan Inventaris Gedung%', 'kategori_jurnal' => 'DUM', 'id_akun_debit' => 1, 'id_akun_kredit' => 6, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
+            ['pola_uraian' => 'Akumulasi Penyusutan Inventaris Komputer%', 'kategori_jurnal' => 'DUM', 'id_akun_debit' => 4, 'id_akun_kredit' => 1, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
+            ['pola_uraian' => 'Akumulasi Penyusutan Inventaris Mebel%', 'kategori_jurnal' => 'DUM', 'id_akun_debit' => 5, 'id_akun_kredit' => 1, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
+            ['pola_uraian' => 'Akumulasi Penyusutan Inventaris Kendaraan%', 'kategori_jurnal' => 'DUM', 'id_akun_debit' => 7, 'id_akun_kredit' => 1, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
+            ['pola_uraian' => 'Akumulasi Penyusutan Inventaris Gedung%', 'kategori_jurnal' => 'DUM', 'id_akun_debit' => 6, 'id_akun_kredit' => 1, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
             ['pola_uraian' => 'Pendapatan Jasa Pinjaman%', 'kategori_jurnal' => 'DUM', 'id_akun_debit' => 1, 'id_akun_kredit' => 29, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
             ['pola_uraian' => 'Titipan Dana RAT%', 'kategori_jurnal' => 'DUM', 'id_akun_debit' => 1, 'id_akun_kredit' => 42, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
             ['pola_uraian' => 'Titipan Dana Pendampingan%', 'kategori_jurnal' => 'DUM', 'id_akun_debit' => 1, 'id_akun_kredit' => 43, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
@@ -205,6 +205,8 @@ class PemetaanSeeder extends Seeder
             ['pola_uraian' => 'Tarik Dana Insentif PP%', 'kategori_jurnal' => 'DUK', 'id_akun_debit' => 151, 'id_akun_kredit' => 1, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
             ['pola_uraian' => 'Investasi%', 'kategori_jurnal' => 'DUK', 'id_akun_debit' => 22, 'id_akun_kredit' => 1, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
 
+            ['pola_uraian' => 'Biaya Penyusutan Inventaris Tanah%', 'kategori_jurnal' => 'DUK', 'id_akun_debit' => 188, 'id_akun_kredit' => 1, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
+            ['pola_uraian' => 'Akumulasi Penyusutan Inventaris Tanah%', 'kategori_jurnal' => 'DUM', 'id_akun_debit' => 189, 'id_akun_kredit' => 1, 'prioritas' => 0, 'deskripsi' => '', 'created_at' => $now, 'updated_at' => $now],
 
         ];
         // Insert data ke database
