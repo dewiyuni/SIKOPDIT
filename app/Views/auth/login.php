@@ -56,7 +56,8 @@
         <h2 class="text-center mb-3">Login</h2>
         <img src="<?= base_url("assets/logo.png") ?>" alt="Logo" class="logo">
 
-        <form action="/auth/authenticate" method="POST">
+        <form action="<?= site_url('auth/authenticate') ?>" method="POST">
+            <input type="hidden" name="csrf_token" value="<?= csrf_hash() ?>">
             <?= csrf_field(); ?>
             <?php if (session()->getFlashdata('error')): ?>
                 <div class="alert alert-danger"><?= session()->getFlashdata('error') ?></div>

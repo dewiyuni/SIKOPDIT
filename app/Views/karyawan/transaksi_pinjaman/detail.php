@@ -4,7 +4,6 @@
 <div class="container">
     <div class="row">
         <div class="col-12">
-            <!-- Header Section -->
             <div class="card p-3 mt-3">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h3 class="mb-0">Detail Pinjaman</h3>
@@ -21,7 +20,6 @@
                     </div>
                 </div>
 
-                <!-- Member & Loan Information -->
                 <div class="row mb-4">
                     <div class="col-md-6 mb-3 mb-md-0">
                         <div class="card bg-light h-100">
@@ -65,7 +63,6 @@
                     </div>
                 </div>
 
-                <!-- Payment Summary -->
                 <div class="row mb-3">
                     <div class="col-12">
                         <div class="card">
@@ -75,16 +72,13 @@
                             <div class="card-body px-md-4">
                                 <div class="row justify-content-center align-items-center text-center">
 
-                                    <!-- Kolom Total Pokok Dibayar -->
                                     <div class="col-lg-3 col-md-6 mb-3">
                                         <div class="h5">Total Pokok Dibayar</div>
-                                        <!-- PERBAIKAN: Gabungkan Rp dan nilai dalam satu elemen -->
                                         <h3 class="text-success fw-bold">
                                             Rp <?= number_format($totalAngsuran, 0, ',', '.') ?>
                                         </h3>
                                     </div>
 
-                                    <!-- Kolom Sisa Pinjaman -->
                                     <div class="col-lg-3 col-md-6 mb-3">
                                         <div class="h5">Sisa Pinjaman</div>
                                         <h3 class="text-danger fw-bold">
@@ -92,7 +86,6 @@
                                         </h3>
                                     </div>
 
-                                    <!-- Kolom Total Bunga -->
                                     <div class="col-lg-2 col-md-4 mb-3">
                                         <div class="h5">Total Bunga</div>
                                         <h3 class="text-primary fw-bold">
@@ -100,7 +93,6 @@
                                         </h3>
                                     </div>
 
-                                    <!-- Kolom Total Denda -->
                                     <div class="col-lg-2 col-md-4 mb-3">
                                         <div class="h5">Total Denda</div>
                                         <h3 class="text-warning fw-bold">
@@ -108,7 +100,6 @@
                                         </h3>
                                     </div>
 
-                                    <!-- Kolom Status -->
                                     <div class="col-lg-2 col-md-4 mb-3">
                                         <div class="h5">Status</div>
                                         <h3>
@@ -119,7 +110,6 @@
                                     </div>
                                 </div>
 
-                                <!-- Progress Bar -->
                                 <div class="progress mt-3" style="height: 25px;">
                                     <div class="progress-bar bg-success" role="progressbar"
                                         style="width: <?= $persentaseLunas ?>%;" aria-valuenow="<?= $persentaseLunas ?>"
@@ -133,7 +123,6 @@
                 </div>
             </div>
 
-            <!-- Installment History -->
             <div class="card p-3 mt-3">
                 <div class="d-flex justify-content-between align-items-center mb-3">
                     <h4 class="mb-0">Riwayat Angsuran</h4>
@@ -159,52 +148,44 @@
                                 <th class="no-print">Aksi</th>
                             </tr>
                         </thead>
-                        <!-- ... (thead tetap sama) ... -->
                         <tbody>
-                            <?php if (!empty($angsuran)): ?>
-                                <?php
-                                $no = 1;
-                                $saldo_awal_iterasi = $pinjaman->jumlah_pinjaman;
-                                foreach ($angsuran as $row):
-                                    $jumlah_bunga = ($row->bunga / 100) * $pinjaman->jumlah_pinjaman;
-                                    $total_bayar = $row->jumlah_angsuran + $jumlah_bunga + $row->denda;
-                                    $saldo_akhir_iterasi = $saldo_awal_iterasi - $row->jumlah_angsuran;
-                                    $bungaDisplayRow = rtrim(rtrim(number_format($row->bunga, 2, ',', '.'), '0'), ',');
-                                    ?>
-                                    <tr>
-                                        <td class="text-center"><?= $no++ ?></td>
-                                        <td><?= date('d M Y', strtotime($row->tanggal_angsuran)) ?></td>
-                                        <!-- PERBAIKAN: Tambahkan text-end untuk perataan kanan -->
-                                        <td class="text-end">Rp <?= number_format($saldo_awal_iterasi, 0, ',', '.') ?></td>
-                                        <td class="text-end">Rp <?= number_format($row->jumlah_angsuran, 0, ',', '.') ?></td>
-                                        <td class="text-center"><?= $bungaDisplayRow ?>%</td>
-                                        <td class="text-end">Rp <?= number_format($jumlah_bunga, 0, ',', '.') ?></td>
-                                        <td class="text-end">
-                                            <?= ($row->denda > 0) ? 'Rp ' . number_format($row->denda, 0, ',', '.') : '-' ?>
-                                        </td>
-                                        <td class="text-end">Rp <?= number_format($total_bayar, 0, ',', '.') ?></td>
-                                        <td class="text-end">Rp <?= number_format($saldo_akhir_iterasi, 0, ',', '.') ?></td>
-                                        <td class="no-print text-center">
-                                            <div class="btn-group">
-                                                <a href="<?= base_url('karyawan/transaksi_pinjaman/edit/' . $row->id_angsuran) ?>"
-                                                    class="btn btn-warning btn-sm"><i class="fas fa-edit"></i></a>
-                                                <button type="button" class="btn btn-danger btn-sm delete-btn"
-                                                    data-id="<?= $row->id_angsuran ?>" data-bs-toggle="modal"
-                                                    data-bs-target="#deleteConfirmModal">
-                                                    <i class="fas fa-trash"></i>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <?php
-                                    $saldo_awal_iterasi = $saldo_akhir_iterasi;
-                                endforeach;
+                            <?php
+                            $no = 1;
+                            $saldo_awal_iterasi = $pinjaman->jumlah_pinjaman;
+                            foreach ($angsuran as $row):
+                                $jumlah_bunga = ($row->bunga / 100) * $pinjaman->jumlah_pinjaman;
+                                $total_bayar = $row->jumlah_angsuran + $jumlah_bunga + $row->denda;
+                                $saldo_akhir_iterasi = $saldo_awal_iterasi - $row->jumlah_angsuran;
+                                $bungaDisplayRow = rtrim(rtrim(number_format($row->bunga, 2, ',', '.'), '0'), ',');
                                 ?>
-                            <?php else: ?>
                                 <tr>
-                                    <td colspan="10" class="text-center">Belum ada riwayat angsuran.</td>
+                                    <td class="text-center"><?= $no++ ?></td>
+                                    <td><?= date('d M Y', strtotime($row->tanggal_angsuran)) ?></td>
+                                    <td class="text-end">Rp <?= number_format($saldo_awal_iterasi, 0, ',', '.') ?></td>
+                                    <td class="text-end">Rp <?= number_format($row->jumlah_angsuran, 0, ',', '.') ?></td>
+                                    <td class="text-center"><?= $bungaDisplayRow ?>%</td>
+                                    <td class="text-end">Rp <?= number_format($jumlah_bunga, 0, ',', '.') ?></td>
+                                    <td class="text-end">
+                                        <?= ($row->denda > 0) ? 'Rp ' . number_format($row->denda, 0, ',', '.') : '-' ?>
+                                    </td>
+                                    <td class="text-end">Rp <?= number_format($total_bayar, 0, ',', '.') ?></td>
+                                    <td class="text-end">Rp <?= number_format($saldo_akhir_iterasi, 0, ',', '.') ?></td>
+                                    <td class="no-print text-center">
+                                        <div class="btn-group">
+                                            <a href="<?= base_url('karyawan/transaksi_pinjaman/edit/' . $row->id_angsuran) ?>"
+                                                class="btn btn-warning btn-sm"><i class="fas fa-edit"></i></a>
+                                            <button type="button" class="btn btn-danger btn-sm delete-btn"
+                                                data-id="<?= $row->id_angsuran ?>" data-bs-toggle="modal"
+                                                data-bs-target="#deleteConfirmModal">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
-                            <?php endif; ?>
+                                <?php
+                                $saldo_awal_iterasi = $saldo_akhir_iterasi;
+                            endforeach;
+                            ?>
                         </tbody>
                     </table>
                 </div>
@@ -213,7 +194,6 @@
     </div>
 </div>
 
-<!-- Modal Konfirmasi Hapus -->
 <div class="modal fade" id="deleteConfirmModal" tabindex="-1" aria-labelledby="deleteConfirmModalLabel"
     aria-hidden="true">
     <div class="modal-dialog">
@@ -241,9 +221,7 @@
 
 <?= $this->section('scripts') ?>
 <script>
-    // Inisialisasi DataTable dan event listener di dalam satu blok
     $(document).ready(function () {
-        // HANYA INISIALISASI DataTable SATU KALI
         $('#tabelAngsuran').DataTable({
             "responsive": true,
             "ordering": false,
@@ -252,27 +230,24 @@
             "searching": false,
             "columnDefs": [
                 { "targets": 'no-print', "visible": true, "searchable": false }
-            ]
+            ],
+            // **FIX**: Add language option to handle empty table
+            "language": {
+                "emptyTable": "Belum ada riwayat angsuran."
+            }
         });
 
-        // Event listener untuk tombol hapus
         $('.delete-btn').on('click', function () {
             const id = $(this).data('id');
             const deleteUrl = `<?= site_url('karyawan/transaksi_pinjaman/delete/') ?>${id}`;
-
-            // Debugging: Cek URL di console browser
-            console.log('Delete URL:', deleteUrl);
-
             $('#deleteForm').attr('action', deleteUrl);
         });
     });
 
-    // UPDATE: Print function is modified
     function printRiwayatAngsuran() {
-        // Data untuk header cetakan
         const namaKoperasi = "KOPERASI SIDOMANUNGGAL";
         const alamatKoperasi = "Sedan, Sidorejo, Lendah, Kulon Progo, D.I.Yogyakarta";
-        const telpKoperasi = ""; // Isi jika ada, atau biarkan kosong.
+        const telpKoperasi = "";
 
         const namaAnggota = <?= json_encode(esc($pinjaman->nama)) ?>;
         const noBa = <?= json_encode(esc($pinjaman->no_ba)) ?>;
@@ -285,15 +260,18 @@
         let tempDiv = document.createElement('div');
         tempDiv.innerHTML = tableHtml;
 
-        // Hapus kolom aksi
         let thAksi = tempDiv.querySelector('th.no-print');
         if (thAksi) thAksi.remove();
         let tdAksi = tempDiv.querySelectorAll('td.no-print');
         tdAksi.forEach(td => td.remove());
 
-        // Sesuaikan colspan untuk baris kosong jika ada
-        let emptyRow = tempDiv.querySelector('td[colspan="10"]');
-        if (emptyRow) emptyRow.setAttribute('colspan', '9'); // 10 kolom - 1 kolom aksi = 9
+        // Adjust colspan for the empty row if it exists (now handled by DataTables)
+        let emptyRow = tempDiv.querySelector('td.dataTables_empty');
+        if (emptyRow) {
+            const currentThead = document.getElementById("tabelAngsuran").querySelector('thead');
+            const columnCount = currentThead.querySelectorAll('th').length - 1; // Subtract the action column
+            emptyRow.setAttribute('colspan', columnCount);
+        }
 
         tableHtml = tempDiv.innerHTML;
 
@@ -310,7 +288,6 @@
                 .info-section td { padding: 3px 0px; vertical-align: top;}
                 .info-section td:nth-child(1) { width: 120px; font-weight: bold; }
                 .info-section td:nth-child(3) { width: 120px; font-weight: bold; }
-
                 table.table-print { width: 100%; border-collapse: collapse; margin-top: 15px; }
                 table.table-print th, table.table-print td {
                     border: 1px solid #333;
@@ -319,21 +296,18 @@
                     font-size: 9pt;
                 }
                 table.table-print th { background-color: #f2f2f2; font-weight: bold; text-align: center; }
-                table.table-print td:nth-child(1) { text-align: center; } /* No */
-                
-                /* UPDATE: CSS selector untuk perataan kanan */
-                table.table-print td:nth-child(3), /* Saldo Awal */
-                table.table-print td:nth-child(4), /* Angsuran Pokok */
-                table.table-print td:nth-child(6), /* Jumlah Bunga */
-                table.table-print td:nth-child(7), /* Denda (NEW) */
-                table.table-print td:nth-child(8), /* Total Bayar */
-                table.table-print td:nth-child(9)  /* Saldo Akhir */
+                table.table-print td.dataTables_empty { text-align: center; }
+                table.table-print td:nth-child(1) { text-align: center; }
+                table.table-print td:nth-child(3),
+                table.table-print td:nth-child(4),
+                table.table-print td:nth-child(6),
+                table.table-print td:nth-child(7),
+                table.table-print td:nth-child(8),
+                table.table-print td:nth-child(9)
                 { text-align: right; }
-                table.table-print td:nth-child(5) { text-align: center; } /* Bunga % */
-
+                table.table-print td:nth-child(5) { text-align: center; }
                 .footer-print { text-align: right; margin-top: 30px; font-size: 9pt; padding-top:10px; border-top: 1px solid #ccc;}
                 .footer-print p { margin: 0; }
-
                 @media print {
                     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
                     .no-print { display: none !important; }
@@ -380,9 +354,8 @@
             </div>
         `);
 
-        let styledTableHtml = tableHtml.replace('<table class="table table-bordered table-hover dataTable no-footer"', '<table class="table-print"');
+        let styledTableHtml = tableHtml.replace(/class=".*?"/g, 'class="table-print"');
         styledTableHtml = styledTableHtml.replace('id="tabelAngsuran"', '');
-        styledTableHtml = styledTableHtml.replace('<thead class="table-light">', '<thead>');
 
         printWindow.document.write(styledTableHtml);
 
