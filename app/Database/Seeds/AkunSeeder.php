@@ -48,7 +48,7 @@ class AkunSeeder extends Seeder
             ['kode_akun' => 'INV001', 'nama_akun' => 'Investasi', 'kategori' => 'ASSET', 'jenis' => 'Debit', 'saldo_awal' => 6800000, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'SD001', 'nama_akun' => 'Serta Data', 'kategori' => 'ASSET', 'jenis' => 'Debit', 'saldo_awal' => 135000, 'created_at' => $now, 'updated_at' => $now],
 
-            ['kode_akun' => 'PIN001', 'nama_akun' => 'Angsuran Pinjaman', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
+            ['kode_akun' => 'PIN001', 'nama_akun' => 'Angsuran Pinjaman', 'kategori' => 'PENDAPATAN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'CAP001', 'nama_akun' => 'CAP (Cadangan Aktiva Produktif)', 'kategori' => 'MODAL', 'jenis' => 'Kredit', 'saldo_awal' => 43700000, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'PND001', 'nama_akun' => 'Denda', 'kategori' => 'PENDAPATAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'FEE001', 'nama_akun' => 'Fee (Anggota Keluar)', 'kategori' => 'PENDAPATAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
@@ -65,7 +65,7 @@ class AkunSeeder extends Seeder
             ['kode_akun' => 'SIM004', 'nama_akun' => 'Simpanan Wajib (SW)', 'kategori' => 'MODAL', 'jenis' => 'Kredit', 'saldo_awal' => 275962645, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'SIM005', 'nama_akun' => 'Simpanan Wajib Pinjam (SWP)', 'kategori' => 'MODAL', 'jenis' => 'Kredit', 'saldo_awal' => 461547125, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'TDP001', 'nama_akun' => 'Titipan Dana Kesejahteraan', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 68551000.00, 'created_at' => $now, 'updated_at' => $now],
-            ['kode_akun' => 'TDP002', 'nama_akun' => 'Titipan Tunjangan Pesangon Karyawan', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
+            ['kode_akun' => 'TDP002', 'nama_akun' => 'Titipan Tunjangan Pesangon Karyawan', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 6600000, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'TDP003', 'nama_akun' => 'Titipan Dana RAT', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'TDP004', 'nama_akun' => 'Titipan Dana Pendampingan', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 4550000, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'TDP005', 'nama_akun' => 'Titipan Penyisihan Pajak SHU', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
@@ -88,7 +88,7 @@ class AkunSeeder extends Seeder
             ['kode_akun' => 'KEW002', 'nama_akun' => 'Titipan Utang Pajak SHU', 'kategori' => 'KEWAJIBAN', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'MOD010', 'nama_akun' => 'Penyisihhan Modal Simpanan Anggota', 'kategori' => 'MODAL', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
 
-            ['kode_akun' => 'AUTO001', 'nama_akun' => 'Pinjaman Anggota', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 3062648900, 'created_at' => $now, 'updated_at' => $now],
+            ['kode_akun' => 'AUTO001', 'nama_akun' => 'Pinjaman Anggota', 'kategori' => 'ASSET', 'jenis' => 'Debit', 'saldo_awal' => 3062648900, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'AUTO004', 'nama_akun' => 'Angsuran Pinjaman ke BPD', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'AUTO005', 'nama_akun' => 'Tarik Simpanan Pokok (SP)', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'AUTO006', 'nama_akun' => 'Tarik Simpanan Wajib (SW)', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
@@ -150,7 +150,7 @@ class AkunSeeder extends Seeder
             ['kode_akun' => 'AUTO060', 'nama_akun' => 'Denda Pajak', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'AUTO061', 'nama_akun' => 'Biaya Pemilihan Pengawas/Pengurus', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'AUTO062', 'nama_akun' => 'Biaya BPJS', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
-            ['kode_akun' => 'AUTO063', 'nama_akun' => 'Penyisihan Tunjangan Pensiun Karyawan', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 6600000, 'created_at' => $now, 'updated_at' => $now],
+            ['kode_akun' => 'AUTO063', 'nama_akun' => 'Penyisihan Tunjangan Pensiun Karyawan', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'AUTO064', 'nama_akun' => 'Cadangan Aktiva Produktif (CAP)', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'AUTO065', 'nama_akun' => 'Penyisihan Dana Rapat Tahunan (RAT)', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 11125000, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'AUTO066', 'nama_akun' => 'Penyisihan Dana Kesejahteraan', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
@@ -218,7 +218,7 @@ class AkunSeeder extends Seeder
             ['kode_akun' => 'ML005', 'nama_akun' => 'PJKR', 'kategori' => 'MODAL', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'ML006', 'nama_akun' => 'SHU', 'kategori' => 'MODAL', 'jenis' => 'Kredit', 'saldo_awal' => 70962636, 'created_at' => $now, 'updated_at' => $now],
 
-            ['kode_akun' => 'AUTO091', 'nama_akun' => 'Biaya Penyusutan Inventaris Tanah', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 17000000, 'created_at' => $now, 'updated_at' => $now],
+            ['kode_akun' => 'AUTO091', 'nama_akun' => 'Biaya Penyusutan Inventaris Tanah', 'kategori' => 'LAIN-LAIN', 'jenis' => 'Debit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
             ['kode_akun' => 'AST006', 'nama_akun' => 'Akumulasi Penyusutan Inventaris Tanah', 'kategori' => 'ASSET', 'jenis' => 'Kredit', 'saldo_awal' => 0.00, 'created_at' => $now, 'updated_at' => $now],
 
         ];

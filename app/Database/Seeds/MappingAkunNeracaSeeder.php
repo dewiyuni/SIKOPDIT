@@ -84,8 +84,8 @@ class MappingAkunNeracaSeeder extends Seeder
             ['nama_laporan' => 'Titipan Biaya Pajak', 'id_akun_utama' => 178, 'id_akun_pengurang' => 83, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'KEWAJIBAN JANGKA PANJANG', 'urutan' => 23, 'created_at' => $now, 'updated_at' => $now],
             ['nama_laporan' => 'Titipan Dana Pendamping', 'id_akun_utama' => 43, 'id_akun_pengurang' => 86, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'KEWAJIBAN JANGKA PANJANG', 'urutan' => 24, 'created_at' => $now, 'updated_at' => $now],
             ['nama_laporan' => 'Pemupukan Modal Tetap', 'id_akun_utama' => 179, 'id_akun_pengurang' => 79, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'KEWAJIBAN JANGKA PANJANG', 'urutan' => 25, 'created_at' => $now, 'updated_at' => $now],
-            ['nama_laporan' => 'Tabungan Pesangon Karyawan', 'id_akun_utama' => 41, 'id_akun_pengurang' => 123, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'KEWAJIBAN JANGKA PANJANG', 'urutan' => 26, 'created_at' => $now, 'updated_at' => $now],
-            ['nama_laporan' => 'Pinjaman Pihak Ke 2', 'id_akun_utama' => 0, 'id_akun_pengurang' => 0, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'KEWAJIBAN JANGKA PANJANG', 'urutan' => 27, 'created_at' => $now, 'updated_at' => $now],
+            ['nama_laporan' => 'Tabungan Pesangon Karyawan', 'id_akun_utama' => 41, 'id_akun_pengurang' => 0, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'KEWAJIBAN JANGKA PANJANG', 'urutan' => 26, 'created_at' => $now, 'updated_at' => $now],
+            ['nama_laporan' => 'Pinjaman Pihak Ke 2', 'id_akun_utama' => 181, 'id_akun_pengurang' => 0, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'KEWAJIBAN JANGKA PANJANG', 'urutan' => 27, 'created_at' => $now, 'updated_at' => $now],
 
             // EKUITAS / MODAL
             ['nama_laporan' => 'Simpanan Pokok', 'id_akun_utama' => 36, 'id_akun_pengurang' => 64, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'EKUITAS', 'urutan' => 28, 'created_at' => $now, 'updated_at' => $now],
@@ -96,7 +96,7 @@ class MappingAkunNeracaSeeder extends Seeder
             ['nama_laporan' => 'Cadangan Likuiditas', 'id_akun_utama' => 183, 'id_akun_pengurang' => 0, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'EKUITAS', 'urutan' => 33, 'created_at' => $now, 'updated_at' => $now],
             ['nama_laporan' => 'Cadangan Koperasi', 'id_akun_utama' => 184, 'id_akun_pengurang' => 0, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'EKUITAS', 'urutan' => 34, 'created_at' => $now, 'updated_at' => $now],
             ['nama_laporan' => 'Dana Risiko', 'id_akun_utama' => 33, 'id_akun_pengurang' => 78, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'EKUITAS', 'urutan' => 35, 'created_at' => $now, 'updated_at' => $now],
-            ['nama_laporan' => 'PJKR', 'id_akun_utama' => 0, 'id_akun_pengurang' => 0, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'EKUITAS', 'urutan' => 36, 'created_at' => $now, 'updated_at' => $now],
+            ['nama_laporan' => 'PJKR', 'id_akun_utama' => 186, 'id_akun_pengurang' => 145, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'EKUITAS', 'urutan' => 36, 'created_at' => $now, 'updated_at' => $now],
             ['nama_laporan' => 'SHU', 'id_akun_utama' => 187, 'id_akun_pengurang' => 0, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'EKUITAS', 'urutan' => 37, 'created_at' => $now, 'updated_at' => $now],
         ];
 

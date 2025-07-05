@@ -138,6 +138,59 @@ class BukuBesarModel extends Model
         } // End foreach jurnal
 
         // --- Selesai Loop Jurnal ---
+        // =======================================
+
+        // ========================
+// === KHUSUS AKUN KAS ===
+// ========================
+
+        // Cari akun Kas (misalnya berdasarkan kode atau kategori)
+        $akunModel = new \App\Models\AkunModel();
+        $akunKas = $akunModel->where('kode_akun', 'AUTO086')->first(); // Ganti sesuai kode Kas
+        if ($akunKas) {
+            $idAkunKas = $akunKas['id'];
+
+            // Hitung total DUM dan DUK
+            $totalDUM = 0;
+            $totalDUK = 0;
+
+            foreach ($jurnal as $j) {
+                $kategori = $j['kategori']; // DUM atau DUK
+                $jumlah = floatval($j['jumlah'] ?? 0);
+
+                if ($kategori === 'DUM') {
+                    $totalDUM += $jumlah;
+                } elseif ($kategori === 'DUK') {
+                    $totalDUK += $jumlah;
+                }
+            }
+
+            // Hapus entri buku besar untuk akun Kas dari batch
+            $bukuBesarBatch = array_filter($bukuBesarBatch, function ($item) use ($idAkunKas) {
+                return $item['id_akun'] != $idAkunKas;
+            });
+
+            // Tambahkan entri pengganti
+            $tanggalAkhir = end($jurnal)['tanggal'] ?? date('Y-m-t');
+            $bukuBesarBatch[] = [
+                'tanggal' => $tanggalAkhir,
+                'id_akun' => $idAkunKas,
+                'id_jurnal' => null,
+                'keterangan' => 'Total DUM bulan ' . $bulan . '/' . $tahun,
+                'debit' => $totalDUM,
+                'kredit' => 0,
+                'saldo' => 0
+            ];
+            $bukuBesarBatch[] = [
+                'tanggal' => $tanggalAkhir,
+                'id_akun' => $idAkunKas,
+                'id_jurnal' => null,
+                'keterangan' => 'Total DUK bulan ' . $bulan . '/' . $tahun,
+                'debit' => 0,
+                'kredit' => $totalDUK,
+                'saldo' => 0
+            ];
+        }
 
         // Cek lagi $logErrors (seharusnya kosong jika sampai sini)
         if (!empty($logErrors)) {
