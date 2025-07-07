@@ -1,4 +1,4 @@
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+<link rel="stylesheet" href="<?= base_url('dist/font/bootstrap-icons.css') ?>">
 
 <?= $this->extend('layouts/main'); ?>
 
