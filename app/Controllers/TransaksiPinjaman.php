@@ -75,42 +75,40 @@ class TransaksiPinjaman extends BaseController
         return view('karyawan/transaksi_pinjaman/tambah', $data);
     }
     // Tambahkan di bagian atas
+    // app/Controllers/TransaksiPinjaman.php
+
     public function simpan()
     {
         $validationRules = [
             'id_anggota' => 'required|integer',
-            'jumlah_pinjaman' => 'required|numeric|greater_than[0]', // Validasi sebagai numeric dulu
+            'jumlah_pinjaman' => 'required|numeric|greater_than[0]',
             'jangka_waktu' => 'required|integer|greater_than[0]',
             'tanggal_pinjaman' => 'required|valid_date',
             'jaminan' => 'permit_empty|string'
         ];
 
-        // Ambil nilai jumlah_pinjaman dari POST dan bersihkan dari format ribuan
         $jumlah_pinjaman_post = $this->request->getPost('jumlah_pinjaman');
         if (is_string($jumlah_pinjaman_post)) {
-            // Hapus titik sebagai pemisah ribuan, biarkan koma jika ada untuk desimal (meski sebaiknya input desimal pakai titik)
             $jumlah_pinjaman_cleaned = (float) str_replace('.', '', $jumlah_pinjaman_post);
         } else {
             $jumlah_pinjaman_cleaned = (float) $jumlah_pinjaman_post;
         }
 
-
-        $errorMessages = []; // Inisialisasi array pesan error kustom
+        $errorMessages = [];
 
         if ($jumlah_pinjaman_cleaned > 2000000 && empty($this->request->getPost('jaminan'))) {
             $validationRules['jaminan'] = 'required';
-            $errorMessages['jaminan'] = [ // Tambahkan pesan kustom untuk jaminan
+            $errorMessages['jaminan'] = [
                 'required' => 'Jaminan wajib diisi untuk pinjaman di atas Rp 2.000.000.'
             ];
         }
 
-        // Lakukan validasi dengan aturan dan pesan error yang sudah disiapkan
         if (!$this->validate($validationRules, $errorMessages)) {
             return redirect()->back()->withInput()->with('errors', $this->validator->getErrors())->with('error', 'Gagal menambahkan pinjaman. Mohon periksa kembali data yang Anda masukkan.');
         }
 
         $id_anggota = $this->request->getPost('id_anggota');
-        $jumlah_pinjaman = $jumlah_pinjaman_cleaned; // Gunakan nilai yang sudah dibersihkan
+        $jumlah_pinjaman = $jumlah_pinjaman_cleaned;
         $jangka_waktu = $this->request->getPost('jangka_waktu');
         $jaminan = $this->request->getPost('jaminan') ?: 'Tidak ada';
         $tanggal_pinjaman = $this->request->getPost('tanggal_pinjaman') ?: date('Y-m-d');
@@ -123,7 +121,6 @@ class TransaksiPinjaman extends BaseController
             return redirect()->back()->withInput()->with('error', 'Anggota tidak aktif dan tidak bisa melakukan pinjaman.');
         }
 
-        // --- VERIFIKASI PINJAMAN SEBELUMNYA ---
         $pinjamanAktif = $this->transaksiPinjamanModel
             ->where('id_anggota', $id_anggota)
             ->where('status', 'aktif')
@@ -141,15 +138,12 @@ class TransaksiPinjaman extends BaseController
             if ($sisaPinjamanAktif > 0) {
                 $linkDetailPinjaman = site_url('karyawan/transaksi_pinjaman/detail/' . $pinjamanAktif->id_pinjaman);
                 $pesanError = 'Anggota ini masih memiliki pinjaman aktif (<a href="' . $linkDetailPinjaman . '" target="_blank">ID: ' . $pinjamanAktif->id_pinjaman . '</a>) yang belum lunas sebesar Rp ' . number_format($sisaPinjamanAktif, 0, ',', '.') . '. Tidak dapat mengajukan pinjaman baru.';
-
-                // Set flashdata dengan pesan error yang mengandung HTML
                 session()->setFlashdata('error_html', $pesanError);
-                return redirect()->back()->withInput(); // Tidak perlu ->with('error', ...) karena sudah pakai error_html
+                return redirect()->back()->withInput();
             } else {
                 $this->transaksiPinjamanModel->update($pinjamanAktif->id_pinjaman, ['status' => 'lunas']);
             }
         }
-        // --- AKHIR VERIFIKASI ---
 
         $this->db->transStart();
         try {
@@ -174,17 +168,22 @@ class TransaksiPinjaman extends BaseController
             $persentase_swp = 0.025;
             $swp = $jumlah_pinjaman * $persentase_swp;
 
+            // ==========================================================
+            // ===== PERBAIKAN UTAMA ADA DI BLOK KODE DI BAWAH INI ======
+            // ==========================================================
             $data_swp = [
                 'id_anggota' => $id_anggota,
                 'id_pinjaman' => $id_pinjaman,
-                'jenis_simpanan' => 'SWP',
-                'jumlah' => $swp,
-                'tanggal_transaksi' => $tanggal_pinjaman,
+                'tanggal' => $tanggal_pinjaman,
+                'setor_swp' => $swp, // Memasukkan nilai ke kolom yang benar
                 'keterangan' => 'Potongan SWP dari Pinjaman ID: ' . $id_pinjaman,
                 'created_at' => date('Y-m-d H:i:s'),
                 'updated_at' => date('Y-m-d H:i:s')
             ];
             $this->transaksiSimpananModel->insert($data_swp);
+            // ==========================================================
+            // ================= AKHIR DARI PERBAIKAN ===================
+            // ==========================================================
 
             $this->db->transComplete();
 
