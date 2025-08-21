@@ -1,5 +1,6 @@
 <?= $this->extend('layouts/main'); ?>
 <?= $this->section('content'); ?>
+<link href="https://cdn.jsdelivr.net/npm/simple-datatables@latest/dist/style.css" rel="stylesheet" />
 
 <div class="container-fluid px-4">
     <h3 class="mt-4"><?= $title ?? 'Tambah Aturan Pemetaan' ?></h3>

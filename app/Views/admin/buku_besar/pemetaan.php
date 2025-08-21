@@ -1,31 +1,36 @@
 <?= $this->extend('layouts/main'); ?>
 <?= $this->section('content'); ?>
+<link href="https://cdn.jsdelivr.net/npm/simple-datatables@latest/dist/style.css" rel="stylesheet" />
 
 <div class="container-fluid px-4">
-    <h3 class="mt-4">Pemetaan Akun</h3>
+    <h3 class="mt-4 mb-4">Pemetaan Akun</h3>
 
+    <!-- Flash Messages -->
     <?php if (session()->getFlashdata('success')): ?>
-        <div class="alert alert-success">
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
             <?= session()->getFlashdata('success') ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     <?php endif; ?>
 
     <?php if (session()->getFlashdata('error')): ?>
-        <div class="alert alert-danger">
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <?= session()->getFlashdata('error') ?>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     <?php endif; ?>
 
     <div class="row">
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header">
+        <!-- Form Pemetaan Akun -->
+        <div class="col-lg-5">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
                     <h5 class="mb-0">Form Pemetaan Akun</h5>
                 </div>
                 <div class="card-body">
                     <?php if (session()->has('errors')): ?>
                         <div class="alert alert-danger">
-                            <ul>
+                            <ul class="mb-0">
                                 <?php foreach (session('errors') as $error): ?>
                                     <li><?= $error ?></li>
                                 <?php endforeach; ?>
@@ -65,21 +70,22 @@
                                 <?php endforeach; ?>
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-primary">Simpan</button>
+                        <button type="submit" class="btn btn-success w-100">Simpan Pemetaan</button>
                     </form>
                 </div>
             </div>
         </div>
 
-        <div class="col-md-6">
-            <div class="card mb-4">
-                <div class="card-header d-flex justify-content-between align-items-center">
+        <!-- Daftar Pemetaan -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header d-flex justify-content-between align-items-center bg-secondary text-white">
                     <h5 class="mb-0">Daftar Pemetaan</h5>
                     <div>
                         <a href="<?= base_url('admin/buku_besar/pemetaan/otomatis') ?>" class="btn btn-primary btn-sm">
-                            <i class="fas fa-magic"></i> Buat Pemetaan Otomatis
+                            <i class="fas fa-magic"></i> Buat Otomatis
                         </a>
-                        <a href="<?= base_url('admin/buku_besar') ?>" class="btn btn-secondary btn-sm">
+                        <a href="<?= base_url('admin/buku_besar') ?>" class="btn btn-light btn-sm">
                             <i class="fas fa-arrow-left"></i> Kembali
                         </a>
                     </div>
@@ -87,32 +93,38 @@
 
                 <div class="card-body">
                     <div class="table-responsive">
-                        <table class="table table-bordered table-striped">
-                            <thead>
+                        <table class="table table-bordered table-striped table-hover align-middle">
+                            <thead class="table-dark">
                                 <tr>
                                     <th>Kategori</th>
                                     <th>Uraian</th>
                                     <th>Akun Debit</th>
                                     <th>Akun Kredit</th>
-                                    <th>Aksi</th>
+                                    <th class="text-center">Aksi</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($pemetaan as $p): ?>
+                                <?php if (count($pemetaan) > 0): ?>
+                                    <?php foreach ($pemetaan as $p): ?>
+                                        <tr>
+                                            <td><?= $p['kategori_jurnal'] ?></td>
+                                            <td><?= $p['uraian_jurnal'] ?></td>
+                                            <td><?= $p['kode_akun_debit'] ?> - <?= $p['nama_akun_debit'] ?></td>
+                                            <td><?= $p['kode_akun_kredit'] ?> - <?= $p['nama_akun_kredit'] ?></td>
+                                            <td class="text-center">
+                                                <a href="<?= base_url('admin/buku_besar/pemetaan/delete/' . $p['id']) ?>"
+                                                    class="btn btn-danger btn-sm"
+                                                    onclick="return confirm('Apakah Anda yakin ingin menghapus pemetaan ini?')">
+                                                    <i class="fas fa-trash"></i>
+                                                </a>
+                                            </td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                <?php else: ?>
                                     <tr>
-                                        <td><?= $p['kategori_jurnal'] ?></td>
-                                        <td><?= $p['uraian_jurnal'] ?></td>
-                                        <td><?= $p['kode_akun_debit'] ?> - <?= $p['nama_akun_debit'] ?></td>
-                                        <td><?= $p['kode_akun_kredit'] ?> - <?= $p['nama_akun_kredit'] ?></td>
-                                        <td>
-                                            <a href="<?= base_url('admin/buku_besar/pemetaan/delete/' . $p['id']) ?>"
-                                                class="btn btn-danger btn-sm"
-                                                onclick="return confirm('Apakah Anda yakin ingin menghapus pemetaan ini?')">
-                                                <i class="fas fa-trash"></i> Hapus
-                                            </a>
-                                        </td>
+                                        <td colspan="5" class="text-center text-muted">Belum ada pemetaan akun</td>
                                     </tr>
-                                <?php endforeach; ?>
+                                <?php endif; ?>
                             </tbody>
                         </table>
                     </div>
@@ -121,5 +133,19 @@
         </div>
     </div>
 </div>
+
+<!-- Select2 -->
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+    $(document).ready(function () {
+        $('#id_akun_debit, #id_akun_kredit').select2({
+            theme: "bootstrap-5",
+            width: '100%',
+            placeholder: "Pilih akun",
+            allowClear: true
+        });
+    });
+</script>
 
 <?= $this->endSection(); ?>

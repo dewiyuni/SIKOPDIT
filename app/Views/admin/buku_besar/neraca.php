@@ -116,7 +116,7 @@ $namaBulanPrev = $bulanNames[$prevBulan] ?? "Bulan_" . $prevBulan;
                             <?php endforeach; ?>
 
                             <tr class="fw-bold">
-                                <td colspan="2" class="text-center">Total aktiva</td>
+                                <td colspan="2" class="text-center">Total AKTIVA</td>
                                 <td class="text-end"><?= formatNumber($total_aktiva_now) ?></td>
                                 <td class="text-end"><?= formatNumber($total_aktiva_prev) ?></td>
                             </tr>
@@ -189,7 +189,7 @@ $namaBulanPrev = $bulanNames[$prevBulan] ?? "Bulan_" . $prevBulan;
                 <!-- Balance Check -->
                 <div class="mt-4 row">
                     <div class="col-md-6">
-                        <?php $selisih_current = $grand_total_aset_current - $total_pasiva_now; ?>
+                        <?php $selisih_current = $total_aktiva_now - $total_pasiva_now; ?>
                         <div
                             class="alert <?= abs($selisih_current) < 0.01 ? 'alert-success' : 'alert-danger' ?> text-center py-1">
                             Periode <?= esc($namaBulanCurrent) ?>:
@@ -197,7 +197,7 @@ $namaBulanPrev = $bulanNames[$prevBulan] ?? "Bulan_" . $prevBulan;
                         </div>
                     </div>
                     <div class="col-md-6">
-                        <?php $selisih_prev = $grand_total_aset_prev - $total_pasiva_prev; ?>
+                        <?php $selisih_prev = $total_aktiva_prev - $total_pasiva_prev; ?>
                         <div
                             class="alert <?= abs($selisih_prev) < 0.01 ? 'alert-success' : 'alert-danger' ?> text-center py-1">
                             Periode <?= esc($namaBulanPrev) ?>:
@@ -205,6 +205,7 @@ $namaBulanPrev = $bulanNames[$prevBulan] ?? "Bulan_" . $prevBulan;
                         </div>
                     </div>
                 </div>
+
             </div>
         </div>
     </div>

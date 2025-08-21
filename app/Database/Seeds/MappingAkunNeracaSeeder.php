@@ -85,7 +85,7 @@ class MappingAkunNeracaSeeder extends Seeder
             ['nama_laporan' => 'Titipan Dana Pendamping', 'id_akun_utama' => 43, 'id_akun_pengurang' => 86, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'KEWAJIBAN JANGKA PANJANG', 'urutan' => 24, 'created_at' => $now, 'updated_at' => $now],
             ['nama_laporan' => 'Pemupukan Modal Tetap', 'id_akun_utama' => 179, 'id_akun_pengurang' => 79, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'KEWAJIBAN JANGKA PANJANG', 'urutan' => 25, 'created_at' => $now, 'updated_at' => $now],
             ['nama_laporan' => 'Tabungan Pesangon Karyawan', 'id_akun_utama' => 41, 'id_akun_pengurang' => 0, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'KEWAJIBAN JANGKA PANJANG', 'urutan' => 26, 'created_at' => $now, 'updated_at' => $now],
-            ['nama_laporan' => 'Pinjaman Pihak Ke 2', 'id_akun_utama' => 181, 'id_akun_pengurang' => 0, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'KEWAJIBAN JANGKA PANJANG', 'urutan' => 27, 'created_at' => $now, 'updated_at' => $now],
+            ['nama_laporan' => 'Pinjaman Pihak Ke 2', 'id_akun_utama' => 32, 'id_akun_pengurang' => 63, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'KEWAJIBAN JANGKA PANJANG', 'urutan' => 27, 'created_at' => $now, 'updated_at' => $now],
 
             // EKUITAS / MODAL
             ['nama_laporan' => 'Simpanan Pokok', 'id_akun_utama' => 36, 'id_akun_pengurang' => 64, 'tipe' => 'normal', 'jenis' => 'PASIVA', 'kategori_jenis' => 'EKUITAS', 'urutan' => 28, 'created_at' => $now, 'updated_at' => $now],
