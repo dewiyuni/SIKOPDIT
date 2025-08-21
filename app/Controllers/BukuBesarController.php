@@ -1010,7 +1010,7 @@ class BukuBesarController extends BaseController
         $startOfMonth = "$tahun-$bulan-01";
         $endOfMonth = date("Y-m-t", strtotime($startOfMonth));
 
-        // CEK APAKAH ADA TRANSAKSI DI BULAN INI SECARA GLOBAL
+        // CEK APAKAH ADA TRANSAKSI DI BULAN INI SECARA GLOBAL (pertahankan logika asli)
         $adaTransaksiBulanIni = $db->table('buku_besar')
             ->where('tanggal >=', $startOfMonth)
             ->where('tanggal <=', $endOfMonth)
@@ -1018,8 +1018,43 @@ class BukuBesarController extends BaseController
 
         foreach ($mapping as $row) {
             $jenis = $row['jenis']; // ambil jenis dari mapping
+            $namaUpper = strtoupper(trim($row['nama_laporan'] ?? ''));
 
-            // SALDO BULAN INI
+            // =========================
+            // KHUSUS: "SHU Tahun Sekarang"
+            // - Posisi (jenis/kategori_jenis) TETAP ikut mapping
+            // - Jika bulan ini tidak ada transaksi => 0 (menurut logika asli)
+            // - Jika ada transaksi: ambil dari saldo_akun (id_akun=173); jika tidak ada datanya => 0
+            // - Periode sebelumnya: ambil dari saldo_akun bulan sebelumnya (kalau ada), else 0
+            // =========================
+            if ($namaUpper === 'SHU TAHUN SEKARANG') {
+                // default 0
+                $saldoAkhir = 0.0;
+
+                if ($adaTransaksiBulanIni) {
+                    $shuNowRow = $this->saldoAkunModel->getSaldoByAkunBulanTahun(173, (int) $bulan, (int) $tahun);
+                    $saldoAkhir = (float) ($shuNowRow['saldo_akhir'] ?? 0);
+                }
+
+                // saldo periode sebelumnya dari saldo_akun (tanpa cek transaksi global)
+                $shuPrevRow = $this->saldoAkunModel->getSaldoByAkunBulanTahun(173, (int) $prevBulan, (int) $prevTahun);
+                $saldoAkhirPrev = (float) ($shuPrevRow['saldo_akhir'] ?? 0);
+
+                $laporan[] = [
+                    'nama' => $row['nama_laporan'],
+                    'jenis' => $row['jenis'],           // TETAP seperti mapping
+                    'kategori_jenis' => $row['kategori_jenis'],  // TETAP seperti mapping
+                    'tipe' => $row['tipe'] ?? 'normal',
+                    'urutan' => $row['urutan'],
+                    'saldo_now' => $saldoAkhir,
+                    'saldo_prev' => $saldoAkhirPrev
+                ];
+                continue; // lewati proses standar
+            }
+
+            // =========================
+            // SALDO BULAN INI (logika asli)
+            // =========================
             if ($adaTransaksiBulanIni) {
                 $utama = $this->saldoAkunModel->getSaldoAkhir($row['id_akun_utama'], $endDate, $jenis);
                 $pengurang = $this->saldoAkunModel->getSaldoAkhir($row['id_akun_pengurang'], $endDate, $jenis);
@@ -1031,7 +1066,9 @@ class BukuBesarController extends BaseController
                 $saldoAkhir = 0;
             }
 
-            // SALDO BULAN SEBELUMNYA
+            // =========================
+            // SALDO BULAN SEBELUMNYA (logika asli)
+            // =========================
             $prevStart = "$prevTahun-$prevBulan-01";
             $prevEnd = date("Y-m-t", strtotime($prevStart));
 
@@ -1050,35 +1087,29 @@ class BukuBesarController extends BaseController
                 'saldo_now' => $saldoAkhir,
                 'saldo_prev' => $saldoAkhirPrev
             ];
-
-
         }
 
-        // Filter & urutkan
-        // Kelompokkan ke dalam 2 array utama: aktiva & pasiva
+        // === Kelompok & urutkan (tetap sama)
         $aktiva = [];
         $kategoriAktiva = ['ASET LANCAR', 'ASET TAK LANCAR', 'ASET TETAP'];
-
         foreach ($kategoriAktiva as $kategoriA) {
             $group = array_filter(
                 $laporan,
-                fn($item) =>
-                $item['jenis'] === 'AKTIVA' && $item['kategori_jenis'] === $kategoriA
+                fn($item) => $item['jenis'] === 'AKTIVA' && $item['kategori_jenis'] === $kategoriA
             );
             usort($group, fn($a, $b) => $a['urutan'] <=> $b['urutan']);
             $aktiva[$kategoriA] = $group;
         }
 
-        // PASIVA berisi beberapa jenis
         $pasiva = [];
         $kategoriPasiva = ['KEWAJIBAN JANGKA PENDEK', 'KEWAJIBAN JANGKA PANJANG', 'EKUITAS'];
-
         foreach ($kategoriPasiva as $kategoriP) {
             $group = array_filter($laporan, fn($item) => trim($item['jenis']) === 'PASIVA' && $item['kategori_jenis'] === $kategoriP);
             usort($group, fn($a, $b) => $a['urutan'] <=> $b['urutan']);
             $pasiva[$kategoriP] = $group;
         }
 
+        // === Grand total (tetap sama)
         $grand_total_aset_current = 0;
         $grand_total_aset_prev = 0;
         foreach ($aktiva as $list) {
@@ -1111,8 +1142,9 @@ class BukuBesarController extends BaseController
             'prevTahun' => $prevTahun,
             'bulanNames' => $this->bulanNames,
         ]);
-
     }
+
+
 
     public function updateNeracaItem()
     {

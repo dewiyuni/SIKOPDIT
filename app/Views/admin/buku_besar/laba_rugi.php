@@ -9,7 +9,6 @@
             <h5 class="mb-0">
                 Laporan Laba Rugi Periode
                 <?php
-                // Ambil $bulanNames dari controller jika ada, atau definisikan di sini
                 if (!isset($bulanNames)) {
                     $bulanNames = [
                         1 => 'Januari',
@@ -29,7 +28,7 @@
                 echo esc($bulanNames[$bulan] ?? $bulan) . ' ' . esc($tahun);
                 ?>
             </h5>
-            <div class="d-flex gap-2 flex-wrap"> <!-- Tambah flex-wrap untuk responsif -->
+            <div class="d-flex gap-2 flex-wrap">
                 <form action="<?= base_url('admin/buku_besar/laba-rugi') ?>" method="get" class="d-flex gap-2">
                     <select name="bulan" class="form-select form-select-sm">
                         <?php foreach ($bulanNames as $key => $value): ?>
@@ -56,6 +55,7 @@
         </div>
         <div class="card-body">
             <div class="table-responsive">
+                <!-- TABEL PENDAPATAN -->
                 <table class="table table-bordered">
                     <thead>
                         <tr class="table-primary">
@@ -68,23 +68,19 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <?php
-                        // HAPUS BLOK ARRAY_FILTER DI SINI
-                        // Langsung gunakan $pendapatan_items yang dikirim controller
-                        
-                        // Pengecekan apakah variabel $pendapatan_items ada dan tidak kosong
-                        if (empty($pendapatan_items)):
-                            ?>
+                        <?php if (empty($pendapatan_items)): ?>
                             <tr>
                                 <td colspan="3" class="text-center">Tidak ada data pendapatan</td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($pendapatan_items as $item): ?>
-                                <tr>
-                                    <td><?= esc($item['kode_akun'] ?? '-') ?></td>
-                                    <td><?= esc($item['nama_akun'] ?? 'N/A') ?></td>
-                                    <td class="text-end"><?= number_format(floatval($item['saldo'] ?? 0), 2, ',', '.') ?></td>
-                                </tr>
+                                <?php if (floatval($item['saldo']) != 0): ?> <!-- ⬅️ Tambahkan filter disini -->
+                                    <tr>
+                                        <td><?= esc($item['kode_akun'] ?? '-') ?></td>
+                                        <td><?= esc($item['nama_akun'] ?? 'N/A') ?></td>
+                                        <td class="text-end"><?= number_format(floatval($item['saldo'] ?? 0), 2, ',', '.') ?></td>
+                                    </tr>
+                                <?php endif; ?>
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </tbody>
@@ -97,6 +93,7 @@
                     </tfoot>
                 </table>
 
+                <!-- TABEL BEBAN -->
                 <table class="table table-bordered mt-4">
                     <thead>
                         <tr class="table-danger">
@@ -109,23 +106,19 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <?php
-                        // HAPUS BLOK ARRAY_FILTER DI SINI
-                        // Langsung gunakan $beban_items yang dikirim controller
-                        
-                        // Pengecekan apakah variabel $beban_items ada dan tidak kosong
-                        if (empty($beban_items)):
-                            ?>
+                        <?php if (empty($beban_items)): ?>
                             <tr>
                                 <td colspan="3" class="text-center">Tidak ada data beban</td>
                             </tr>
                         <?php else: ?>
                             <?php foreach ($beban_items as $item): ?>
-                                <tr>
-                                    <td><?= esc($item['kode_akun'] ?? '-') ?></td>
-                                    <td><?= esc($item['nama_akun'] ?? 'N/A') ?></td>
-                                    <td class="text-end"><?= number_format(floatval($item['saldo'] ?? 0), 2, ',', '.') ?></td>
-                                </tr>
+                                <?php if (floatval($item['saldo']) != 0): ?> <!-- ⬅️ Tambahkan filter disini -->
+                                    <tr>
+                                        <td><?= esc($item['kode_akun'] ?? '-') ?></td>
+                                        <td><?= esc($item['nama_akun'] ?? 'N/A') ?></td>
+                                        <td class="text-end"><?= number_format(floatval($item['saldo'] ?? 0), 2, ',', '.') ?></td>
+                                    </tr>
+                                <?php endif; ?>
                             <?php endforeach; ?>
                         <?php endif; ?>
                     </tbody>
@@ -137,8 +130,8 @@
                     </tfoot>
                 </table>
 
+                <!-- LABA RUGI BERSIH -->
                 <table class="table table-bordered mt-4" style="width: 50%; margin-left:auto; margin-right:0;">
-                    <!-- Styling agar lebih mirip laporan -->
                     <tbody>
                         <tr class="table-info">
                             <th>LABA (RUGI) BERSIH</th>

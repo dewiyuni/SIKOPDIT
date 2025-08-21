@@ -23,19 +23,19 @@
                     11 => 'November',
                     12 => 'Desember'
                 ];
-                echo $bulanNames[$bulan] . ' ' . $tahun;
+                echo esc($bulanNames[$bulan] ?? $bulan) . ' ' . esc($tahun);
                 ?>
             </h5>
             <div class="d-flex gap-2">
                 <form action="<?= base_url('admin/buku_besar/neraca-saldo') ?>" method="get" class="d-flex gap-2">
                     <select name="bulan" class="form-select form-select-sm">
                         <?php foreach ($bulanNames as $key => $value): ?>
-                            <option value="<?= $key ?>" <?= $bulan == $key ? 'selected' : '' ?>><?= $value ?></option>
+                            <option value="<?= $key ?>" <?= $bulan == $key ? 'selected' : '' ?>><?= esc($value) ?></option>
                         <?php endforeach; ?>
                     </select>
                     <select name="tahun" class="form-select form-select-sm">
                         <?php for ($year = date('Y'); $year >= 2020; $year--): ?>
-                            <option value="<?= $year ?>" <?= $tahun == $year ? 'selected' : '' ?>><?= $year ?></option>
+                            <option value="<?= $year ?>" <?= $tahun == $year ? 'selected' : '' ?>><?= esc($year) ?></option>
                         <?php endfor; ?>
                     </select>
                     <button type="submit" class="btn btn-primary btn-sm">Filter</button>
@@ -51,6 +51,7 @@
                 </a>
             </div>
         </div>
+
         <div class="card-body">
             <div class="table-responsive">
                 <table class="table table-bordered table-striped">
@@ -63,22 +64,41 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($neraca_saldo as $neraca): ?>
+                        <?php
+                        $adaBaris = false;
+                        if (!empty($neraca_saldo)):
+                            foreach ($neraca_saldo as $neraca):
+                                // Normalisasi nilai
+                                $debit = isset($neraca['debit']) && is_numeric($neraca['debit']) ? floatval($neraca['debit']) : 0.0;
+                                $kredit = isset($neraca['kredit']) && is_numeric($neraca['kredit']) ? floatval($neraca['kredit']) : 0.0;
+
+                                // SKIP baris jika keduanya 0 / kosong
+                                if ($debit == 0.0 && $kredit == 0.0) {
+                                    continue;
+                                }
+                                $adaBaris = true;
+                                ?>
+                                <tr>
+                                    <td><?= esc($neraca['kode_akun'] ?? '-') ?></td>
+                                    <td><?= esc($neraca['nama_akun'] ?? 'N/A') ?></td>
+                                    <td class="text-end"><?= $debit > 0 ? number_format($debit, 2, ',', '.') : '' ?></td>
+                                    <td class="text-end"><?= $kredit > 0 ? number_format($kredit, 2, ',', '.') : '' ?></td>
+                                </tr>
+                                <?php
+                            endforeach;
+                        endif;
+
+                        if (!$adaBaris): ?>
                             <tr>
-                                <td><?= $neraca['kode_akun'] ?></td>
-                                <td><?= $neraca['nama_akun'] ?></td>
-                                <td class="text-end">
-                                    <?= $neraca['debit'] > 0 ? number_format($neraca['debit'], 2, ',', '.') : '' ?></td>
-                                <td class="text-end">
-                                    <?= $neraca['kredit'] > 0 ? number_format($neraca['kredit'], 2, ',', '.') : '' ?></td>
+                                <td colspan="4" class="text-center">Tidak ada data neraca saldo untuk periode ini</td>
                             </tr>
-                        <?php endforeach; ?>
+                        <?php endif; ?>
                     </tbody>
                     <tfoot>
                         <tr class="table-primary">
                             <th colspan="2" class="text-end">TOTAL</th>
-                            <th class="text-end"><?= number_format($total_debit, 2, ',', '.') ?></th>
-                            <th class="text-end"><?= number_format($total_kredit, 2, ',', '.') ?></th>
+                            <th class="text-end"><?= number_format(floatval($total_debit ?? 0), 2, ',', '.') ?></th>
+                            <th class="text-end"><?= number_format(floatval($total_kredit ?? 0), 2, ',', '.') ?></th>
                         </tr>
                     </tfoot>
                 </table>

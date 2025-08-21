@@ -8,42 +8,59 @@
     </div>
 
     <?php if (session()->getFlashdata('message')): ?>
-        <div class="alert alert-success"><?= session()->getFlashdata('message') // Pesan sukses biasa, aman di-escape ?>
-        </div>
+        <div class="alert alert-success"><?= session()->getFlashdata('message') ?></div>
     <?php endif; ?>
 
     <?php
-    // Handle pesan error biasa dan error_html
     $errorMessage = session()->getFlashdata('error');
     $errorHtmlMessage = session()->getFlashdata('error_html');
+
+    // siapkan map untuk JS (id <-> label)
+    $mapIdToLabel = [];
+    $mapLabelToId = [];
+    foreach ($anggota as $a) {
+        $label = $a->nama . ' (' . $a->no_ba . ')';
+        $mapIdToLabel[$a->id_anggota] = $label;
+        $mapLabelToId[$label] = $a->id_anggota;
+    }
+    $oldId = old('id_anggota'); // untuk prefilling
     ?>
 
     <?php if ($errorHtmlMessage): ?>
-        <div class="alert alert-danger"><?= $errorHtmlMessage // Tampilkan HTML apa adanya ?></div>
+        <div class="alert alert-danger"><?= $errorHtmlMessage ?></div>
     <?php elseif ($errorMessage): ?>
-        <div class="alert alert-danger"><?= esc($errorMessage) // Pesan error biasa, escape untuk keamanan ?></div>
+        <div class="alert alert-danger"><?= esc($errorMessage) ?></div>
     <?php endif; ?>
 
-
     <div class="card p-3">
-        <form action="<?= base_url('karyawan/transaksi_pinjaman/simpan') ?>" method="post">
+        <form action="<?= base_url('karyawan/transaksi_pinjaman/simpan') ?>" method="post"
+            onsubmit="return validateAnggota();">
             <?= csrf_field() ?>
 
             <div class="row">
                 <!-- Left Column -->
                 <div class="col-md-6">
                     <div class="form-group mb-3">
-                        <label for="id_anggota" class="form-label">Nama Anggota</label>
-                        <select name="id_anggota" class="form-control" required>
-                            <option value="" disabled selected>-- Pilih Anggota --</option>
+                        <label for="anggota_input" class="form-label">Nama Anggota</label>
+
+                        <!-- Input + Datalist (pencarian sederhana) -->
+                        <input type="text" id="anggota_input" class="form-control"
+                            placeholder="Ketik nama atau No. BA, lalu pilih…" list="list_anggota" autocomplete="off">
+                        <datalist id="list_anggota">
                             <?php foreach ($anggota as $a): ?>
-                                <option value="<?= esc($a->id_anggota) ?>" <?= old('id_anggota') == $a->id_anggota ? 'selected' : '' ?>>
-                                    <?= esc($a->nama) ?> (<?= esc($a->no_ba) ?>)
-                                </option>
+                                <option value="<?= esc($a->nama . ' (' . $a->no_ba . ')') ?>"
+                                    data-id="<?= esc($a->id_anggota) ?>"></option>
                             <?php endforeach; ?>
-                        </select>
+                        </datalist>
+
+                        <!-- id yang dikirim ke server -->
+                        <input type="hidden" name="id_anggota" id="id_anggota_hidden" value="<?= esc($oldId) ?>">
+
+                        <small id="anggota_help" class="text-muted d-block mt-1">
+                            Pilih salah satu dari daftar saran. Jika tidak muncul, lanjutkan mengetik.
+                        </small>
                         <?php if (session('errors.id_anggota')): ?>
-                            <small class="text-danger"><?= esc(session('errors.id_anggota')) ?></small>
+                            <small class="text-danger d-block"><?= esc(session('errors.id_anggota')) ?></small>
                         <?php endif; ?>
                     </div>
 
@@ -95,7 +112,7 @@
                         <div class="input-group">
                             <span class="input-group-text">Rp</span>
                             <input type="text" id="bunga_simpanan_display" class="form-control" disabled
-                                style="background-color: #f8f9fa;">
+                                style="background-color:#f8f9fa;">
                             <input type="hidden" name="bunga_simpanan" id="bunga_simpanan_hidden">
                         </div>
                     </div>
@@ -105,7 +122,7 @@
                         <div class="input-group">
                             <span class="input-group-text">Rp</span>
                             <input type="text" id="jumlah_diterima" class="form-control" disabled
-                                style="background-color: #f8f9fa;">
+                                style="background-color:#f8f9fa;">
                             <input type="hidden" name="jumlah_diterima" id="jumlah_diterima_hidden">
                         </div>
                     </div>
@@ -166,12 +183,10 @@
                                             <th>Sisa Pinjaman</th>
                                         </tr>
                                     </thead>
-                                    <tbody id="simulasi_body">
-                                        <!-- Data simulasi akan diisi oleh JavaScript -->
-                                    </tbody>
+                                    <tbody id="simulasi_body"></tbody>
                                     <tfoot class="table-info">
                                         <tr>
-                                            <th colspan="1">Total</th>
+                                            <th>Total</th>
                                             <th id="total_pokok_simulasi">Rp 0</th>
                                             <th id="total_bunga_simulasi">Rp 0</th>
                                             <th id="total_pembayaran_simulasi">Rp 0</th>
@@ -180,6 +195,7 @@
                                     </tfoot>
                                 </table>
                             </div>
+
                         </div>
                     </div>
                 </div>
@@ -194,30 +210,72 @@
     </div>
 </div>
 
-<!-- ... (script JavaScript Anda tetap sama) ... -->
 <script>
-    // Format angka dengan pemisah ribuan
+    /* ====== ANGGOTA: datalist binding sederhana ====== */
+    const mapIdToLabel = <?= json_encode($mapIdToLabel, JSON_UNESCAPED_UNICODE) ?>;
+    const mapLabelToId = <?= json_encode($mapLabelToId, JSON_UNESCAPED_UNICODE) ?>;
+
+    const anggotaInput = document.getElementById('anggota_input');
+    const idHidden = document.getElementById('id_anggota_hidden');
+    const anggotaHelp = document.getElementById('anggota_help');
+
+    // Prefill label jika ada old('id_anggota')
+    (function prefillAnggota() {
+        const oldId = idHidden.value;
+        if (oldId && mapIdToLabel[oldId]) {
+            anggotaInput.value = mapIdToLabel[oldId];
+        }
+    })();
+
+    anggotaInput.addEventListener('change', syncAnggota);
+    anggotaInput.addEventListener('blur', syncAnggota);
+    anggotaInput.addEventListener('input', function () {
+        // Saat user mengetik, kosongkan id sampai memilih yang valid
+        idHidden.value = '';
+    });
+
+    function syncAnggota() {
+        const label = anggotaInput.value.trim();
+        const id = mapLabelToId[label] || '';
+        idHidden.value = id;
+        if (!id) {
+            anggotaHelp.classList.remove('text-muted');
+            anggotaHelp.classList.add('text-danger');
+            anggotaHelp.textContent = 'Nama tidak ditemukan. Pilih dari saran yang muncul.';
+        } else {
+            anggotaHelp.classList.remove('text-danger');
+            anggotaHelp.classList.add('text-muted');
+            anggotaHelp.textContent = 'Pilih salah satu dari daftar saran. Jika tidak muncul, lanjutkan mengetik.';
+        }
+    }
+
+    function validateAnggota() {
+        if (!idHidden.value) {
+            anggotaInput.focus();
+            syncAnggota();
+            return false;
+        }
+        return true;
+    }
+
+    /* ====== FORMAT & SIMULASI (punyamu, tanpa perubahan) ====== */
     function formatRibuan(input) {
-        let angka = input.value.replace(/\D/g, ""); // Hapus semua non-angka
-        input.value = angka.replace(/\B(?=(\d{3})+(?!\d))/g, "."); // Tambah titik pemisah ribuan
-        document.getElementById("jumlah_pinjaman_hidden").value = angka; // Simpan angka bersih tanpa titik
+        let angka = input.value.replace(/\D/g, "");
+        input.value = angka.replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+        document.getElementById("jumlah_pinjaman_hidden").value = angka;
         return angka;
     }
 
-    // Format angka untuk display
     function formatNumber(number) {
-        if (isNaN(number) || number === null || number === undefined) {
-            return "0";
-        }
-        return parseFloat(number).toLocaleString('id-ID'); // Gunakan toLocaleString untuk format
+        if (isNaN(number) || number === null || number === undefined) return "0";
+        return parseFloat(number).toLocaleString('id-ID');
     }
 
-    // Hitung semua simulasi
     function hitungSimulasi() {
         const pinjamanInput = document.getElementById("jumlah_pinjaman_hidden").value;
         const jangkaWaktuInput = document.getElementById("jangka_waktu").value;
 
-        const pinjaman = parseFloat(pinjamanInput || 0); // Pastikan parse sebagai float
+        const pinjaman = parseFloat(pinjamanInput || 0);
         const jangkaWaktu = parseInt(jangkaWaktuInput || 0);
 
         const labelBungaAngsuran = document.getElementById("label_bunga_angsuran");
@@ -230,7 +288,6 @@
             return;
         }
 
-        // Potongan awal SWP (2.5% dari pinjaman awal)
         const bungaSimpananPersen = 2.5;
         const bungaSimpanan = Math.round(pinjaman * (bungaSimpananPersen / 100));
         const jumlahDiterima = pinjaman - bungaSimpanan;
@@ -252,7 +309,7 @@
         let totalPembayaranKeseluruhan = 0;
 
         const batasBungaMenurun = 2000000;
-        const bungaAngsuranPersen = 2; // 2%
+        const bungaAngsuranPersen = 2;
 
         if (pinjaman > batasBungaMenurun) {
             labelBungaAngsuran.innerHTML = "<strong>Bunga Per Angsuran (2% dari Sisa):</strong>";
@@ -271,7 +328,7 @@
             let angsuranPokokBulanIni;
             let bungaBulanIni;
 
-            if (sisaPinjaman <= 0) { // Jika sudah lunas di iterasi sebelumnya
+            if (sisaPinjaman <= 0) {
                 angsuranPokokBulanIni = 0;
                 bungaBulanIni = 0;
             } else if (pinjaman > batasBungaMenurun) {
@@ -281,15 +338,13 @@
             }
 
             if (i === jangkaWaktu) {
-                angsuranPokokBulanIni = sisaPinjaman; // Lunas di angsuran terakhir
+                angsuranPokokBulanIni = sisaPinjaman;
             } else {
                 angsuranPokokBulanIni = Math.min(angsuranPokokAwal, sisaPinjaman);
             }
-            // Koreksi jika angsuran pokok membuat sisa negatif (karena pembulatan bunga)
             if (sisaPinjaman - angsuranPokokBulanIni < 0 && i < jangkaWaktu) {
                 angsuranPokokBulanIni = sisaPinjaman;
             }
-
 
             let totalAngsuranBulanIni = angsuranPokokBulanIni + bungaBulanIni;
             let sisaPinjamanSetelahBayar = sisaPinjaman - angsuranPokokBulanIni;
@@ -302,19 +357,16 @@
 
             let row = document.createElement('tr');
             row.innerHTML = `
-                <td>${i}</td>
-                <td>Rp ${formatNumber(angsuranPokokBulanIni)}</td>
-                <td>Rp ${formatNumber(bungaBulanIni)}</td>
-                <td>Rp ${formatNumber(totalAngsuranBulanIni)}</td>
-                <td>Rp ${formatNumber(Math.max(0, sisaPinjamanSetelahBayar))}</td>
-            `;
+            <td>${i}</td>
+            <td>Rp ${formatNumber(angsuranPokokBulanIni)}</td>
+            <td>Rp ${formatNumber(bungaBulanIni)}</td>
+            <td>Rp ${formatNumber(totalAngsuranBulanIni)}</td>
+            <td>Rp ${formatNumber(Math.max(0, sisaPinjamanSetelahBayar))}</td>
+        `;
             simulasiBody.appendChild(row);
 
             sisaPinjaman = sisaPinjamanSetelahBayar;
-
-            if (sisaPinjaman <= 0 && i < jangkaWaktu) {
-                break;
-            }
+            if (sisaPinjaman <= 0 && i < jangkaWaktu) break;
         }
 
         document.getElementById("total_pokok_simulasi").innerText = `Rp ${formatNumber(totalPokokTerbayar)}`;
@@ -325,22 +377,17 @@
     function resetSimulasi() {
         document.getElementById("jumlah_pinjaman").value = "";
         document.getElementById("jumlah_pinjaman_hidden").value = "0";
-        // document.getElementById("jangka_waktu").value = ""; // Biarkan jangka waktu jika sudah diisi
-
         document.getElementById("bunga_simpanan_display").value = "0";
         document.getElementById("bunga_simpanan_hidden").value = "0";
         document.getElementById("jumlah_diterima").value = "0";
         document.getElementById("jumlah_diterima_hidden").value = "0";
-
         document.getElementById("angsuran_pokok_display").value = "0";
         document.getElementById("bunga_angsuran_display").value = "0";
         document.getElementById("total_angsuran_display").value = "0";
-
         document.getElementById("simulasi_body").innerHTML = '';
         document.getElementById("total_pokok_simulasi").innerText = "Rp 0";
         document.getElementById("total_bunga_simulasi").innerText = "Rp 0";
         document.getElementById("total_pembayaran_simulasi").innerText = "Rp 0";
-
         document.getElementById("label_bunga_angsuran").innerHTML = "<strong>Bunga Per Angsuran (2%):</strong>";
         document.getElementById("label_total_angsuran").innerHTML = "<strong>Total Angsuran /bulan:</strong>";
     }
@@ -351,13 +398,11 @@
 
         if (oldPinjaman) {
             document.getElementById("jumlah_pinjaman_hidden").value = oldPinjaman;
-            // Tampilkan format ribuan di input yang terlihat
             document.getElementById("jumlah_pinjaman").value = parseFloat(oldPinjaman).toLocaleString('id-ID');
         }
         if (oldJangkaWaktu) {
             document.getElementById("jangka_waktu").value = oldJangkaWaktu;
         }
-
 
         if (oldPinjaman || oldJangkaWaktu) {
             hitungSimulasi();
