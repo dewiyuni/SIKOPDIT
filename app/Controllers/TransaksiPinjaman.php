@@ -29,31 +29,45 @@ class TransaksiPinjaman extends BaseController
     }
     public function index()
     {
-        // First, get all loans with basic information
         $pinjaman = $this->transaksiPinjamanModel
             ->select('transaksi_pinjaman.*, anggota.nama, anggota.no_ba')
             ->join('anggota', 'anggota.id_anggota = transaksi_pinjaman.id_anggota', 'left')
             ->findAll();
 
-        // For each loan, get the latest payment record to determine the current status
+        $overdueCount = 0;
+
         foreach ($pinjaman as &$row) {
-            // Get the latest payment record for this loan
+            // Ambil angsuran terakhir berdasarkan created_at
             $latestPayment = $this->angsuranModel
                 ->where('id_pinjaman', $row->id_pinjaman)
-                ->orderBy('id_angsuran', 'DESC') // Get the most recent payment
+                ->orderBy('created_at', 'DESC')
                 ->first();
 
             if ($latestPayment) {
-                // If there's a payment record, use its sisa_pinjaman value
                 $row->saldo_terakhir = $latestPayment->sisa_pinjaman;
                 $row->status_pembayaran = $latestPayment->status;
+                $lastPaymentDate = $latestPayment->created_at; // gunakan created_at
             } else {
-                // If no payment records, the remaining balance is the full loan amount
+                // Jika belum ada angsuran, pakai tanggal pinjaman
                 $row->saldo_terakhir = $row->jumlah_pinjaman;
                 $row->status_pembayaran = 'belum bayar';
+                $lastPaymentDate = $row->tanggal_pinjaman;
             }
 
-            // Calculate total payments made
+            // Cek apakah telat bayar
+            $row->is_overdue = false;
+            if (($row->saldo_terakhir ?? 0) > 0 && strtolower($row->status_pembayaran) !== 'lunas') {
+                $today = new \DateTime();
+                $lastPayment = new \DateTime($lastPaymentDate);
+                $daysDiff = $today->diff($lastPayment)->days;
+
+                if ($daysDiff >= 30) {
+                    $row->is_overdue = true;
+                    $overdueCount++;
+                }
+            }
+
+            // Hitung total pembayaran yang sudah dilakukan
             $totalPayments = $this->angsuranModel
                 ->selectSum('jumlah_angsuran')
                 ->where('id_pinjaman', $row->id_pinjaman)
@@ -63,7 +77,10 @@ class TransaksiPinjaman extends BaseController
             $row->total_angsuran = $totalPayments ? $totalPayments->jumlah_angsuran : 0;
         }
 
-        return view('karyawan/transaksi_pinjaman/index', ['pinjaman' => $pinjaman]);
+        return view('karyawan/transaksi_pinjaman/index', [
+            'pinjaman' => $pinjaman,
+            'overdueCount' => $overdueCount
+        ]);
     }
 
     public function tambah()
