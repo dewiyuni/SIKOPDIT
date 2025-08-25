@@ -89,6 +89,16 @@
                         Pinjaman</span></a>
             </li>
         <?php endif; ?>
+
+        <!-- Menu untuk anggota -->
+        <?php if (session()->get('role') == 'anggota'): ?>
+            <li class="nav-item">
+                <a class="nav-link" href="<?= site_url('anggota/dashboard') ?>">🏠 <span>Dashboard</span></a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link" href="<?= site_url('anggota/profile') ?>">💰 <span>Profile</span></a>
+            </li>
+        <?php endif; ?>
     </ul>
 
     <!-- Content Wrapper -->
@@ -106,13 +116,16 @@
                 </button>
                 <!-- Topbar Navbar -->
                 <ul class="navbar-nav ml-auto">
-
                     <!-- Nav Item - User Information -->
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
                             data-bs-toggle="dropdown" aria-expanded="false">
                             <span class="mr-2 d-none d-lg-inline text-gray-600 small">
-                                <?= ucfirst(session()->get('role')); ?>
+                                <?php if (session()->get('role') === 'anggota'): ?>
+                                    <?= session()->get('nama') ?? session()->get('nama'); ?>
+                                <?php else: ?>
+                                    <?= ucfirst(session()->get('role')); ?>
+                                <?php endif; ?>
                             </span>
                             <img class="img-profile rounded-circle"
                                 src="<?= base_url('assets/img/undraw_profile_3.svg'); ?>" alt="Profile Image">

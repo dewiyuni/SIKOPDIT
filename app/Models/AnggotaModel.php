@@ -14,7 +14,23 @@ class AnggotaModel extends Model
     protected $useSoftDeletes = false;
 
     protected $useTimestamps = true;
-    protected $allowedFields = ['no_ba', 'nama', 'nik', 'dusun', 'alamat', 'pekerjaan', 'tgl_lahir', 'nama_pasangan', 'status', 'created_at', 'updated_at'];
+    protected $allowedFields = [
+        'no_ba',
+        'nama',
+        'nik',
+        'email',
+        'password',
+        'dusun',
+        'alamat',
+        'pekerjaan',
+        'tgl_lahir',
+        'nama_pasangan',
+        'no_hp',
+        'status',
+        'role',
+        'created_at',
+        'updated_at'
+    ];
 
     public function getAnggotaWithTransaksi()
     {
@@ -26,5 +42,6 @@ class AnggotaModel extends Model
             ->groupBy('anggota.id_anggota')
             ->findAll();
     }
+
 
 }

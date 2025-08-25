@@ -20,6 +20,10 @@ $routes->group('karyawan', ['filter' => 'roleCheck:karyawan'], function ($routes
     $routes->get('dashboard', 'AuthController::karyawanDashboard');
 });
 
+$routes->group('anggota', ['filter' => 'roleCheck:anggota'], function ($routes) {
+    $routes->get('dashboard', 'AuthController::anggotaDashboard');
+});
+
 // ====================== Admin routes ================================
 $routes->get('admin/anggota', 'AnggotaController::anggota');
 $routes->get('admin/tambah_anggota', 'AnggotaController::tambahAnggota');
@@ -188,3 +192,7 @@ $routes->get('admin/buku_besar/pemetaan/debug', 'BukuBesarController::debugPemet
 
 // option akun
 $routes->get('akun/options', 'AkunController::options');
+
+// ====================== anggota routes ================================
+$routes->get('anggota/profile', 'DashboardAnggotaController::profile');
+$routes->post('anggota/update_password', 'DashboardAnggotaController::updatePassword');

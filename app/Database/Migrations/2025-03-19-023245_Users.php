@@ -29,8 +29,8 @@ class Users extends Migration
             ],
             'role' => [
                 'type' => 'ENUM',
-                'constraint' => ['admin', 'karyawan'],
-                'default' => 'karyawan'
+                'constraint' => ['admin', 'karyawan', 'anggota'],
+                'default' => 'anggota'
             ],
             'status' => [
                 'type' => 'ENUM',

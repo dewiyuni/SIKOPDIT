@@ -30,45 +30,135 @@ class AuthController extends BaseController
     public function login()
     {
         if (session()->get('is_logged_in')) {
-            return redirect()->to(session()->get('role') === 'admin' ? '/admin/dashboard' : '/karyawan/dashboard');
+            $role = session()->get('role');
+            if ($role === 'admin')
+                return redirect()->to('/admin/dashboard');
+            if ($role === 'karyawan')
+                return redirect()->to('/karyawan/dashboard');
+            if ($role === 'anggota')
+                return redirect()->to('/anggota/dashboard'); // 👈
         }
-
         return view('auth/login');
     }
+    public function anggotaDashboard()
+    {
+        if (session()->get('role') !== 'anggota') {
+            return redirect()->to('/login')->with('error', 'Akses ditolak');
+        }
+
+        $idAnggota = session()->get('anggota_id');
+
+        // Hitung saldo simpanan per anggota
+        $simpanan = $this->db->table('transaksi_simpanan')
+            ->select('
+            SUM(setor_sp - tarik_sp) as total_sp,
+            SUM(setor_sw - tarik_sw) as total_sw,
+            SUM(setor_swp - tarik_swp) as total_swp,
+            SUM(setor_ss - tarik_ss) as total_ss
+        ')
+            ->where('id_anggota', $idAnggota)
+            ->get()
+            ->getRowArray();
+
+        $totalSimpanan = array_sum($simpanan);
+
+        // Hitung pinjaman aktif per anggota
+        $pinjaman = $this->db->table('transaksi_pinjaman')
+            ->select('SUM(jumlah_pinjaman - COALESCE((SELECT SUM(jumlah_angsuran) FROM angsuran WHERE angsuran.id_pinjaman = transaksi_pinjaman.id_pinjaman),0)) as total_pinjaman')
+            ->where('id_anggota', $idAnggota)
+            ->where('status', 'aktif')
+            ->get()
+            ->getRowArray();
+
+        // Ambil 5 pinjaman terakhir
+        $pinjamanTerakhir = $this->db->table('transaksi_pinjaman')
+            ->where('id_anggota', $idAnggota)
+            ->orderBy('tanggal_pinjaman', 'DESC')
+            ->limit(5)
+            ->get()
+            ->getResultArray();
+
+        // Ambil angsuran terakhir untuk setiap pinjaman
+        // Ambil angsuran untuk setiap pinjaman terakhir
+        foreach ($pinjamanTerakhir as &$p) {
+            $p['angsuran'] = $this->db->table('angsuran')
+                ->where('id_pinjaman', $p['id_pinjaman'])
+                ->orderBy('tanggal_angsuran', 'ASC') // urut dari yang paling awal
+                ->get()
+                ->getResultArray();
+        }
+
+        $data = [
+            'anggota' => $this->anggotaModel->find($idAnggota),
+            'simpanan' => $simpanan,
+            'totalSimpanan' => $totalSimpanan,
+            'totalPinjaman' => $pinjaman['total_pinjaman'] ?? 0,
+            'pinjamanTerakhir' => $pinjamanTerakhir,
+        ];
+
+        return view('dashboard_anggota', $data);
+    }
+
 
 
     public function authenticate()
     {
         if (session()->get('is_logged_in')) {
-            return redirect()->to(session()->get('role') === 'admin' ? '/admin/dashboard' : '/karyawan/dashboard');
+            $role = session()->get('role');
+            if ($role === 'admin')
+                return redirect()->to('/admin/dashboard');
+            if ($role === 'karyawan')
+                return redirect()->to('/karyawan/dashboard');
+            if ($role === 'anggota')
+                return redirect()->to('/anggota/dashboard');
         }
 
         $email = $this->request->getPost('email');
         $password = $this->request->getPost('password');
 
-        $auth = new AuthModel();
-        $user = $auth->getUserByEmail($email);
-
+        // 1) Cek di tabel users (admin/karyawan)
+        $user = $this->authModel->getUserByEmail($email);
         if ($user && password_verify($password, $user->password)) {
             if ($user->status !== 'aktif') {
                 session()->setFlashdata('error', 'Akun belum aktif.');
                 return redirect()->to('/');
             }
 
-            // Set session
             session()->set([
                 'user_id' => $user->id_user,
                 'nama' => $user->nama,
-                'role' => $user->role,
+                'email' => $user->email,
+                'role' => $user->role, // admin/karyawan
                 'is_logged_in' => true,
             ]);
 
             return redirect()->to($user->role === 'admin' ? '/admin/dashboard' : '/karyawan/dashboard');
-        } else {
-            session()->setFlashdata('error', 'Email atau password salah');
-            return redirect()->to('/');
         }
+
+        // 2) Fallback: cek di tabel anggota
+        $anggota = $this->anggotaModel
+            ->where('email', $email)
+            ->where('status', 'aktif')
+            ->first();
+
+        if ($anggota && password_verify($password, $anggota->password)) {
+            // Set session untuk anggota
+            session()->set([
+                'anggota_id' => $anggota->id_anggota,
+                'nama' => $anggota->nama, // langsung pakai nama lengkap
+                'email' => $anggota->email,
+                'role' => 'anggota',
+                'is_logged_in' => true,
+            ]);
+
+            return redirect()->to('/anggota/dashboard');
+        }
+
+        // Jika dua-duanya gagal
+        session()->setFlashdata('error', 'Email atau password salah');
+        return redirect()->to('/');
     }
+
 
     public function logout()
     {

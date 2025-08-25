@@ -29,6 +29,15 @@ class Anggota extends Migration
                 'constraint' => '16',
                 'unique' => true
             ],
+            'email' => [
+                'type' => 'VARCHAR',
+                'constraint' => '75',
+                'unique' => true
+            ],
+            'password' => [
+                'type' => 'VARCHAR',
+                'constraint' => '255'
+            ],
             'dusun' => [
                 'type' => 'ENUM',
                 'constraint' => [
@@ -68,10 +77,20 @@ class Anggota extends Migration
                 'constraint' => '50',
                 'null' => true
             ],
+            'no_hp' => [
+                'type' => 'VARCHAR',
+                'constraint' => '20',
+                'null' => true
+            ],
             'status' => [
                 'type' => 'ENUM',
                 'constraint' => ['aktif', 'nonaktif'],
                 'default' => 'aktif'
+            ],
+            'role' => [
+                'type' => 'ENUM',
+                'constraint' => ['anggota'],
+                'default' => 'anggota'
             ],
             'created_at' => [
                 'type' => 'DATETIME',
@@ -81,6 +100,7 @@ class Anggota extends Migration
                 'type' => 'DATETIME',
                 'null' => true
             ]
+
         ]);
 
         $this->forge->addKey('id_anggota', true);
